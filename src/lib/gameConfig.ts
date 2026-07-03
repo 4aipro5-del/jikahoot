@@ -1,0 +1,2 @@
+export const QUESTION_DURATION_SEC = 20
+export const BASE_POINTS_PER_CORRECT_ANSWER = 100

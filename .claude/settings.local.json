@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest *)",
+      "Bash(rm -rf /private/tmp/claude-501/-Users-jiseonlee-Desktop-likekahoot/d2857865-9d18-40ec-a0f4-40bc451b23b8/scratchpad/likekahoot-scaffold)",
+      "Bash(npm run *)",
+      "Bash(npx eslint *)",
+      "Bash(cd *)",
+      "Bash(node _tmp-verify-gameplay-rules.mjs)",
+      "Bash(node _tmp-cleanup2.mjs)"
+    ]
+  }
+}

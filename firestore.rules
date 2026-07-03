@@ -1,0 +1,130 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isTeacher(teacherUid) {
+      return isSignedIn() && request.auth.uid == teacherUid;
+    }
+
+    function game(gameCode) {
+      return get(/databases/$(database)/documents/games/$(gameCode)).data;
+    }
+
+    function gameOwner(gameCode) {
+      return game(gameCode).teacherUid;
+    }
+
+    function gameStatus(gameCode) {
+      return game(gameCode).status;
+    }
+
+    function gameCurrentIndex(gameCode) {
+      return game(gameCode).currentQuestionIndex;
+    }
+
+    // ---- Teacher room + persistent question bank ----
+    match /rooms/{teacherUid} {
+      allow read, create, update: if isTeacher(teacherUid);
+      allow delete: if false;
+
+      // correctChoiceId lives here, so only the room owner may ever read it
+      match /questionBank/{questionId} {
+        allow read: if isTeacher(teacherUid);
+
+        // the teacher is their own reviewer, so their own questions go straight
+        // to 'approved'; anything a student submits is forced into 'pending'
+        allow create: if isSignedIn() && (
+          (
+            isTeacher(teacherUid)
+            && request.resource.data.createdBy == 'teacher'
+            && request.resource.data.status == 'approved'
+          )
+          || (
+            !isTeacher(teacherUid)
+            && request.resource.data.createdBy == 'student'
+            && request.resource.data.authorUid == request.auth.uid
+            && request.resource.data.status == 'pending'
+          )
+        );
+
+        // approve/reject/edit is the room owner's call only
+        allow update, delete: if isTeacher(teacherUid);
+      }
+    }
+
+    // room-code -> teacherUid lookup, so students can resolve a room without
+    // ever knowing the teacher's uid (mirrors the game-code pattern below)
+    match /roomCodes/{code} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.auth.uid == request.resource.data.teacherUid
+        && request.resource.data.keys().hasOnly(['teacherUid'])
+        && !exists(/databases/$(database)/documents/roomCodes/$(code));
+      allow update, delete: if false;
+    }
+
+    // ---- Ephemeral game sessions, looked up directly by game code ----
+    match /games/{gameCode} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.teacherUid == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.teacherUid == request.auth.uid;
+      allow delete: if false;
+
+      // one-shot nickname reservation to block duplicate nicknames in a game
+      match /nicknames/{slug} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+          && request.resource.data.keys().hasOnly(['playerUid'])
+          && request.resource.data.playerUid == request.auth.uid
+          && !exists(/databases/$(database)/documents/games/$(gameCode)/nicknames/$(slug));
+        allow update, delete: if false;
+      }
+
+      match /players/{playerUid} {
+        allow create: if isSignedIn() && request.auth.uid == playerUid;
+
+        // the roster is public in the lobby (just nicknames, no scores yet)
+        // and once results are revealed; during active play, players only
+        // see themselves and the host so live scores/streaks aren't visible
+        allow read: if isSignedIn() && (
+          request.auth.uid == playerUid
+          || request.auth.uid == gameOwner(gameCode)
+          || gameStatus(gameCode) == 'lobby'
+          || gameStatus(gameCode) == 'finished'
+        );
+
+        // only the host grades / updates score + streak
+        allow update: if isSignedIn() && request.auth.uid == gameOwner(gameCode);
+        allow delete: if false;
+
+        match /answers/{questionIndex} {
+          // a player submits their own answer exactly once, ungraded
+          allow create: if isSignedIn()
+            && request.auth.uid == playerUid
+            && request.resource.data.keys().hasOnly(['choiceId', 'answeredAt', 'isCorrect', 'pointsEarned'])
+            && request.resource.data.isCorrect == null
+            && request.resource.data.pointsEarned == null
+            && gameStatus(gameCode) == 'active'
+            && int(questionIndex) == gameCurrentIndex(gameCode);
+
+          allow read: if isSignedIn() && (
+            request.auth.uid == playerUid
+            || request.auth.uid == gameOwner(gameCode)
+          );
+
+          // host grades it once; the verdict can't be changed after the fact
+          allow update: if isSignedIn()
+            && request.auth.uid == gameOwner(gameCode)
+            && resource.data.isCorrect == null;
+
+          allow delete: if false;
+        }
+      }
+    }
+  }
+}

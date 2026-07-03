@@ -1,0 +1,210 @@
+import {
+  collection,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  runTransaction,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore'
+import { db } from '@/lib/firebase/client'
+import { signInStudentAnonymously } from '@/lib/firebase/auth'
+import type { Answer, Game, NicknameReservation, Player, PublicQuestion } from '@/types/firestore'
+import { streakBonusMultiplier } from '@/types/firestore'
+import { BASE_POINTS_PER_CORRECT_ANSWER } from '@/lib/gameConfig'
+
+// no 0/O/1/I/L — easy to read aloud and type on a Chromebook
+const GAME_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+const GAME_CODE_LENGTH = 6
+const MAX_ATTEMPTS = 5
+
+function generateGameCode(): string {
+  let code = ''
+  for (let i = 0; i < GAME_CODE_LENGTH; i++) {
+    code += GAME_CODE_ALPHABET[Math.floor(Math.random() * GAME_CODE_ALPHABET.length)]
+  }
+  return code
+}
+
+function slugifyNickname(nickname: string): string {
+  return 'n-' + nickname.trim().toLowerCase().replace(/\s+/g, '-').replace(/\//g, '-')
+}
+
+export async function createGame(
+  teacherUid: string,
+  questions: PublicQuestion[],
+  questionDurationSec: number,
+): Promise<string> {
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const code = generateGameCode()
+    const gameRef = doc(db, 'games', code)
+
+    try {
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(gameRef)
+        if (snap.exists()) {
+          throw new Error('GAME_CODE_TAKEN')
+        }
+
+        const game: Game = {
+          teacherUid,
+          status: 'lobby',
+          questions,
+          currentQuestionIndex: -1,
+          questionDurationSec,
+          currentQuestionStartedAt: null,
+          createdAt: serverTimestamp() as unknown as Game['createdAt'],
+          endedAt: null,
+        }
+        tx.set(gameRef, game)
+      })
+      return code
+    } catch (err) {
+      if (err instanceof Error && err.message === 'GAME_CODE_TAKEN') continue
+      throw err
+    }
+  }
+
+  throw new Error('게임 코드를 생성하지 못했습니다. 다시 시도해 주세요.')
+}
+
+export function subscribeToGame(gameCode: string, callback: (game: Game | null) => void) {
+  return onSnapshot(doc(db, 'games', gameCode), (snap) => {
+    callback(snap.exists() ? (snap.data() as Game) : null)
+  })
+}
+
+export type PlayerWithId = Player & { id: string }
+
+export function subscribeToPlayers(
+  gameCode: string,
+  callback: (players: PlayerWithId[]) => void,
+) {
+  const q = query(collection(db, 'games', gameCode, 'players'), orderBy('joinedAt', 'asc'))
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Player) })))
+  })
+}
+
+export async function joinGame(
+  gameCode: string,
+  nickname: string,
+): Promise<{ authorUid: string; nickname: string }> {
+  const cred = await signInStudentAnonymously()
+  const playerUid = cred.user.uid
+  const slug = slugifyNickname(nickname)
+
+  const gameRef = doc(db, 'games', gameCode)
+  const nicknameRef = doc(db, 'games', gameCode, 'nicknames', slug)
+  const playerRef = doc(db, 'games', gameCode, 'players', playerUid)
+
+  await runTransaction(db, async (tx) => {
+    const gameSnap = await tx.get(gameRef)
+    if (!gameSnap.exists()) {
+      throw new Error('게임 코드를 찾을 수 없어요. 선생님께 다시 확인해 주세요.')
+    }
+    if ((gameSnap.data() as Game).status !== 'lobby') {
+      throw new Error('이미 시작했거나 끝난 게임이에요.')
+    }
+
+    const nicknameSnap = await tx.get(nicknameRef)
+    if (nicknameSnap.exists()) {
+      throw new Error('이미 사용 중인 닉네임이에요. 다른 이름을 입력해 주세요.')
+    }
+
+    const reservation: NicknameReservation = { playerUid }
+    tx.set(nicknameRef, reservation)
+
+    const player: Player = {
+      nickname,
+      joinedAt: serverTimestamp() as unknown as Player['joinedAt'],
+      totalScore: 0,
+      currentStreak: 0,
+    }
+    tx.set(playerRef, player)
+  })
+
+  return { authorUid: playerUid, nickname }
+}
+
+export function advanceQuestion(gameCode: string, nextIndex: number) {
+  return updateDoc(doc(db, 'games', gameCode), {
+    status: 'active',
+    currentQuestionIndex: nextIndex,
+    currentQuestionStartedAt: serverTimestamp(),
+  })
+}
+
+export function finishGame(gameCode: string) {
+  return updateDoc(doc(db, 'games', gameCode), {
+    status: 'finished',
+    endedAt: serverTimestamp(),
+  })
+}
+
+export function resetStreak(gameCode: string, playerUid: string) {
+  return updateDoc(doc(db, 'games', gameCode, 'players', playerUid), {
+    currentStreak: 0,
+  })
+}
+
+function answerRef(gameCode: string, playerUid: string, questionIndex: number) {
+  return doc(db, 'games', gameCode, 'players', playerUid, 'answers', String(questionIndex))
+}
+
+export function submitAnswer(
+  gameCode: string,
+  playerUid: string,
+  questionIndex: number,
+  choiceId: string,
+) {
+  const answer: Answer = {
+    choiceId,
+    answeredAt: serverTimestamp() as unknown as Answer['answeredAt'],
+    isCorrect: null,
+    pointsEarned: null,
+  }
+  return setDoc(answerRef(gameCode, playerUid, questionIndex), answer)
+}
+
+export function subscribeToAnswer(
+  gameCode: string,
+  playerUid: string,
+  questionIndex: number,
+  callback: (answer: Answer | null) => void,
+) {
+  return onSnapshot(answerRef(gameCode, playerUid, questionIndex), (snap) => {
+    callback(snap.exists() ? (snap.data() as Answer) : null)
+  })
+}
+
+// grades a single answer and folds the result into the player's running
+// score/streak; only ever called from the host client, which is the only
+// one that knows the correct choice for this question
+export async function gradeAnswer(
+  gameCode: string,
+  playerUid: string,
+  questionIndex: number,
+  isCorrect: boolean,
+) {
+  const playerRef = doc(db, 'games', gameCode, 'players', playerUid)
+
+  await runTransaction(db, async (tx) => {
+    const playerSnap = await tx.get(playerRef)
+    const player = playerSnap.data() as Player
+
+    const newStreak = isCorrect ? player.currentStreak + 1 : 0
+    const points = isCorrect ? Math.round(BASE_POINTS_PER_CORRECT_ANSWER * streakBonusMultiplier(newStreak)) : 0
+
+    tx.update(answerRef(gameCode, playerUid, questionIndex), {
+      isCorrect,
+      pointsEarned: points,
+    })
+    tx.update(playerRef, {
+      totalScore: player.totalScore + points,
+      currentStreak: newStreak,
+    })
+  })
+}
