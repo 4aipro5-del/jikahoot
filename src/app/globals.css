@@ -1,13 +1,31 @@
-@import "tailwindcss";
+@font-face {
+  font-family: "KblJumpExtended";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-5@1.0/KBLJump_EB_ExtendedTTF.woff2")
+    format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
 
 @font-face {
-  font-family: "SBAggroB";
-  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2108@1.1/SBAggroB.woff")
-    format("woff");
+  font-family: "KblJump";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-5@1.0/KBLJump_RTTF.woff2")
+    format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "KblJump";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-5@1.0/KBLJump_BTTF.woff2")
+    format("woff2");
   font-style: normal;
   font-weight: 700;
   font-display: swap;
 }
+
+@import "tailwindcss";
 
 :root {
   --background: #12082f;
@@ -31,8 +49,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-body), "SBAggroB", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-  --font-mono: var(--font-body), sans-serif;
+  --font-sans: "KblJump", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --font-mono: "KblJump", monospace;
 }
 
 * {
@@ -46,7 +64,7 @@ html {
 body {
   min-height: 100vh;
   color: var(--foreground);
-  font-family: var(--font-body), "SBAggroB", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-family: "KblJump", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   background:
     radial-gradient(circle at 15% 15%, rgba(120, 73, 255, 0.45), transparent 28%),
     radial-gradient(circle at 85% 12%, rgba(19, 104, 206, 0.3), transparent 24%),
@@ -107,9 +125,21 @@ button:disabled {
 }
 
 .display-font {
-  font-family: var(--font-body), "SBAggroB", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-family: "KblJumpExtended", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  word-break: keep-all;
+  text-wrap: balance;
+}
+
+.balance-wrap {
+  word-break: keep-all;
+  text-wrap: balance;
+}
+
+.pretty-wrap {
+  word-break: keep-all;
+  text-wrap: pretty;
 }
 
 .stage-shell {
@@ -150,6 +180,14 @@ button:disabled {
   width: min(1120px, 100%);
   margin: 0 auto;
   padding: clamp(1.25rem, 2vw, 2rem);
+}
+
+.portal-stage {
+  width: min(1400px, 100%);
+}
+
+.dashboard-stage {
+  width: min(1680px, 100%);
 }
 
 .quiz-panel {
@@ -254,9 +292,9 @@ button:disabled {
 .code-input {
   text-align: center;
   text-transform: uppercase;
-  letter-spacing: 0.32em;
-  font-family: var(--font-body), sans-serif;
-  font-weight: 800;
+  letter-spacing: 0.12em;
+  font-family: "KblJump", monospace;
+  font-weight: 700;
   font-size: clamp(1.2rem, 3vw, 1.7rem);
 }
 

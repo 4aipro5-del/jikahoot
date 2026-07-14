@@ -34,11 +34,13 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
   return (
     <section className="quiz-panel flex flex-col gap-5 p-6 sm:p-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="flex flex-col gap-3">
           <p className="text-sm font-black uppercase tracking-[0.2em] text-white/58">
             Question Bank
           </p>
-          <h2 className="display-font text-4xl text-white sm:text-5xl">문제 현황</h2>
+          <h2 className="display-font text-[2rem] leading-none text-white sm:text-[2.4rem]">
+            문제 현황
+          </h2>
         </div>
 
         <div className="flex flex-wrap gap-2">

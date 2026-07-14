@@ -185,13 +185,13 @@ function LobbyView({
     <section className="grid gap-6 xl:grid-cols-[0.88fr_1.12fr]">
       <div className="paper-panel flex flex-col gap-5 p-6 sm:p-8">
         <div>
-          <p className="hero-chip hero-chip-paper">Host Console</p>
-          <h1 className="display-font mt-4 text-4xl text-[var(--panel-text)] sm:text-5xl">
+          <p className="hero-chip hero-chip-paper">Host Stage</p>
+          <h1 className="display-font balance-wrap mt-4 text-4xl text-[var(--panel-text)] sm:text-5xl">
             무대 준비 완료
           </h1>
-          <p className="paper-muted mt-2 text-sm leading-6 sm:text-base">
-            참가 코드를 공유하고 학생들이 들어오는 동안 명단을 확인하세요. 준비가 되면
-            바로 시작할 수 있습니다.
+          <p className="paper-muted pretty-wrap mt-2 flex w-fit max-w-full flex-col gap-2 text-sm leading-[1.45] sm:text-base">
+            <span className="block whitespace-nowrap">참가 코드를 공유하고 학생들이 들어오는 동안 명단을 확인하세요.</span>
+            <span className="block whitespace-nowrap">준비가 되면 바로 시작할 수 있습니다.</span>
           </p>
         </div>
 
@@ -199,7 +199,9 @@ function LobbyView({
           <p className="paper-ghost text-xs font-black uppercase tracking-[0.2em]">
             Join Code
           </p>
-          <p className="display-font mt-2 text-6xl text-[var(--panel-text)] sm:text-7xl">{gameCode}</p>
+          <p className="display-font balance-wrap mt-2 text-6xl text-[var(--panel-text)] sm:text-7xl">
+            {gameCode}
+          </p>
         </div>
 
         <button onClick={onStart} disabled={players.length === 0 || starting} className="primary-button">

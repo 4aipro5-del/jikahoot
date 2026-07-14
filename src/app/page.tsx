@@ -22,7 +22,7 @@ export default function Home() {
 function PortalFallback() {
   return (
     <div className="stage-shell">
-      <div className="stage-content flex min-h-screen items-center justify-center">
+      <div className="stage-content portal-stage flex min-h-screen items-center justify-center">
         <div className="quiz-panel px-6 py-5 text-center">
           <p className="text-white/70">무대를 준비하는 중...</p>
         </div>
@@ -103,7 +103,7 @@ function HomePortal() {
   if (user && !user.isAnonymous) {
     return (
       <div className="stage-shell">
-        <div className="stage-content flex min-h-screen items-center justify-center">
+        <div className="stage-content portal-stage flex min-h-screen items-center justify-center">
           <div className="quiz-panel px-6 py-5 text-center">
             <p className="text-white/70">교사용 대시보드로 이동 중...</p>
           </div>
@@ -114,19 +114,16 @@ function HomePortal() {
 
   return (
     <div className="stage-shell">
-      <div className="stage-content flex min-h-screen flex-col justify-center py-8 sm:py-12">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <div className="stage-content portal-stage flex min-h-screen flex-col justify-center py-8 sm:py-12">
+        <div className="mx-auto flex w-full max-w-[1380px] flex-col gap-6">
           <div className="flex justify-center lg:justify-start">
             <span className="hero-chip">Classroom Quiz Show</span>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[1.12fr_0.88fr]">
+          <div className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr] xl:gap-8">
             <section className="quiz-panel flex flex-col gap-8 p-6 sm:p-8 lg:p-10">
-              <div className="space-y-4">
-                <p className="text-sm font-extrabold uppercase tracking-[0.32em] text-white/65">
-                  Like Kahoot
-                </p>
-                <h1 className="display-font text-5xl leading-[0.95] text-white sm:text-6xl lg:text-7xl">
+              <div className="space-y-3">
+                <h1 className="display-font text-4xl leading-[1.08] text-white sm:text-[2.8rem] lg:text-[3.6rem] xl:text-[3.85rem]">
                   교실을 바로
                   <br />
                   퀴즈 쇼로.
@@ -141,8 +138,8 @@ function HomePortal() {
               <div className="grid gap-4 sm:grid-cols-3">
                 {[
                   ["빠른 입장", "코드와 닉네임만 입력하면 자동으로 맞는 화면으로 이동"],
-                  ["원색 답안", "문제 화면은 Kahoot 스타일의 4색 타일로 즉시 반응"],
-                  ["교사용 진행", "참가 코드, 응답 수, 다음 문제를 크게 보여주는 콘솔"],
+                  ["학생 퀴즈", "학생도 문제를 만들고 바로 풀 수 있어요."],
+                  ["교사용 진행", "참가 코드, 응답 수, 다음 문제를 한눈에 보는 진행 화면"],
                 ].map(([title, desc], index) => (
                   <div
                     key={title}
@@ -164,7 +161,7 @@ function HomePortal() {
                   <h2 className="display-font mt-4 text-4xl text-[var(--panel-text)] sm:text-5xl">
                     게임 코드 입력
                   </h2>
-                  <p className="paper-muted mt-2 text-sm leading-6 sm:text-base">
+                  <p className="paper-muted mt-2 max-w-[32rem] text-sm leading-6 sm:text-base">
                     선생님이 알려준 코드를 넣으면 문제 제출 또는 플레이 화면으로 자동
                     연결돼요.
                   </p>
@@ -205,16 +202,16 @@ function HomePortal() {
                 <p className="text-sm font-black uppercase tracking-[0.22em] text-white/58">
                   Teacher Zone
                 </p>
-                <h3 className="display-font mt-2 text-3xl text-white">교사용 무대로 입장</h3>
+                <h3 className="display-font mt-2 text-3xl text-white">교사용 페이지</h3>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
-                  Google 로그인 후 방 코드, 승인된 문제, 현재 게임 진행 상황을 한눈에
-                  관리할 수 있어요.
+                  Google 로그인 후 방 코드, 승인된 문제, 현재 게임 진행 상황을 관리할 수
+                  있어요.
                 </p>
               </div>
 
               <div className="flex min-w-[230px] flex-col items-start gap-3">
                 <button onClick={handleTeacherSignIn} className="secondary-button w-full">
-                  Google로 로그인
+                  Google 로그인
                 </button>
                 {teacherError && (
                   <p className="status-banner w-full" data-tone="error">
@@ -224,13 +221,13 @@ function HomePortal() {
               </div>
             </div>
 
-            <div className="paper-panel flex items-center gap-4 p-5 text-sm font-bold">
+            <div className="paper-panel flex items-center gap-4 p-5 text-sm font-bold sm:p-6">
               <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[var(--kahoot-yellow)] text-xl text-[#432700]">
                 !
               </span>
-              <p className="paper-muted leading-6">
-                학생은 한 번 코드와 이름을 넣으면, 방 상태에 따라 제출 화면 또는 게임
-                화면으로 자연스럽게 이어집니다.
+              <p className="paper-muted text-base leading-7 sm:text-[1.05rem]">
+                <span className="block">학생은 한 번 코드와 이름을 넣으면,</span>
+                <span className="block">방 상태에 따라 제출 화면 또는 게임 화면으로 자연스럽게 이어집니다.</span>
               </p>
             </div>
           </section>

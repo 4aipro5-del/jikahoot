@@ -115,10 +115,12 @@ export default function QuestionEditorForm({
 
   return (
     <form onSubmit={handleSubmit} className="paper-panel flex flex-col gap-6 p-6 sm:p-8">
-      <div className="space-y-2">
-        <p className="hero-chip hero-chip-paper">Quiz Builder</p>
-        <h2 className="display-font text-4xl text-[var(--panel-text)] sm:text-5xl">{title}</h2>
-        <p className="paper-muted text-sm leading-6 sm:text-base">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <p className="hero-chip hero-chip-paper w-full">Quiz Builder</p>
+        <h2 className="display-font text-[2rem] leading-none text-[var(--panel-text)] sm:text-[2.4rem]">
+          {title}
+        </h2>
+        <p className="paper-muted w-full text-left text-sm leading-6 sm:text-base">
           질문은 짧고 선명하게, 선택지는 헷갈리지 않게 써 주면 실제 게임 화면에서도 더
           잘 보여요.
         </p>

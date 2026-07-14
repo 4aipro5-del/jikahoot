@@ -46,19 +46,19 @@ export default function DashboardPage() {
 
   return (
     <div className="stage-shell">
-      <div className="stage-content flex min-h-screen flex-col gap-6 py-8">
+      <div className="stage-content dashboard-stage flex min-h-screen flex-col gap-8 py-8">
         <header className="quiz-panel p-6 sm:p-8">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div className="space-y-3">
               <p className="text-sm font-black uppercase tracking-[0.22em] text-white/58">
-                Teacher Console
+                Teacher Stage
               </p>
               <h1 className="display-font text-4xl text-white sm:text-5xl">
                 {room.displayName} 선생님의 퀴즈 무대
               </h1>
               <p className="max-w-3xl text-sm leading-6 text-white/74 sm:text-base">
                 문제를 승인하고, 바로 새 게임을 열고, 참가 코드를 학생에게 공유할 수 있는
-                진행용 콘솔이에요.
+                교사용 진행 화면이에요.
               </p>
             </div>
 
@@ -76,14 +76,17 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
+        <div className="grid gap-8 lg:grid-cols-[1fr_1.15fr_1fr] lg:items-start 2xl:grid-cols-[1fr_1.22fr_1fr]">
           <div className="flex flex-col gap-6">
             <StartGameButton teacherUid={room.teacherUid} />
           </div>
 
           <div className="flex flex-col gap-6">
-            <QuestionForm teacherUid={room.teacherUid} />
             <QuestionList teacherUid={room.teacherUid} />
+          </div>
+
+          <div className="flex flex-col gap-6">
+            <QuestionForm teacherUid={room.teacherUid} />
           </div>
         </div>
       </div>

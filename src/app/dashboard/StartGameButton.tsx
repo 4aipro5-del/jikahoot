@@ -35,12 +35,12 @@ export default function StartGameButton({ teacherUid }: { teacherUid: string }) 
 
   return (
     <section className="paper-panel flex flex-col gap-5 p-6 sm:p-8">
-      <div className="flex flex-col gap-3">
-        <p className="hero-chip hero-chip-paper">Launch Game</p>
-        <h2 className="display-font text-4xl text-[var(--panel-text)] sm:text-5xl">
-          무대 열기
+      <div className="flex flex-col items-center gap-3 text-center">
+        <p className="hero-chip hero-chip-paper w-full">Launch Game</p>
+        <h2 className="display-font text-[2rem] leading-none text-[var(--panel-text)] sm:text-[2.4rem]">
+          퀴즈 시작
         </h2>
-        <p className="paper-muted text-sm leading-6 sm:text-base">
+        <p className="paper-muted w-full text-left text-sm leading-6 sm:text-base">
           승인된 문제를 바탕으로 바로 새 게임을 생성해요. 게임이 시작되면 참가 코드가
           발급되고 학생들은 곧바로 입장할 수 있습니다.
         </p>
