@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import { joinGame } from "@/lib/firestore/games";
 import PlayingGame from "./PlayingGame";
 
@@ -9,15 +10,55 @@ type Step =
   | { kind: "playing"; gameCode: string; nickname: string; authorUid: string };
 
 export default function PlayPage() {
+  return (
+    <Suspense fallback={<PlayPageFallback />}>
+      <PlayPageContent />
+    </Suspense>
+  );
+}
+
+function PlayPageFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
+      <p className="text-zinc-500">불러오는 중...</p>
+    </div>
+  );
+}
+
+function PlayPageContent() {
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>({ kind: "join" });
-  const [code, setCode] = useState("");
-  const [nickname, setNickname] = useState("");
+  const [code, setCode] = useState(() => searchParams.get("code")?.trim().toUpperCase() ?? "");
+  const [nickname, setNickname] = useState(() => searchParams.get("nickname")?.trim() ?? "");
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const autoJoinTried = useRef(false);
 
-  async function handleJoin(e: FormEvent) {
-    e.preventDefault();
+  async function join(trimmedCode: string, trimmedNickname: string) {
     setError(null);
+    setJoining(true);
+    try {
+      const { authorUid } = await joinGame(trimmedCode, trimmedNickname);
+      setStep({ kind: "playing", gameCode: trimmedCode, nickname: trimmedNickname, authorUid });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "입장하지 못했습니다.");
+    } finally {
+      setJoining(false);
+    }
+  }
+
+  // 홈 포털에서 코드/닉네임을 들고 넘어온 경우, 다시 입력하지 않고 바로 이어서 입장한다.
+  useEffect(() => {
+    if (autoJoinTried.current) return;
+    if (code && nickname) {
+      autoJoinTried.current = true;
+      queueMicrotask(() => join(code, nickname));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleJoin(e: FormEvent) {
+    e.preventDefault();
 
     const trimmedCode = code.trim().toUpperCase();
     const trimmedNickname = nickname.trim();
@@ -30,15 +71,7 @@ export default function PlayPage() {
       return;
     }
 
-    setJoining(true);
-    try {
-      const { authorUid } = await joinGame(trimmedCode, trimmedNickname);
-      setStep({ kind: "playing", gameCode: trimmedCode, nickname: trimmedNickname, authorUid });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "입장하지 못했습니다.");
-    } finally {
-      setJoining(false);
-    }
+    join(trimmedCode, trimmedNickname);
   }
 
   if (step.kind === "playing") {

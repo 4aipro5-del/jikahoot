@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import QuestionEditorForm from "@/components/QuestionEditorForm";
 import { signInStudentAnonymously } from "@/lib/firebase/auth";
 import { resolveRoomCode } from "@/lib/firestore/roomCodes";
@@ -11,27 +12,32 @@ type Step =
   | { kind: "submit"; teacherUid: string; authorUid: string; nickname: string };
 
 export default function SubmitPage() {
+  return (
+    <Suspense fallback={<SubmitPageFallback />}>
+      <SubmitPageContent />
+    </Suspense>
+  );
+}
+
+function SubmitPageFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
+      <p className="text-zinc-500">불러오는 중...</p>
+    </div>
+  );
+}
+
+function SubmitPageContent() {
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>({ kind: "join" });
-  const [code, setCode] = useState("");
-  const [nickname, setNickname] = useState("");
+  const [code, setCode] = useState(() => searchParams.get("code")?.trim().toUpperCase() ?? "");
+  const [nickname, setNickname] = useState(() => searchParams.get("nickname")?.trim() ?? "");
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const autoJoinTried = useRef(false);
 
-  async function handleJoin(e: FormEvent) {
-    e.preventDefault();
+  async function join(trimmedCode: string, trimmedNickname: string) {
     setError(null);
-
-    const trimmedCode = code.trim().toUpperCase();
-    const trimmedNickname = nickname.trim();
-    if (!trimmedCode) {
-      setError("방 코드를 입력해 주세요.");
-      return;
-    }
-    if (!trimmedNickname) {
-      setError("이름(닉네임)을 입력해 주세요.");
-      return;
-    }
-
     setJoining(true);
     try {
       // roomCodes 조회에는 Firestore 규칙상 인증이 필요하므로, 방 코드를
@@ -48,6 +54,33 @@ export default function SubmitPage() {
     } finally {
       setJoining(false);
     }
+  }
+
+  // 홈 포털에서 코드/닉네임을 들고 넘어온 경우, 다시 입력하지 않고 바로 이어서 입장한다.
+  useEffect(() => {
+    if (autoJoinTried.current) return;
+    if (code && nickname) {
+      autoJoinTried.current = true;
+      queueMicrotask(() => join(code, nickname));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleJoin(e: FormEvent) {
+    e.preventDefault();
+
+    const trimmedCode = code.trim().toUpperCase();
+    const trimmedNickname = nickname.trim();
+    if (!trimmedCode) {
+      setError("방 코드를 입력해 주세요.");
+      return;
+    }
+    if (!trimmedNickname) {
+      setError("이름(닉네임)을 입력해 주세요.");
+      return;
+    }
+
+    join(trimmedCode, trimmedNickname);
   }
 
   if (step.kind === "submit") {
