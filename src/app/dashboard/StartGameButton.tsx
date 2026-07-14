@@ -34,19 +34,56 @@ export default function StartGameButton({ teacherUid }: { teacherUid: string }) 
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-black/[.08] p-5 dark:border-white/[.145]">
-      <h2 className="text-lg font-semibold">게임 시작하기</h2>
-      <button
-        onClick={handleStart}
-        disabled={approved.length === 0 || starting}
-        className="self-start rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
-      >
-        {starting ? "게임 준비 중..." : `게임 시작 (승인된 문제 ${approved.length}개)`}
-      </button>
-      {approved.length === 0 && (
-        <p className="text-xs text-zinc-500">승인된 문제가 있어야 게임을 시작할 수 있어요.</p>
-      )}
-      {error && <p className="text-sm text-red-600">{error}</p>}
-    </div>
+    <section className="paper-panel flex flex-col gap-5 p-6 sm:p-8">
+      <div className="flex flex-col gap-3">
+        <p className="hero-chip hero-chip-paper">Launch Game</p>
+        <h2 className="display-font text-4xl text-[var(--panel-text)] sm:text-5xl">
+          무대 열기
+        </h2>
+        <p className="paper-muted text-sm leading-6 sm:text-base">
+          승인된 문제를 바탕으로 바로 새 게임을 생성해요. 게임이 시작되면 참가 코드가
+          발급되고 학생들은 곧바로 입장할 수 있습니다.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="paper-purple-bg rounded-[24px] p-5">
+          <p className="paper-subtle text-sm font-black uppercase tracking-[0.18em]">
+            Approved
+          </p>
+          <p className="display-font mt-2 text-5xl text-[var(--panel-text)]">{approved.length}</p>
+          <p className="paper-subtle mt-1 text-sm font-semibold">사용 가능 문제</p>
+        </div>
+        <div className="paper-yellow-bg rounded-[24px] p-5">
+          <p className="paper-subtle text-sm font-black uppercase tracking-[0.18em]">
+            Round Time
+          </p>
+          <p className="display-font mt-2 text-5xl text-[var(--panel-text)]">
+            {QUESTION_DURATION_SEC}s
+          </p>
+          <p className="paper-subtle mt-1 text-sm font-semibold">문제당 제한 시간</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col items-start gap-3">
+        <button
+          onClick={handleStart}
+          disabled={approved.length === 0 || starting}
+          className="primary-button"
+        >
+          {starting ? "게임 준비 중..." : "새 게임 시작"}
+        </button>
+        {approved.length === 0 && (
+          <p className="rounded-[20px] bg-[rgba(216,158,0,0.12)] px-4 py-3 text-sm font-black text-[#8a6100]">
+            승인된 문제가 있어야 게임을 시작할 수 있어요.
+          </p>
+        )}
+        {error && (
+          <p className="status-banner w-full" data-tone="error">
+            {error}
+          </p>
+        )}
+      </div>
+    </section>
   );
 }

@@ -34,32 +34,59 @@ export default function DashboardPage() {
 
   if (!user || !room) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-zinc-500">{error ?? "불러오는 중..."}</p>
+      <div className="stage-shell">
+        <div className="stage-content flex min-h-screen items-center justify-center">
+          <div className="quiz-panel px-6 py-5 text-center">
+            <p className="text-white/70">{error ?? "교사용 무대를 준비하는 중..."}</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 p-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">{room.displayName} 선생님의 방</h1>
-          <p className="text-sm text-zinc-500">
-            문제 제출 코드: <span className="font-mono font-semibold">{room.roomCode}</span>
-          </p>
-        </div>
-        <button
-          onClick={() => signOutUser()}
-          className="rounded-full border border-black/[.08] px-4 py-2 text-sm font-medium hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
-        >
-          로그아웃
-        </button>
-      </header>
+    <div className="stage-shell">
+      <div className="stage-content flex min-h-screen flex-col gap-6 py-8">
+        <header className="quiz-panel p-6 sm:p-8">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+            <div className="space-y-3">
+              <p className="text-sm font-black uppercase tracking-[0.22em] text-white/58">
+                Teacher Console
+              </p>
+              <h1 className="display-font text-4xl text-white sm:text-5xl">
+                {room.displayName} 선생님의 퀴즈 무대
+              </h1>
+              <p className="max-w-3xl text-sm leading-6 text-white/74 sm:text-base">
+                문제를 승인하고, 바로 새 게임을 열고, 참가 코드를 학생에게 공유할 수 있는
+                진행용 콘솔이에요.
+              </p>
+            </div>
 
-      <StartGameButton teacherUid={room.teacherUid} />
-      <QuestionForm teacherUid={room.teacherUid} />
-      <QuestionList teacherUid={room.teacherUid} />
+            <div className="flex flex-col items-start gap-3 sm:items-end">
+              <div className="rounded-[26px] bg-white px-5 py-4 text-[var(--panel-text)] shadow-[0_14px_0_rgba(38,18,87,0.18)]">
+                <p className="paper-ghost text-xs font-black uppercase tracking-[0.2em]">
+                  Room Code
+                </p>
+                <p className="display-font mt-2 text-5xl sm:text-6xl">{room.roomCode}</p>
+              </div>
+              <button onClick={() => signOutUser()} className="secondary-button">
+                로그아웃
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
+          <div className="flex flex-col gap-6">
+            <StartGameButton teacherUid={room.teacherUid} />
+          </div>
+
+          <div className="flex flex-col gap-6">
+            <QuestionForm teacherUid={room.teacherUid} />
+            <QuestionList teacherUid={room.teacherUid} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

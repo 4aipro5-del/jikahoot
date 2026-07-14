@@ -21,8 +21,12 @@ export default function SubmitPage() {
 
 function SubmitPageFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
-      <p className="text-zinc-500">불러오는 중...</p>
+    <div className="stage-shell">
+      <div className="stage-content flex min-h-screen items-center justify-center">
+        <div className="quiz-panel px-6 py-5 text-center">
+          <p className="text-white/70">제출 화면 준비 중...</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -40,8 +44,6 @@ function SubmitPageContent() {
     setError(null);
     setJoining(true);
     try {
-      // roomCodes 조회에는 Firestore 규칙상 인증이 필요하므로, 방 코드를
-      // 확인하기 전에 먼저 익명 로그인을 완료해야 한다.
       const cred = await signInStudentAnonymously();
       const teacherUid = await resolveRoomCode(trimmedCode);
       if (!teacherUid) {
@@ -56,7 +58,6 @@ function SubmitPageContent() {
     }
   }
 
-  // 홈 포털에서 코드/닉네임을 들고 넘어온 경우, 다시 입력하지 않고 바로 이어서 입장한다.
   useEffect(() => {
     if (autoJoinTried.current) return;
     if (code && nickname) {
@@ -85,66 +86,124 @@ function SubmitPageContent() {
 
   if (step.kind === "submit") {
     return (
-      <div className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 p-8">
-        <header>
-          <h1 className="text-xl font-semibold">{step.nickname}님, 문제를 만들어 보세요!</h1>
-          <p className="text-sm text-zinc-500">
-            제출한 문제는 선생님이 확인한 뒤 반영돼요.
-          </p>
-        </header>
+      <div className="stage-shell">
+        <div className="stage-content flex min-h-screen flex-col justify-center gap-6 py-8">
+          <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+            <section className="quiz-panel p-6 sm:p-8">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <p className="hero-chip">Question Lab</p>
+                  <h1 className="display-font mt-4 text-4xl text-white sm:text-5xl">
+                    {step.nickname}님, 문제를 내 볼까요?
+                  </h1>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-white/76 sm:text-base">
+                    제출한 문제는 선생님이 확인한 뒤 게임에 반영돼요. 질문과 선택지를
+                    분명하게 쓰면 더 재미있는 퀴즈가 됩니다.
+                  </p>
+                </div>
 
-        <QuestionEditorForm
-          title="문제 만들기"
-          submitLabel="선생님께 제출하기"
-          successMessage="제출했어요! 선생님 확인을 기다려 주세요."
-          onSubmit={(input) =>
-            submitStudentQuestion(step.teacherUid, {
-              ...input,
-              authorUid: step.authorUid,
-              authorNickname: step.nickname,
-            })
-          }
-        />
+                <button onClick={() => setStep({ kind: "join" })} className="secondary-button">
+                  다른 방 코드로 이동
+                </button>
+              </div>
+            </section>
 
-        <button
-          onClick={() => setStep({ kind: "join" })}
-          className="self-start text-sm text-zinc-500 hover:text-black dark:hover:text-white"
-        >
-          다른 방으로 이동
-        </button>
+            <QuestionEditorForm
+              title="문제 만들기"
+              submitLabel="선생님께 제출하기"
+              successMessage="제출했어요! 선생님 확인을 기다려 주세요."
+              onSubmit={(input) =>
+                submitStudentQuestion(step.teacherUid, {
+                  ...input,
+                  authorUid: step.authorUid,
+                  authorNickname: step.nickname,
+                })
+              }
+            />
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-zinc-50 p-8 font-sans dark:bg-black">
-      <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">문제 제출하기</h1>
+    <div className="stage-shell">
+      <div className="stage-content flex min-h-screen items-center justify-center py-8">
+        <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[1fr_0.92fr]">
+          <section className="quiz-panel flex flex-col justify-between gap-6 p-6 sm:p-8">
+            <div className="space-y-4">
+              <span className="hero-chip">Student Submission</span>
+              <h1 className="display-font text-5xl leading-none text-white sm:text-6xl">
+                우리 반 퀴즈도
+                <br />
+                직접 출제.
+              </h1>
+              <p className="max-w-xl text-base leading-7 text-white/78 sm:text-lg">
+                학생이 직접 낸 문제를 선생님이 승인한 뒤 게임에 포함할 수 있어요.
+                참여감이 확 올라가는 흐름으로 구성했습니다.
+              </p>
+            </div>
 
-      <form onSubmit={handleJoin} className="flex w-full max-w-sm flex-col gap-3">
-        <input
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          placeholder="선생님이 알려준 방 코드 6자리"
-          className="rounded-md border border-black/[.08] px-3 py-2 text-center font-mono uppercase tracking-widest dark:border-white/[.145] dark:bg-black"
-          maxLength={6}
-        />
-        <input
-          value={nickname}
-          onChange={(e) => setNickname(e.target.value)}
-          placeholder="이름(닉네임)"
-          className="rounded-md border border-black/[.08] px-3 py-2 dark:border-white/[.145] dark:bg-black"
-        />
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[
+                ["학생 참여", "문제를 만드는 순간부터 수업 몰입도가 높아져요"],
+                ["선생님 승인", "제출 후 바로 공개되지 않고 확인 과정을 거쳐요"],
+                ["같은 무드", "입장부터 제출까지 한 화면 톤으로 이어집니다"],
+              ].map(([title, desc], index) => (
+                <div
+                  key={title}
+                  className={`rounded-[24px] p-4 ${
+                    index === 1 ? "bg-white/14" : "bg-white/8"
+                  }`}
+                >
+                  <p className="display-font text-2xl text-white">{title}</p>
+                  <p className="mt-2 text-sm leading-6 text-white/70">{desc}</p>
+                </div>
+              ))}
+            </div>
+          </section>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+          <section className="paper-panel p-6 sm:p-8">
+            <div className="flex flex-col gap-5">
+              <div>
+                <p className="hero-chip hero-chip-paper">Enter Room</p>
+                <h2 className="display-font mt-4 text-4xl text-[var(--panel-text)] sm:text-5xl">
+                  방 코드 입력
+                </h2>
+                <p className="paper-muted mt-2 text-sm leading-6 sm:text-base">
+                  선생님 방 코드와 이름을 입력하면 문제 제출 화면으로 들어가요.
+                </p>
+              </div>
 
-        <button
-          type="submit"
-          disabled={joining}
-          className="rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
-        >
-          {joining ? "입장 중..." : "입장하기"}
-        </button>
-      </form>
+              <form onSubmit={handleJoin} className="flex flex-col gap-4">
+                <input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="방 코드 6자리"
+                  className="text-input code-input"
+                  maxLength={6}
+                />
+                <input
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="이름(닉네임)"
+                  className="text-input"
+                />
+
+                {error && (
+                  <p className="status-banner" data-tone="error">
+                    {error}
+                  </p>
+                )}
+
+                <button type="submit" disabled={joining} className="primary-button w-full">
+                  {joining ? "입장 중..." : "문제 제출하러 가기"}
+                </button>
+              </form>
+            </div>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

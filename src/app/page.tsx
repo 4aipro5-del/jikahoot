@@ -21,8 +21,12 @@ export default function Home() {
 
 function PortalFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
-      <p className="text-zinc-500">불러오는 중...</p>
+    <div className="stage-shell">
+      <div className="stage-content flex min-h-screen items-center justify-center">
+        <div className="quiz-panel px-6 py-5 text-center">
+          <p className="text-white/70">무대를 준비하는 중...</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -40,8 +44,6 @@ function HomePortal() {
 
   useEffect(() => subscribeToAuthState(setUser), []);
 
-  // students carry an anonymous session from /submit or /play, so only a
-  // real (non-anonymous) teacher session should bounce to the dashboard
   useEffect(() => {
     if (user && !user.isAnonymous) router.replace("/dashboard");
   }, [user, router]);
@@ -72,7 +74,6 @@ function HomePortal() {
 
     setJoining(true);
     try {
-      // roomCodes/games 조회 모두 인증이 필요하므로 먼저 익명 로그인부터 한다.
       await signInStudentAnonymously();
 
       const [teacherUid, hasGame] = await Promise.all([
@@ -101,60 +102,139 @@ function HomePortal() {
 
   if (user && !user.isAnonymous) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-zinc-500">대시보드로 이동 중...</p>
+      <div className="stage-shell">
+        <div className="stage-content flex min-h-screen items-center justify-center">
+          <div className="quiz-panel px-6 py-5 text-center">
+            <p className="text-white/70">교사용 대시보드로 이동 중...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-10 bg-zinc-50 p-8 font-sans dark:bg-black">
-      <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
-        초등 카훗 퀴즈 빌더
-      </h1>
+    <div className="stage-shell">
+      <div className="stage-content flex min-h-screen flex-col justify-center py-8 sm:py-12">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+          <div className="flex justify-center lg:justify-start">
+            <span className="hero-chip">Classroom Quiz Show</span>
+          </div>
 
-      <div className="flex w-full max-w-sm flex-col gap-3 rounded-lg border border-black/[.08] p-6 dark:border-white/[.145]">
-        <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">학생 입장하기</h2>
-        <p className="text-xs text-zinc-500">
-          선생님이 알려준 코드를 입력하면 문제 제출과 게임 참여 중 알맞은 곳으로 자동으로
-          연결돼요.
-        </p>
+          <div className="grid gap-6 lg:grid-cols-[1.12fr_0.88fr]">
+            <section className="quiz-panel flex flex-col gap-8 p-6 sm:p-8 lg:p-10">
+              <div className="space-y-4">
+                <p className="text-sm font-extrabold uppercase tracking-[0.32em] text-white/65">
+                  Like Kahoot
+                </p>
+                <h1 className="display-font text-5xl leading-[0.95] text-white sm:text-6xl lg:text-7xl">
+                  교실을 바로
+                  <br />
+                  퀴즈 쇼로.
+                </h1>
+                <p className="max-w-2xl text-base leading-7 text-white/80 sm:text-lg">
+                  학생은 코드만 입력하면 바로 참여하고, 선생님은 문제 은행으로 게임을
+                  시작할 수 있어요. 첫 화면부터 에너지 있는 무대감이 느껴지도록
+                  리디자인했어요.
+                </p>
+              </div>
 
-        <form onSubmit={handleStudentJoin} className="flex flex-col gap-3">
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="방/게임 코드 6자리"
-            className="rounded-md border border-black/[.08] px-3 py-2 text-center font-mono uppercase tracking-widest dark:border-white/[.145] dark:bg-black"
-            maxLength={6}
-          />
-          <input
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            placeholder="이름(닉네임)"
-            className="rounded-md border border-black/[.08] px-3 py-2 dark:border-white/[.145] dark:bg-black"
-          />
+              <div className="grid gap-4 sm:grid-cols-3">
+                {[
+                  ["빠른 입장", "코드와 닉네임만 입력하면 자동으로 맞는 화면으로 이동"],
+                  ["원색 답안", "문제 화면은 Kahoot 스타일의 4색 타일로 즉시 반응"],
+                  ["교사용 진행", "참가 코드, 응답 수, 다음 문제를 크게 보여주는 콘솔"],
+                ].map(([title, desc], index) => (
+                  <div
+                    key={title}
+                    className={`rounded-[26px] border border-white/12 p-4 text-white/90 ${
+                      index === 1 ? "floaty bg-white/12" : "bg-white/8"
+                    }`}
+                  >
+                    <p className="display-font text-2xl">{title}</p>
+                    <p className="mt-2 text-sm leading-6 text-white/72">{desc}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
 
-          {studentError && <p className="text-sm text-red-600">{studentError}</p>}
+            <section className="paper-panel p-6 sm:p-8">
+              <div className="flex flex-col gap-5">
+                <div>
+                  <p className="hero-chip hero-chip-paper">Student Entry</p>
+                  <h2 className="display-font mt-4 text-4xl text-[var(--panel-text)] sm:text-5xl">
+                    게임 코드 입력
+                  </h2>
+                  <p className="paper-muted mt-2 text-sm leading-6 sm:text-base">
+                    선생님이 알려준 코드를 넣으면 문제 제출 또는 플레이 화면으로 자동
+                    연결돼요.
+                  </p>
+                </div>
 
-          <button
-            type="submit"
-            disabled={joining}
-            className="rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
-          >
-            {joining ? "확인 중..." : "입장하기"}
-          </button>
-        </form>
-      </div>
+                <form onSubmit={handleStudentJoin} className="flex flex-col gap-4">
+                  <input
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder="방/게임 코드 6자리"
+                    className="text-input code-input"
+                    maxLength={6}
+                  />
+                  <input
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    placeholder="이름(닉네임)"
+                    className="text-input"
+                  />
 
-      <div className="flex flex-col items-center gap-2">
-        <button
-          onClick={handleTeacherSignIn}
-          className="rounded-full border border-black/[.08] px-4 py-2 text-sm font-medium hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
-        >
-          Google로 로그인 (교사)
-        </button>
-        {teacherError && <p className="text-sm text-red-600">{teacherError}</p>}
+                  {studentError && (
+                    <p className="status-banner" data-tone="error">
+                      {studentError}
+                    </p>
+                  )}
+
+                  <button type="submit" disabled={joining} className="primary-button w-full">
+                    {joining ? "코드 확인 중..." : "바로 입장하기"}
+                  </button>
+                </form>
+              </div>
+            </section>
+          </div>
+
+          <section className="grid gap-4 lg:grid-cols-[1fr_auto]">
+            <div className="quiz-panel flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.22em] text-white/58">
+                  Teacher Zone
+                </p>
+                <h3 className="display-font mt-2 text-3xl text-white">교사용 무대로 입장</h3>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
+                  Google 로그인 후 방 코드, 승인된 문제, 현재 게임 진행 상황을 한눈에
+                  관리할 수 있어요.
+                </p>
+              </div>
+
+              <div className="flex min-w-[230px] flex-col items-start gap-3">
+                <button onClick={handleTeacherSignIn} className="secondary-button w-full">
+                  Google로 로그인
+                </button>
+                {teacherError && (
+                  <p className="status-banner w-full" data-tone="error">
+                    {teacherError}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="paper-panel flex items-center gap-4 p-5 text-sm font-bold">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[var(--kahoot-yellow)] text-xl text-[#432700]">
+                !
+              </span>
+              <p className="paper-muted leading-6">
+                학생은 한 번 코드와 이름을 넣으면, 방 상태에 따라 제출 화면 또는 게임
+                화면으로 자연스럽게 이어집니다.
+              </p>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );
