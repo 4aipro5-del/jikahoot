@@ -9,6 +9,7 @@ import {
   advanceQuestion,
   finalizeQuestion,
   finishGame,
+  removePlayerFromGame,
   subscribeToGame,
   subscribeToPlayers,
   type PlayerWithId,
@@ -33,6 +34,7 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   const [players, setPlayers] = useState<PlayerWithId[]>([]);
   const [correctChoiceMap, setCorrectChoiceMap] = useState<Record<string, string>>({});
   const [advancing, setAdvancing] = useState(false);
+  const [removingPlayerId, setRemovingPlayerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => subscribeToAuthState(setUser), []);
@@ -90,6 +92,18 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     }
   }
 
+  async function handleRemovePlayer(player: PlayerWithId) {
+    setError(null);
+    setRemovingPlayerId(player.id);
+    try {
+      await removePlayerFromGame(gameCode, player.id, player.nickname);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "참가자를 내보내지 못했습니다.");
+    } finally {
+      setRemovingPlayerId(null);
+    }
+  }
+
   if (!user || game === undefined) {
     return (
       <div className="stage-shell">
@@ -134,7 +148,14 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
         </Link>
 
         {game.status === "lobby" && (
-          <LobbyView gameCode={gameCode} players={players} onStart={handleAdvance} starting={advancing} />
+          <LobbyView
+            gameCode={gameCode}
+            players={players}
+            onStart={handleAdvance}
+            onRemovePlayer={handleRemovePlayer}
+            removingPlayerId={removingPlayerId}
+            starting={advancing}
+          />
         )}
 
         {game.status === "active" && (
@@ -174,43 +195,59 @@ function LobbyView({
   gameCode,
   players,
   onStart,
+  onRemovePlayer,
+  removingPlayerId,
   starting,
 }: {
   gameCode: string;
   players: PlayerWithId[];
   onStart: () => void;
+  onRemovePlayer: (player: PlayerWithId) => void;
+  removingPlayerId: string | null;
   starting: boolean;
 }) {
   return (
-    <section className="grid gap-6 xl:grid-cols-[0.88fr_1.12fr]">
-      <div className="paper-panel flex flex-col gap-5 p-6 sm:p-8">
-        <div>
-          <p className="hero-chip hero-chip-paper">Host Stage</p>
-          <h1 className="display-font balance-wrap mt-4 text-4xl text-[var(--panel-text)] sm:text-5xl">
-            무대 준비 완료
-          </h1>
-          <p className="paper-muted pretty-wrap mt-2 flex w-fit max-w-full flex-col gap-2 text-sm leading-[1.45] sm:text-base">
-            <span className="block whitespace-nowrap">참가 코드를 공유하고 학생들이 들어오는 동안 명단을 확인하세요.</span>
-            <span className="block whitespace-nowrap">준비가 되면 바로 시작할 수 있습니다.</span>
-          </p>
-        </div>
+    <section className="flex flex-col gap-6">
+      <div className="paper-panel p-6 sm:p-8">
+        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr] xl:items-center">
+          <div>
+            <p className="hero-chip hero-chip-paper">Host Stage</p>
+            <h1 className="display-font balance-wrap mt-4 text-4xl text-[var(--panel-text)] sm:text-5xl">
+              퀴즈 준비 완료
+            </h1>
+            <p className="paper-muted pretty-wrap mt-2 flex w-fit max-w-full flex-col gap-2 text-sm leading-[1.45] sm:text-base">
+              <span className="block whitespace-nowrap">참가 코드를 공유하고 학생들이 들어오는 동안 명단을 확인하세요.</span>
+              <span className="block whitespace-nowrap">준비가 되면 바로 시작할 수 있습니다.</span>
+            </p>
+          </div>
 
-        <div className="paper-purple-bg rounded-[28px] px-5 py-5">
-          <p className="paper-ghost text-xs font-black uppercase tracking-[0.2em]">
-            Join Code
-          </p>
-          <p className="display-font balance-wrap mt-2 text-6xl text-[var(--panel-text)] sm:text-7xl">
-            {gameCode}
-          </p>
-        </div>
+          <div className="flex flex-col gap-4 xl:items-end">
+            <div className="paper-purple-bg w-full rounded-[28px] px-5 py-5 xl:max-w-[32rem]">
+              <p className="paper-ghost text-xs font-black uppercase tracking-[0.2em]">
+                Join Code
+              </p>
+              <p className="display-font balance-wrap mt-2 text-6xl text-[var(--panel-text)] sm:text-7xl">
+                {gameCode}
+              </p>
+            </div>
 
-        <button onClick={onStart} disabled={players.length === 0 || starting} className="primary-button">
-          {starting ? "시작하는 중..." : "게임 시작"}
-        </button>
+            <button
+              onClick={onStart}
+              disabled={players.length === 0 || starting}
+              className="primary-button primary-button-stage w-full xl:max-w-[32rem]"
+            >
+              {starting ? "시작하는 중..." : "게임 시작"}
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="quiz-panel p-6 sm:p-8">
-        <PlayerRoster players={players} />
+      <div className="quiz-panel min-h-[26rem] p-6 sm:p-8">
+        <PlayerRoster
+          players={players}
+          onRemovePlayer={onRemovePlayer}
+          removingPlayerId={removingPlayerId}
+        />
       </div>
     </section>
   );

@@ -323,6 +323,22 @@ button:disabled {
   box-shadow: 0 10px 0 rgba(112, 74, 0, 0.35);
 }
 
+.primary-button-hero {
+  min-height: clamp(6rem, 8vw, 7.6rem);
+  padding: 1rem 1.8rem;
+  font-family: "KblJumpExtended", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-size: clamp(3.6rem, 5vw, 5.2rem);
+  line-height: 1;
+}
+
+.primary-button-stage {
+  min-height: clamp(4.8rem, 5.8vw, 5.6rem);
+  padding: 0.9rem 1.5rem;
+  font-family: "KblJumpExtended", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-size: clamp(1.8rem, 2.4vw, 2.5rem);
+  line-height: 1;
+}
+
 .primary-button:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 12px 0 rgba(112, 74, 0, 0.35);
@@ -382,8 +398,11 @@ button:disabled {
 }
 
 .status-banner[data-tone="error"] {
-  background: rgba(226, 27, 60, 0.18);
-  color: #ffd0d8;
+  border: 1px solid rgba(226, 27, 60, 0.32);
+  background: #ffe3e9;
+  color: #6f1025 !important;
+  opacity: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .status-banner[data-tone="success"] {

@@ -71,7 +71,7 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
           <li key={question.id} className="paper-panel p-5 sm:p-6">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
+                <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="hero-chip-paper rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.18em]">
                       {question.status}
@@ -89,6 +89,12 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
                     </p>
                   )}
                 </div>
+                <button
+                  onClick={() => deleteQuestion(teacherUid, question.id)}
+                  className="self-start rounded-full border border-[rgba(38,18,87,0.1)] bg-white/55 px-4 py-2 text-sm font-black text-[rgba(38,18,87,0.62)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38)] hover:bg-[rgba(38,18,87,0.08)] hover:text-[var(--panel-text)] sm:shrink-0"
+                >
+                  삭제
+                </button>
               </div>
 
               <ul className="grid gap-2 sm:grid-cols-2">
@@ -111,30 +117,22 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
                 })}
               </ul>
 
-              <div className="flex flex-wrap gap-3">
-                {question.status === "pending" && (
-                  <>
-                    <button
-                      onClick={() => approveQuestion(teacherUid, question.id)}
-                      className="rounded-full bg-[var(--kahoot-green)] px-4 py-2 text-sm font-black text-white"
-                    >
-                      승인
-                    </button>
-                    <button
-                      onClick={() => rejectQuestion(teacherUid, question.id)}
-                      className="rounded-full bg-[var(--kahoot-red)] px-4 py-2 text-sm font-black text-white"
-                    >
-                      반려
-                    </button>
-                  </>
-                )}
-                <button
-                  onClick={() => deleteQuestion(teacherUid, question.id)}
-                  className="rounded-full bg-[rgba(226,27,60,0.12)] px-4 py-2 text-sm font-black text-[var(--kahoot-red)]"
-                >
-                  삭제
-                </button>
-              </div>
+              {question.status === "pending" && (
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => approveQuestion(teacherUid, question.id)}
+                    className="rounded-full bg-[var(--kahoot-green)] px-4 py-2 text-sm font-black text-white"
+                  >
+                    승인
+                  </button>
+                  <button
+                    onClick={() => rejectQuestion(teacherUid, question.id)}
+                    className="rounded-full bg-[var(--kahoot-red)] px-4 py-2 text-sm font-black text-white"
+                  >
+                    반려
+                  </button>
+                </div>
+              )}
             </div>
           </li>
         ))}

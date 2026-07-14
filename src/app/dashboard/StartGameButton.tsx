@@ -37,7 +37,7 @@ export default function StartGameButton({ teacherUid }: { teacherUid: string }) 
     <section className="paper-panel flex flex-col gap-5 p-6 sm:p-8">
       <div className="flex flex-col items-center gap-3 text-center">
         <p className="hero-chip hero-chip-paper w-full">Launch Game</p>
-        <h2 className="display-font text-[2rem] leading-none text-[var(--panel-text)] sm:text-[2.4rem]">
+        <h2 className="display-font text-[2.15rem] leading-none text-[var(--panel-text)] sm:text-[2.55rem]">
           퀴즈 시작
         </h2>
         <p className="paper-muted w-full text-left text-sm leading-6 sm:text-base">
@@ -69,7 +69,7 @@ export default function StartGameButton({ teacherUid }: { teacherUid: string }) 
         <button
           onClick={handleStart}
           disabled={approved.length === 0 || starting}
-          className="primary-button"
+          className="primary-button text-[1.05rem] sm:text-[1.12rem]"
         >
           {starting ? "게임 준비 중..." : "새 게임 시작"}
         </button>

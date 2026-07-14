@@ -82,7 +82,10 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['playerUid'])
           && request.resource.data.playerUid == request.auth.uid
           && !exists(/databases/$(database)/documents/games/$(gameCode)/nicknames/$(slug));
-        allow update, delete: if false;
+        allow update: if false;
+        allow delete: if isSignedIn()
+          && request.auth.uid == gameOwner(gameCode)
+          && gameStatus(gameCode) == 'lobby';
       }
 
       match /players/{playerUid} {
@@ -100,7 +103,9 @@ service cloud.firestore {
 
         // only the host grades / updates score + streak
         allow update: if isSignedIn() && request.auth.uid == gameOwner(gameCode);
-        allow delete: if false;
+        allow delete: if isSignedIn()
+          && request.auth.uid == gameOwner(gameCode)
+          && gameStatus(gameCode) == 'lobby';
 
         match /answers/{questionIndex} {
           // a player submits their own answer exactly once, ungraded

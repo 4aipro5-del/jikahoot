@@ -4,6 +4,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import {
   subscribeToAnswer,
   subscribeToGame,
+  subscribeToPlayer,
   subscribeToPlayers,
   submitAnswer,
   type PlayerWithId,
@@ -23,17 +24,32 @@ export default function PlayingGame({
   gameCode,
   authorUid,
   nickname,
+  onForcedOut,
 }: {
   gameCode: string;
   authorUid: string;
   nickname: string;
+  onForcedOut: () => void;
 }) {
   const [game, setGame] = useState<Game | null | undefined>(undefined);
   const [players, setPlayers] = useState<PlayerWithId[]>([]);
+  const [wasRegistered, setWasRegistered] = useState(false);
 
   useEffect(() => subscribeToGame(gameCode, setGame), [gameCode]);
 
   useEffect(() => subscribeToPlayers(gameCode, setPlayers), [gameCode, game?.status]);
+
+  useEffect(() => {
+    return subscribeToPlayer(gameCode, authorUid, (player) => {
+      if (player) {
+        setWasRegistered(true);
+        return;
+      }
+      if (wasRegistered) {
+        onForcedOut();
+      }
+    });
+  }, [authorUid, gameCode, onForcedOut, wasRegistered]);
 
   if (!game) {
     return (

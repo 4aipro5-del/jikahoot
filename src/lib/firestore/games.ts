@@ -96,6 +96,16 @@ export function subscribeToPlayers(
   })
 }
 
+export function subscribeToPlayer(
+  gameCode: string,
+  playerUid: string,
+  callback: (player: Player | null) => void,
+) {
+  return onSnapshot(doc(db, 'games', gameCode, 'players', playerUid), (snap) => {
+    callback(snap.exists() ? (snap.data() as Player) : null)
+  })
+}
+
 export async function joinGame(
   gameCode: string,
   nickname: string,
@@ -135,6 +145,18 @@ export async function joinGame(
   })
 
   return { authorUid: playerUid, nickname }
+}
+
+export async function removePlayerFromGame(
+  gameCode: string,
+  playerUid: string,
+  nickname: string,
+) {
+  const slug = slugifyNickname(nickname)
+  await runTransaction(db, async (tx) => {
+    tx.delete(doc(db, 'games', gameCode, 'players', playerUid))
+    tx.delete(doc(db, 'games', gameCode, 'nicknames', slug))
+  })
 }
 
 export function advanceQuestion(gameCode: string, nextIndex: number) {
