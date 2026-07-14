@@ -25,7 +25,14 @@ export default function PlayingGame({
   const [players, setPlayers] = useState<PlayerWithId[]>([]);
 
   useEffect(() => subscribeToGame(gameCode, setGame), [gameCode]);
-  useEffect(() => subscribeToPlayers(gameCode, setPlayers), [gameCode]);
+
+  // the players read rule for a non-owner depends on the game's status
+  // (own doc always visible; others only in lobby/finished), which is
+  // checked via a cross-document get() the client's listener won't
+  // reliably re-evaluate on its own. Re-subscribing fresh on every status
+  // change forces a new query that's guaranteed to reflect the current
+  // rule outcome, instead of risking a stale view of the other players.
+  useEffect(() => subscribeToPlayers(gameCode, setPlayers), [gameCode, game?.status]);
 
   if (!game) {
     return (

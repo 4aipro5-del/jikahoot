@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -68,6 +69,13 @@ export async function createGame(
   }
 
   throw new Error('게임 코드를 생성하지 못했습니다. 다시 시도해 주세요.')
+}
+
+// used by the home portal to tell a game code apart from a room code before
+// routing a student into /play vs /submit
+export async function gameExists(gameCode: string): Promise<boolean> {
+  const snap = await getDoc(doc(db, 'games', gameCode))
+  return snap.exists()
 }
 
 export function subscribeToGame(gameCode: string, callback: (game: Game | null) => void) {
@@ -178,6 +186,42 @@ export function subscribeToAnswer(
   return onSnapshot(answerRef(gameCode, playerUid, questionIndex), (snap) => {
     callback(snap.exists() ? (snap.data() as Answer) : null)
   })
+}
+
+// called right before the host advances past a question (or ends the game).
+// The live subscribeToAnswer-based grading in useGrading can miss an answer
+// that's written right as the host advances — its listener is torn down the
+// moment currentQuestionIndex/status changes, so a late write can arrive
+// with nobody left listening. This re-reads every player's answer straight
+// from the server and grades anything still ungraded, so a slow submit near
+// the deadline can't leave a player's final score permanently short.
+export async function finalizeQuestion(
+  gameCode: string,
+  playerIds: string[],
+  questionIndex: number,
+  correctChoiceId: string,
+) {
+  await Promise.all(
+    playerIds.map(async (playerUid) => {
+      try {
+        const snap = await getDoc(answerRef(gameCode, playerUid, questionIndex))
+        if (!snap.exists()) {
+          await resetStreak(gameCode, playerUid)
+          return
+        }
+        const answer = snap.data() as Answer
+        if (answer.isCorrect === null) {
+          await gradeAnswer(gameCode, playerUid, questionIndex, answer.choiceId === correctChoiceId)
+        }
+      } catch (err) {
+        // the live per-answer listener in useGrading may have graded this
+        // exact answer between our read and write (rules reject a second
+        // write once isCorrect is no longer null) — the score is already
+        // correct either way, so this race is safe to ignore.
+        console.error('finalizeQuestion: 답안 정리 실패', playerUid, err)
+      }
+    }),
+  )
 }
 
 // grades a single answer and folds the result into the player's running

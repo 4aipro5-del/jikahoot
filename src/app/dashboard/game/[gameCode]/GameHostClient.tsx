@@ -7,8 +7,8 @@ import type { User } from "firebase/auth";
 import { subscribeToAuthState } from "@/lib/firebase/auth";
 import {
   advanceQuestion,
+  finalizeQuestion,
   finishGame,
-  resetStreak,
   subscribeToGame,
   subscribeToPlayers,
   type PlayerWithId,
@@ -58,8 +58,16 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     setAdvancing(true);
     try {
       if (game.status === "active") {
-        const nonResponders = players.filter((p) => !answers[p.id]);
-        await Promise.all(nonResponders.map((p) => resetStreak(gameCode, p.id)));
+        const question = game.questions[game.currentQuestionIndex];
+        const correctChoiceId = correctChoiceMap[question.id];
+        if (correctChoiceId) {
+          await finalizeQuestion(
+            gameCode,
+            players.map((p) => p.id),
+            game.currentQuestionIndex,
+            correctChoiceId,
+          );
+        }
       }
 
       const nextIndex = game.currentQuestionIndex + 1;
@@ -152,10 +160,7 @@ function LobbyView({
         <p className="font-mono text-6xl font-bold tracking-widest">{gameCode}</p>
       </div>
 
-      <p className="text-zinc-600 dark:text-zinc-400">
-        학생들이 <span className="font-mono font-semibold">/play</span>에서 이 코드로 입장하면
-        여기에 실시간으로 나타나요.
-      </p>
+      <p className="text-zinc-600 dark:text-zinc-400">친구들이 들어오기를 기다리고 있어요...</p>
 
       <PlayerRoster players={players} />
 
