@@ -34,12 +34,14 @@ export default function SubmitPage() {
 
     setJoining(true);
     try {
+      // roomCodes 조회에는 Firestore 규칙상 인증이 필요하므로, 방 코드를
+      // 확인하기 전에 먼저 익명 로그인을 완료해야 한다.
+      const cred = await signInStudentAnonymously();
       const teacherUid = await resolveRoomCode(trimmedCode);
       if (!teacherUid) {
         setError("방 코드를 찾을 수 없어요. 선생님께 다시 확인해 주세요.");
         return;
       }
-      const cred = await signInStudentAnonymously();
       setStep({ kind: "submit", teacherUid, authorUid: cred.user.uid, nickname: trimmedNickname });
     } catch (err) {
       setError(err instanceof Error ? err.message : "입장하지 못했습니다.");
