@@ -4,6 +4,7 @@ import {
   signInAnonymously,
   signInWithPopup,
   signOut,
+  updateProfile,
   type User,
 } from 'firebase/auth'
 import { auth } from '@/lib/firebase/client'
@@ -22,6 +23,10 @@ export function signInStudentAnonymously() {
 
 export function signOutUser() {
   return signOut(auth)
+}
+
+export function updateTeacherDisplayName(user: User, displayName: string) {
+  return updateProfile(user, { displayName })
 }
 
 export function subscribeToAuthState(callback: (user: User | null) => void) {

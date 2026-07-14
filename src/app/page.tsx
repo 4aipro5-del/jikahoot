@@ -137,18 +137,30 @@ function HomePortal() {
 
               <div className="grid gap-4 sm:grid-cols-3">
                 {[
-                  ["빠른 입장", "코드와 닉네임만 입력하면 자동으로 맞는 화면으로 이동"],
-                  ["학생 퀴즈", "학생도 문제를 만들고 바로 풀 수 있어요."],
-                  ["교사용 진행", "참가 코드, 응답 수, 다음 문제를 한눈에 보는 진행 화면"],
-                ].map(([title, desc], index) => (
+                  [
+                    "빠른 입장",
+                    "코드와 닉네임만 입력하면 자동으로 맞는 화면으로 이동",
+                    "bg-[linear-gradient(180deg,rgba(19,104,206,0.24),rgba(19,104,206,0.12))] border-[#4fa2ff]/40",
+                  ],
+                  [
+                    "학생 퀴즈",
+                    "학생도 문제를 만들고 바로 풀 수 있어요.",
+                    "bg-[linear-gradient(180deg,rgba(226,27,60,0.24),rgba(226,27,60,0.12))] border-[#ff6e8a]/40",
+                  ],
+                  [
+                    "교사용 진행",
+                    "참가 코드, 응답 수, 다음 문제를 한눈에 보는 진행 화면",
+                    "bg-[linear-gradient(180deg,rgba(255,201,72,0.2),rgba(255,201,72,0.1))] border-[#ffd86a]/45",
+                  ],
+                ].map(([title, desc, toneClass], index) => (
                   <div
                     key={title}
-                    className={`rounded-[26px] border border-white/12 p-4 text-white/90 ${
-                      index === 1 ? "floaty bg-white/12" : "bg-white/8"
+                    className={`rounded-[26px] border p-4 text-white/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ${
+                      index === 1 ? `floaty ${toneClass}` : toneClass
                     }`}
                   >
                     <p className="display-font text-2xl">{title}</p>
-                    <p className="mt-2 text-sm leading-6 text-white/72">{desc}</p>
+                    <p className="mt-2 text-sm leading-6 text-white/82">{desc}</p>
                   </div>
                 ))}
               </div>

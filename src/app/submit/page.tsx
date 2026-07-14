@@ -96,9 +96,9 @@ function SubmitPageContent() {
                   <h1 className="display-font mt-4 text-4xl text-white sm:text-5xl">
                     {step.nickname}님, 문제를 내 볼까요?
                   </h1>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-white/76 sm:text-base">
-                    제출한 문제는 선생님이 확인한 뒤 게임에 반영돼요. 질문과 선택지를
-                    분명하게 쓰면 더 재미있는 퀴즈가 됩니다.
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-white/76 sm:text-base lg:max-w-4xl">
+                    제출한 문제는 선생님 확인 후 게임에 반영돼요. 질문과 선택지를 분명하게
+                    쓰면 더 재미있는 퀴즈가 돼요.
                   </p>
                 </div>
 

@@ -28,20 +28,24 @@
 @import "tailwindcss";
 
 :root {
-  --background: #12082f;
+  --background: #09142f;
   --foreground: #fff8f0;
-  --panel-text: #261257;
-  --muted: #ddd5ff;
-  --surface: rgba(25, 12, 63, 0.76);
-  --surface-strong: rgba(255, 255, 255, 0.14);
+  --panel-text: #22164f;
+  --muted: #d8e2ff;
+  --surface: rgba(12, 26, 72, 0.84);
+  --surface-strong: rgba(255, 255, 255, 0.16);
   --panel: rgba(255, 255, 255, 0.95);
   --kahoot-red: #e21b3c;
   --kahoot-blue: #1368ce;
   --kahoot-yellow: #d89e00;
   --kahoot-green: #26890c;
   --kahoot-purple: #46178f;
-  --shadow-soft: 0 28px 60px rgba(8, 5, 23, 0.35);
-  --shadow-panel: 0 18px 0 rgba(42, 18, 89, 0.2), 0 28px 60px rgba(20, 11, 48, 0.18);
+  --shadow-soft:
+    0 28px 60px rgba(8, 15, 42, 0.34),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-panel:
+    0 18px 0 rgba(32, 25, 87, 0.18),
+    0 26px 56px rgba(15, 18, 52, 0.16);
   --radius-xl: 30px;
   --radius-lg: 22px;
 }
@@ -66,10 +70,11 @@ body {
   color: var(--foreground);
   font-family: "KblJump", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   background:
-    radial-gradient(circle at 15% 15%, rgba(120, 73, 255, 0.45), transparent 28%),
-    radial-gradient(circle at 85% 12%, rgba(19, 104, 206, 0.3), transparent 24%),
-    radial-gradient(circle at 50% 82%, rgba(226, 27, 60, 0.16), transparent 28%),
-    linear-gradient(145deg, #12082f 0%, #35136e 50%, #150833 100%);
+    radial-gradient(circle at 14% 14%, rgba(226, 27, 60, 0.28), transparent 24%),
+    radial-gradient(circle at 88% 14%, rgba(19, 104, 206, 0.34), transparent 22%),
+    radial-gradient(circle at 18% 84%, rgba(255, 201, 72, 0.18), transparent 22%),
+    radial-gradient(circle at 78% 76%, rgba(38, 137, 12, 0.18), transparent 24%),
+    linear-gradient(145deg, #09142f 0%, #102560 48%, #28145c 100%);
 }
 
 body::before {
@@ -156,7 +161,7 @@ button:disabled {
   width: 18rem;
   height: 18rem;
   border-radius: 999px;
-  background: rgba(38, 137, 12, 0.18);
+  background: rgba(226, 27, 60, 0.14);
   filter: blur(44px);
   pointer-events: none;
 }
@@ -169,7 +174,7 @@ button:disabled {
   width: 20rem;
   height: 20rem;
   border-radius: 999px;
-  background: rgba(19, 104, 206, 0.18);
+  background: rgba(255, 201, 72, 0.14);
   filter: blur(50px);
   pointer-events: none;
 }
@@ -193,7 +198,9 @@ button:disabled {
 .quiz-panel {
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-xl);
-  background: var(--surface);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 24%),
+    linear-gradient(135deg, rgba(8, 20, 58, 0.96), rgba(37, 21, 90, 0.86));
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(18px);
 }
@@ -201,7 +208,9 @@ button:disabled {
 .paper-panel {
   border: 1px solid rgba(255, 255, 255, 0.65);
   border-radius: var(--radius-xl);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 240, 255, 0.93));
+  background:
+    radial-gradient(circle at top right, rgba(255, 210, 92, 0.18), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 244, 255, 0.94));
   color: var(--panel-text);
   box-shadow: var(--shadow-panel);
 }
@@ -211,8 +220,9 @@ button:disabled {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.13);
   color: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.08);
   padding: 0.55rem 0.9rem;
   font-size: 0.75rem;
   font-weight: 800;
@@ -221,7 +231,7 @@ button:disabled {
 }
 
 .hero-chip-paper {
-  background: rgba(70, 23, 143, 0.12);
+  background: linear-gradient(180deg, rgba(255, 210, 92, 0.2), rgba(70, 23, 143, 0.08));
   color: var(--kahoot-purple);
 }
 
@@ -242,11 +252,11 @@ button:disabled {
 }
 
 .paper-purple-bg {
-  background: rgba(70, 23, 143, 0.08);
+  background: rgba(19, 104, 206, 0.1);
 }
 
 .paper-yellow-bg {
-  background: rgba(216, 158, 0, 0.12);
+  background: rgba(255, 201, 72, 0.16);
 }
 
 .text-input {
@@ -330,7 +340,7 @@ button:disabled {
   justify-content: center;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(37, 74, 161, 0.36), rgba(22, 31, 76, 0.38));
   color: white;
   padding: 0.8rem 1.25rem;
   font-size: 0.95rem;
@@ -340,7 +350,7 @@ button:disabled {
 
 .secondary-button:hover:not(:disabled) {
   transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.16);
+  background: linear-gradient(180deg, rgba(42, 90, 195, 0.44), rgba(29, 43, 97, 0.44));
 }
 
 .tab-button {
@@ -360,7 +370,7 @@ button:disabled {
 }
 
 .tab-button[data-active="false"] {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.82);
 }
 

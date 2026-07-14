@@ -1,4 +1,4 @@
-import { doc, getDoc, runTransaction, serverTimestamp, type Timestamp } from 'firebase/firestore'
+import { doc, getDoc, runTransaction, serverTimestamp, setDoc, type Timestamp } from 'firebase/firestore'
 import type { User } from 'firebase/auth'
 import { db } from '@/lib/firebase/client'
 import type { Room } from '@/types/firestore'
@@ -56,4 +56,41 @@ export async function ensureRoom(user: User): Promise<Room> {
   }
 
   throw new Error('방 코드를 생성하지 못했습니다. 다시 시도해 주세요.')
+}
+
+export async function getRoomByTeacherUid(teacherUid: string): Promise<Room | null> {
+  const roomSnap = await getDoc(doc(db, 'rooms', teacherUid))
+  return roomSnap.exists() ? (roomSnap.data() as Room) : null
+}
+
+export async function syncRoomProfile(user: User): Promise<Room> {
+  const existing = await getRoomByTeacherUid(user.uid)
+  if (!existing) {
+    return ensureRoom(user)
+  }
+
+  const nextProfile = {
+    displayName: user.displayName ?? '',
+    email: user.email ?? '',
+    photoUrl: user.photoURL ?? null,
+  }
+
+  if (
+    existing.displayName === nextProfile.displayName &&
+    existing.email === nextProfile.email &&
+    existing.photoUrl === nextProfile.photoUrl
+  ) {
+    return existing
+  }
+
+  await setDoc(
+    doc(db, 'rooms', user.uid),
+    nextProfile,
+    { merge: true },
+  )
+
+  return {
+    ...existing,
+    ...nextProfile,
+  }
 }
