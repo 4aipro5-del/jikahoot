@@ -6,6 +6,7 @@ import type { Choice } from "@/types/firestore";
 
 const MIN_CHOICES = 2;
 const MAX_CHOICES = 4;
+const DEFAULT_CHOICES = Array.from({ length: MAX_CHOICES }, () => "");
 const CHOICE_THEMES = [
   {
     badge: "bg-[var(--kahoot-red)] text-white",
@@ -37,7 +38,7 @@ export default function QuestionEditorForm({
   onSubmit: (input: { text: string; choices: Choice[]; correctChoiceId: string }) => Promise<unknown>;
 }) {
   const [text, setText] = useState("");
-  const [choiceTexts, setChoiceTexts] = useState(["", ""]);
+  const [choiceTexts, setChoiceTexts] = useState(DEFAULT_CHOICES);
   const [correctIndex, setCorrectIndex] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +72,7 @@ export default function QuestionEditorForm({
 
   function resetForm() {
     setText("");
-    setChoiceTexts(["", ""]);
+    setChoiceTexts(DEFAULT_CHOICES);
     setCorrectIndex(null);
   }
 
@@ -146,7 +147,7 @@ export default function QuestionEditorForm({
               Choices
             </span>
             <p className="paper-muted mt-1 text-sm font-semibold">
-              정답 버튼을 눌러 정답 선택지를 지정하세요.
+              O는 정답, X는 일반 선택지예요.
             </p>
           </div>
 
@@ -171,49 +172,62 @@ export default function QuestionEditorForm({
                 key={index}
                 className={`rounded-[24px] border border-[rgba(38,18,87,0.1)] p-4 ${theme.panel}`}
               >
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
                     <span
                       className={`inline-flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-sm font-black ${theme.badge}`}
                     >
                       {index + 1}
                     </span>
-                    <p className="paper-muted text-sm font-black">
-                      선택지 {index + 1}
-                    </p>
+                    <input
+                      value={choice}
+                      onChange={(e) => updateChoice(index, e.target.value)}
+                      placeholder={`선택지 ${index + 1}`}
+                      className="text-input h-14 flex-1"
+                    />
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-end gap-2 sm:shrink-0">
                     <button
                       type="button"
                       onClick={() => setCorrectIndex(index)}
-                      className={`rounded-full px-4 py-2 text-sm font-black ${
+                      aria-label={`선택지 ${index + 1} ${isCorrect ? "정답 선택됨" : "정답으로 선택"}`}
+                      className={`inline-flex h-11 w-11 items-center justify-center rounded-full text-lg font-black ${
                         isCorrect
                           ? "bg-[var(--kahoot-green)] text-white"
                           : "bg-white text-[var(--kahoot-purple)]"
                       }`}
                     >
-                      {isCorrect ? "정답" : "정답으로 지정"}
+                      {isCorrect ? "O" : "X"}
                     </button>
 
                     {choiceTexts.length > MIN_CHOICES && (
                       <button
                         type="button"
                         onClick={() => removeChoice(index)}
-                        className="rounded-full bg-[rgba(226,27,60,0.12)] px-3 py-2 text-sm font-black text-[var(--kahoot-red)]"
+                        aria-label={`선택지 ${index + 1} 삭제`}
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/70 text-[rgba(38,18,87,0.6)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38)] hover:bg-white hover:text-[var(--panel-text)]"
                       >
-                        삭제
+                        <svg
+                          aria-hidden="true"
+                          viewBox="0 0 24 24"
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4h8v2" />
+                          <path d="M19 6l-1 14H6L5 6" />
+                          <path d="M10 11v6" />
+                          <path d="M14 11v6" />
+                        </svg>
                       </button>
                     )}
                   </div>
                 </div>
-
-                <input
-                  value={choice}
-                  onChange={(e) => updateChoice(index, e.target.value)}
-                  placeholder={`선택지 ${index + 1}`}
-                  className="text-input"
-                />
               </div>
             );
           })}
@@ -235,9 +249,6 @@ export default function QuestionEditorForm({
         <button type="submit" disabled={submitting} className="primary-button">
           {submitting ? "저장 중..." : submitLabel}
         </button>
-        <p className="paper-subtle text-sm font-semibold">
-          최대 4개의 선택지를 만들 수 있어요.
-        </p>
       </div>
     </form>
   );

@@ -33,6 +33,25 @@ function slugifyNickname(nickname: string): string {
   return 'n-' + nickname.trim().toLowerCase().replace(/\s+/g, '-').replace(/\//g, '-')
 }
 
+function shuffleChoicesForGame(questions: PublicQuestion[]): PublicQuestion[] {
+  return questions.map((question) => {
+    const shuffledChoices = [...question.choices]
+
+    for (let index = shuffledChoices.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1))
+      ;[shuffledChoices[index], shuffledChoices[swapIndex]] = [
+        shuffledChoices[swapIndex],
+        shuffledChoices[index],
+      ]
+    }
+
+    return {
+      ...question,
+      choices: shuffledChoices,
+    }
+  })
+}
+
 export async function createGame(
   teacherUid: string,
   questions: PublicQuestion[],
@@ -49,10 +68,11 @@ export async function createGame(
           throw new Error('GAME_CODE_TAKEN')
         }
 
+        const shuffledQuestions = shuffleChoicesForGame(questions)
         const game: Game = {
           teacherUid,
           status: 'lobby',
-          questions,
+          questions: shuffledQuestions,
           currentQuestionIndex: -1,
           questionDurationSec,
           currentQuestionStartedAt: null,

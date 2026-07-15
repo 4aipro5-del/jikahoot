@@ -173,26 +173,26 @@ export default function DashboardPage() {
               <p className="text-sm font-black uppercase tracking-[0.22em] text-white/58">
                 Teacher Stage
               </p>
-              <h1 className="display-font text-4xl text-white sm:text-5xl">
-                {room.displayName} 선생님의 퀴즈 무대
-              </h1>
+	              <h1 className="display-font text-4xl text-white sm:text-5xl">
+	                {room.displayName} 선생님의 퀴즈
+	              </h1>
               <p className="max-w-3xl text-sm leading-6 text-white/74 sm:text-base">
                 문제를 승인하고, 바로 새 게임을 열고, 참가 코드를 학생에게 공유할 수 있는
                 교사용 진행 화면이에요.
               </p>
             </div>
 
-            <div className="flex flex-col items-start gap-3 sm:items-end">
-              <div className="rounded-[26px] bg-white px-5 py-4 text-[var(--panel-text)] shadow-[0_14px_0_rgba(38,18,87,0.18)]">
-                <p className="paper-ghost text-xs font-black uppercase tracking-[0.2em]">
-                  Room Code
-                </p>
-                <p className="display-font mt-2 text-5xl sm:text-6xl">{room.roomCode}</p>
-              </div>
-              <button onClick={() => signOutUser()} className="secondary-button">
-                로그아웃
-              </button>
-            </div>
+	            <div className="flex flex-col items-start gap-3 sm:items-end">
+	              <button onClick={() => signOutUser()} className="secondary-button">
+	                로그아웃
+	              </button>
+	              <div className="rounded-[26px] bg-white px-5 py-4 text-[var(--panel-text)] shadow-[0_14px_0_rgba(38,18,87,0.18)]">
+	                <p className="paper-ghost text-xs font-black uppercase tracking-[0.2em]">
+	                  Room Code
+	                </p>
+	                <p className="display-font mt-2 text-5xl sm:text-6xl">{room.roomCode}</p>
+	              </div>
+	            </div>
           </div>
         </header>
 
