@@ -109,6 +109,8 @@ function SubmitPageContent() {
             </section>
 
             <QuestionEditorForm
+              variant="dark"
+              className="mx-auto max-w-3xl"
               title="문제 만들기"
               submitLabel="선생님께 제출하기"
               successMessage="제출했어요! 선생님 확인을 기다려 주세요."

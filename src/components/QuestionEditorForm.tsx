@@ -31,12 +31,17 @@ export default function QuestionEditorForm({
   submitLabel,
   successMessage,
   onSubmit,
+  variant = "light",
+  className = "",
 }: {
   title: string;
   submitLabel: string;
   successMessage: string;
   onSubmit: (input: { text: string; choices: Choice[]; correctChoiceId: string }) => Promise<unknown>;
+  variant?: "light" | "dark";
+  className?: string;
 }) {
+  const isDark = variant === "dark";
   const [text, setText] = useState("");
   const [choiceTexts, setChoiceTexts] = useState(DEFAULT_CHOICES);
   const [correctIndex, setCorrectIndex] = useState<number | null>(null);
@@ -92,7 +97,11 @@ export default function QuestionEditorForm({
       return;
     }
     if (correctIndex === null) {
-      setError("정답을 선택해 주세요.");
+      const message = isDark ? "O(답)을 표시하세요." : "정답을 선택해 주세요.";
+      setError(message);
+      if (isDark && typeof window !== "undefined") {
+        window.alert(message);
+      }
       return;
     }
 
@@ -115,27 +124,42 @@ export default function QuestionEditorForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="paper-panel flex flex-col gap-6 p-6 sm:p-8">
+    <form
+      onSubmit={handleSubmit}
+      className={`flex w-full flex-col gap-6 p-6 sm:p-8 ${
+        isDark
+          ? "rounded-[30px] border border-white/12 bg-slate-900/60 text-white shadow-[0_28px_60px_rgba(8,15,42,0.34)] backdrop-blur-xl"
+          : "paper-panel"
+      } ${className}`}
+    >
       <div className="flex flex-col items-center gap-3 text-center">
-        <p className="hero-chip hero-chip-paper w-full">Quiz Builder</p>
-        <h2 className="display-font text-[2rem] leading-none text-[var(--panel-text)] sm:text-[2.4rem]">
+        <p className={`w-full ${isDark ? "hero-chip" : "hero-chip hero-chip-paper"}`}>Quiz Builder</p>
+        <h2
+          className={`display-font text-[2rem] leading-none sm:text-[2.4rem] ${
+            isDark ? "text-white" : "text-[var(--panel-text)]"
+          }`}
+        >
           {title}
         </h2>
-        <p className="paper-muted w-full text-left text-sm leading-6 sm:text-base">
-          질문은 짧고 선명하게, 선택지는 헷갈리지 않게 써 주면 실제 게임 화면에서도 더
-          잘 보여요.
-        </p>
       </div>
 
       <label className="flex flex-col gap-2">
-        <span className="paper-subtle text-sm font-black uppercase tracking-[0.18em]">
+        <span
+          className={`text-sm font-black uppercase tracking-[0.18em] ${
+            isDark ? "text-white/78" : "paper-subtle"
+          }`}
+        >
           Question
         </span>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="예: 대한민국의 수도는 어디일까요?"
-          className="text-area min-h-28"
+          className={`min-h-28 ${
+            isDark
+              ? "w-full resize-vertical rounded-[22px] border border-white/12 bg-slate-950/55 px-4 py-4 text-base font-bold text-white placeholder:text-white/28 focus-visible:outline-none focus-visible:border-cyan-300/75 focus-visible:shadow-[0_0_0_4px_rgba(103,232,249,0.16)]"
+              : "text-area"
+          }`}
           rows={3}
         />
       </label>
@@ -143,19 +167,24 @@ export default function QuestionEditorForm({
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <span className="paper-subtle text-sm font-black uppercase tracking-[0.18em]">
+            <span
+              className={`text-sm font-black uppercase tracking-[0.18em] ${
+                isDark ? "text-white/78" : "paper-subtle"
+              }`}
+            >
               Choices
             </span>
-            <p className="paper-muted mt-1 text-sm font-semibold">
-              O는 정답, X는 일반 선택지예요.
-            </p>
           </div>
 
           {choiceTexts.length < MAX_CHOICES && (
             <button
               type="button"
               onClick={addChoice}
-              className="rounded-full bg-[var(--kahoot-purple)] px-4 py-2 text-sm font-black text-white shadow-[0_8px_0_rgba(39,12,80,0.22)]"
+              className={`rounded-full px-4 py-2 text-sm font-black text-white ${
+                isDark
+                  ? "bg-white/12 shadow-[0_8px_0_rgba(8,15,42,0.26)] hover:bg-white/18"
+                  : "bg-[var(--kahoot-purple)] shadow-[0_8px_0_rgba(39,12,80,0.22)]"
+              }`}
             >
               + 선택지 추가
             </button>
@@ -170,7 +199,11 @@ export default function QuestionEditorForm({
             return (
               <div
                 key={index}
-                className={`rounded-[24px] border border-[rgba(38,18,87,0.1)] p-4 ${theme.panel}`}
+                className={`rounded-[24px] border p-4 ${
+                  isDark
+                    ? "border-white/10 bg-white/4"
+                    : `border-[rgba(38,18,87,0.1)] ${theme.panel}`
+                }`}
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -183,7 +216,11 @@ export default function QuestionEditorForm({
                       value={choice}
                       onChange={(e) => updateChoice(index, e.target.value)}
                       placeholder={`선택지 ${index + 1}`}
-                      className="text-input h-14 flex-1"
+                      className={`h-14 flex-1 ${
+                        isDark
+                          ? "min-w-0 rounded-[20px] border border-white/12 bg-slate-950/55 px-4 text-base font-bold text-white placeholder:text-white/28 focus-visible:outline-none focus-visible:border-cyan-300/75 focus-visible:shadow-[0_0_0_4px_rgba(103,232,249,0.16)]"
+                          : "text-input"
+                      }`}
                     />
                   </div>
 
@@ -195,7 +232,9 @@ export default function QuestionEditorForm({
                       className={`inline-flex h-11 w-11 items-center justify-center rounded-full text-lg font-black ${
                         isCorrect
                           ? "bg-[var(--kahoot-green)] text-white"
-                          : "bg-white text-[var(--kahoot-purple)]"
+                          : isDark
+                            ? "bg-white/10 text-white"
+                            : "bg-white text-[var(--kahoot-purple)]"
                       }`}
                     >
                       {isCorrect ? "O" : "X"}
@@ -206,7 +245,11 @@ export default function QuestionEditorForm({
                         type="button"
                         onClick={() => removeChoice(index)}
                         aria-label={`선택지 ${index + 1} 삭제`}
-                        className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/70 text-[rgba(38,18,87,0.6)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38)] hover:bg-white hover:text-[var(--panel-text)]"
+                        className={`inline-flex h-11 w-11 items-center justify-center rounded-full ${
+                          isDark
+                            ? "bg-white/10 text-white/72 hover:bg-white/16 hover:text-white"
+                            : "bg-white/70 text-[rgba(38,18,87,0.6)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38)] hover:bg-white hover:text-[var(--panel-text)]"
+                        }`}
                       >
                         <svg
                           aria-hidden="true"
@@ -240,7 +283,13 @@ export default function QuestionEditorForm({
         </p>
       )}
       {success && (
-        <p className="rounded-[20px] bg-[rgba(38,137,12,0.12)] px-4 py-3 text-sm font-black text-[var(--kahoot-green)]">
+        <p
+          className={`rounded-[20px] px-4 py-3 text-sm font-black ${
+            isDark
+              ? "bg-[rgba(38,137,12,0.2)] text-[#d9ffd0]"
+              : "bg-[rgba(38,137,12,0.12)] text-[var(--kahoot-green)]"
+          }`}
+        >
           {successMessage}
         </p>
       )}

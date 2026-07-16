@@ -159,7 +159,7 @@ export default function DashboardPage() {
       <div className="stage-shell">
         <div className="stage-content flex min-h-screen items-center justify-center">
           <div className="quiz-panel px-6 py-5 text-center">
-            <p className="text-white/70">{error ?? "교사용 무대를 준비하는 중..."}</p>
+            <p className="text-white/70">{error ?? "교사용 퀴즈를 준비하는 중..."}</p>
           </div>
         </div>
       </div>
