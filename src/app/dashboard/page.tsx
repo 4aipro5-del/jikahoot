@@ -33,6 +33,8 @@ export default function DashboardPage() {
     }
     if (!user) return;
 
+    const currentUser = user;
+
     let active = true;
 
     async function loadTeacherRoom() {
@@ -42,7 +44,7 @@ export default function DashboardPage() {
       setRoom(null);
 
       try {
-        const existingRoom = await getRoomByTeacherUid(user.uid);
+        const existingRoom = await getRoomByTeacherUid(currentUser.uid);
         if (!active) return;
 
         if (existingRoom?.displayName.trim()) {
