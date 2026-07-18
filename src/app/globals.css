@@ -236,6 +236,15 @@ button:disabled {
   width: min(1680px, 100%);
 }
 
+.dashboard-scroll-shell {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.dashboard-scroll-canvas {
+  min-width: 96rem;
+}
+
 .quiz-panel {
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-xl);

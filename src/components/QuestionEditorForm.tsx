@@ -126,7 +126,7 @@ export default function QuestionEditorForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className={`flex w-full flex-col gap-6 p-6 sm:p-8 ${
+      className={`flex w-full flex-col gap-6 p-8 ${
         isDark
           ? "rounded-[30px] border border-white/12 bg-slate-900/60 text-white shadow-[0_28px_60px_rgba(8,15,42,0.34)] backdrop-blur-xl"
           : "paper-panel"
@@ -135,7 +135,7 @@ export default function QuestionEditorForm({
       <div className="flex flex-col items-center gap-3 text-center">
         <p className={`w-full ${isDark ? "hero-chip" : "hero-chip hero-chip-paper"}`}>Quiz Builder</p>
         <h2
-          className={`display-font text-[2rem] leading-none sm:text-[2.4rem] ${
+          className={`display-font text-[2.4rem] leading-none ${
             isDark ? "text-white" : "text-[var(--panel-text)]"
           }`}
         >
@@ -205,7 +205,7 @@ export default function QuestionEditorForm({
                     : `border-[rgba(38,18,87,0.1)] ${theme.panel}`
                 }`}
               >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-3">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
                     <span
                       className={`inline-flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-sm font-black ${theme.badge}`}

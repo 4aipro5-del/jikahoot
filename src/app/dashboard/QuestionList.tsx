@@ -94,7 +94,7 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
 
   return (
     <section className="quiz-panel flex flex-col gap-5 p-6 sm:p-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex items-end justify-between gap-4">
         <div className="flex flex-col gap-3">
           <p className="text-sm font-black uppercase tracking-[0.2em] text-white/58">
             Question Bank
@@ -134,7 +134,7 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
           return (
             <li key={question.id} className="paper-panel p-5 sm:p-6">
               <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="hero-chip-paper rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.18em]">
@@ -170,7 +170,7 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
                   </button>
                 </div>
 
-                <ul className="grid gap-2 sm:grid-cols-2">
+                <ul className="grid grid-cols-2 gap-2">
                   {(isEditing ? draftChoices : question.choices.map((choice) => choice.text)).map(
                     (choiceText, index) => {
                       const isCorrect = isEditing

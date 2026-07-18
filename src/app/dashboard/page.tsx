@@ -169,11 +169,11 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="stage-shell">
-      <div className="stage-content dashboard-stage flex min-h-screen flex-col gap-8 py-8">
+    <div className="stage-shell dashboard-scroll-shell">
+      <div className="stage-content dashboard-stage dashboard-scroll-canvas flex min-h-screen flex-col gap-8 py-8">
         <header className="quiz-panel p-6 sm:p-8">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-            <div className="min-w-0 space-y-3 xl:flex-1">
+          <div className="flex items-end justify-between gap-8">
+            <div className="min-w-0 flex-1 space-y-3">
               <p className="text-sm font-black uppercase tracking-[0.22em] text-white/58">
                 Teacher Stage
               </p>
@@ -189,7 +189,7 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div className="flex flex-col items-start gap-3 sm:items-end xl:flex-none">
+            <div className="flex flex-none flex-col items-end gap-3">
               <button onClick={() => signOutUser()} className="secondary-button">
                 로그아웃
               </button>
@@ -203,7 +203,7 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_1.15fr_1fr] lg:items-start 2xl:grid-cols-[1fr_1.22fr_1fr]">
+        <div className="grid grid-cols-[26rem_34rem_28rem] items-start gap-8">
           <div className="flex flex-col gap-6">
             <StartGameButton teacherUid={room.teacherUid} />
           </div>

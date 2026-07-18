@@ -46,7 +46,7 @@ export default function StartGameButton({ teacherUid }: { teacherUid: string }) 
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-4">
         <div className="paper-purple-bg rounded-[24px] p-5">
           <p className="paper-subtle text-sm font-black uppercase tracking-[0.18em]">
             Approved
@@ -58,7 +58,7 @@ export default function StartGameButton({ teacherUid }: { teacherUid: string }) 
           <p className="paper-subtle text-sm font-black uppercase tracking-[0.18em]">
             Time
           </p>
-          <p className="display-font mt-2 text-[3.35rem] leading-none text-[var(--panel-text)] sm:text-[4rem]">
+          <p className="display-font mt-2 whitespace-nowrap text-[2.15rem] leading-none tracking-[-0.05em] text-[var(--panel-text)] sm:text-[2.7rem]">
             {QUESTION_DURATION_SEC}s
           </p>
           <p className="paper-subtle mt-1 text-sm font-semibold">문제당 제한 시간</p>
