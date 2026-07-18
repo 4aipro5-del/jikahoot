@@ -56,9 +56,9 @@ export default function StartGameButton({ teacherUid }: { teacherUid: string }) 
         </div>
         <div className="paper-yellow-bg rounded-[24px] p-5">
           <p className="paper-subtle text-sm font-black uppercase tracking-[0.18em]">
-            Round Time
+            Time
           </p>
-          <p className="display-font mt-2 text-5xl text-[var(--panel-text)]">
+          <p className="display-font mt-2 text-[3.35rem] leading-none text-[var(--panel-text)] sm:text-[4rem]">
             {QUESTION_DURATION_SEC}s
           </p>
           <p className="paper-subtle mt-1 text-sm font-semibold">문제당 제한 시간</p>

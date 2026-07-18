@@ -8,6 +8,7 @@ import {
   subscribeToAuthState,
   updateTeacherDisplayName,
 } from "@/lib/firebase/auth";
+import ResponsiveDisplayTitle from "@/components/ResponsiveDisplayTitle";
 import { getRoomByTeacherUid, syncRoomProfile } from "@/lib/firestore/rooms";
 import type { Room } from "@/types/firestore";
 import QuestionForm from "./QuestionForm";
@@ -15,6 +16,7 @@ import QuestionList from "./QuestionList";
 import StartGameButton from "./StartGameButton";
 
 export default function DashboardPage() {
+  const teacherTitleOverflowMode = "wrap";
   const router = useRouter();
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [room, setRoom] = useState<Room | null>(null);
@@ -171,30 +173,33 @@ export default function DashboardPage() {
       <div className="stage-content dashboard-stage flex min-h-screen flex-col gap-8 py-8">
         <header className="quiz-panel p-6 sm:p-8">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-            <div className="space-y-3">
+            <div className="min-w-0 space-y-3 xl:flex-1">
               <p className="text-sm font-black uppercase tracking-[0.22em] text-white/58">
                 Teacher Stage
               </p>
-	              <h1 className="display-font text-4xl text-white sm:text-5xl">
-	                {room.displayName} 선생님의 퀴즈
-	              </h1>
+              <ResponsiveDisplayTitle
+                leading={room.displayName}
+                suffix="선생님의 퀴즈"
+                overflowMode={teacherTitleOverflowMode}
+                className="text-white"
+              />
               <p className="max-w-3xl text-sm leading-6 text-white/74 sm:text-base">
                 문제를 승인하고, 바로 새 게임을 열고, 참가 코드를 학생에게 공유할 수 있는
                 교사용 진행 화면이에요.
               </p>
             </div>
 
-	            <div className="flex flex-col items-start gap-3 sm:items-end">
-	              <button onClick={() => signOutUser()} className="secondary-button">
-	                로그아웃
-	              </button>
-	              <div className="rounded-[26px] bg-white px-5 py-4 text-[var(--panel-text)] shadow-[0_14px_0_rgba(38,18,87,0.18)]">
-	                <p className="paper-ghost text-xs font-black uppercase tracking-[0.2em]">
-	                  Room Code
-	                </p>
-	                <p className="display-font mt-2 text-5xl sm:text-6xl">{room.roomCode}</p>
-	              </div>
-	            </div>
+            <div className="flex flex-col items-start gap-3 sm:items-end xl:flex-none">
+              <button onClick={() => signOutUser()} className="secondary-button">
+                로그아웃
+              </button>
+              <div className="rounded-[26px] bg-white px-5 py-4 text-[var(--panel-text)] shadow-[0_14px_0_rgba(38,18,87,0.18)]">
+                <p className="paper-ghost text-xs font-black uppercase tracking-[0.2em]">
+                  Room Code
+                </p>
+                <p className="display-font mt-2 text-5xl sm:text-6xl">{room.roomCode}</p>
+              </div>
+            </div>
           </div>
         </header>
 
