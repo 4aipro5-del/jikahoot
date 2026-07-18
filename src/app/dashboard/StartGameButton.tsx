@@ -58,7 +58,7 @@ export default function StartGameButton({ teacherUid }: { teacherUid: string }) 
           <p className="paper-subtle text-sm font-black uppercase tracking-[0.18em]">
             Time
           </p>
-          <p className="display-font mt-2 whitespace-nowrap text-[2.15rem] leading-none tracking-[-0.05em] text-[var(--panel-text)] sm:text-[2.7rem]">
+          <p className="display-font mt-2 whitespace-nowrap text-[2rem] leading-none tracking-[-0.05em] text-[var(--panel-text)] sm:text-[2.5rem]">
             {QUESTION_DURATION_SEC}s
           </p>
           <p className="paper-subtle mt-1 text-sm font-semibold">문제당 제한 시간</p>
