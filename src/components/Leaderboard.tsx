@@ -1,9 +1,9 @@
 import type { PlayerWithId } from "@/lib/firestore/games";
 
 const PODIUM_STYLES = [
-  "bg-[linear-gradient(180deg,#ffe481,#ffc83d)] text-[#442700] shadow-[0_14px_0_rgba(130,89,0,0.22)]",
-  "bg-[linear-gradient(180deg,#eff4ff,#cfd7ef)] text-[#27314f] shadow-[0_14px_0_rgba(63,78,113,0.2)]",
-  "bg-[linear-gradient(180deg,#ffd7c4,#ffb288)] text-[#542616] shadow-[0_14px_0_rgba(109,54,31,0.18)]",
+  "border border-[rgba(88,204,2,0.16)] bg-[#e8f9d8] text-[var(--panel-text)] shadow-[0_14px_0_rgba(88,204,2,0.18)]",
+  "border border-[rgba(28,176,246,0.14)] bg-[#edf6ff] text-[var(--panel-text)] shadow-[0_14px_0_rgba(28,176,246,0.12)]",
+  "border border-[rgba(255,200,0,0.16)] bg-[#fff5dd] text-[#5a4600] shadow-[0_14px_0_rgba(216,158,0,0.12)]",
 ];
 
 export default function Leaderboard({
@@ -27,7 +27,7 @@ export default function Leaderboard({
               <div
                 key={player.id}
                 className={`rounded-[30px] p-5 ${PODIUM_STYLES[index]} ${
-                  isHighlighted ? "ring-4 ring-white/90" : ""
+                  isHighlighted ? "ring-4 ring-[rgba(88,204,2,0.36)]" : ""
                 }`}
               >
                 <p className="text-sm font-black uppercase tracking-[0.22em]">
@@ -53,8 +53,8 @@ export default function Leaderboard({
                 key={player.id}
                 className={`flex items-center justify-between rounded-[24px] border px-4 py-4 ${
                   isHighlighted
-                    ? "border-white/70 bg-white/18 text-white"
-                    : "border-white/12 bg-white/8 text-white/86"
+                    ? "border-[rgba(88,204,2,0.26)] bg-[rgba(232,249,216,0.94)] text-[var(--panel-text)]"
+                    : "border-[rgba(88,204,2,0.12)] bg-white/90 text-[rgba(36,51,17,0.86)]"
                 }`}
               >
                 <span className="text-base font-black">

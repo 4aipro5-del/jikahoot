@@ -93,18 +93,18 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
   }
 
   return (
-    <section className="quiz-panel flex flex-col gap-5 p-6 sm:p-8">
+    <section className="paper-panel dashboard-bank-card flex flex-col gap-5 p-8">
       <div className="flex items-end justify-between gap-4">
         <div className="flex flex-col gap-3">
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-white/58">
+          <p className="dashboard-bank-kicker text-sm font-black uppercase tracking-[0.2em]">
             Question Bank
           </p>
-          <h2 className="display-font text-[2rem] leading-none text-white sm:text-[2.4rem]">
+          <h2 className="display-font dashboard-bank-title text-[1.75rem] leading-none sm:text-[2rem]">
             문제 현황
           </h2>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="dashboard-bank-tabs flex flex-wrap gap-2">
           {TABS.map(({ key, label }) => {
             const count = questions.filter((q) => q.status === key).length;
             return (
@@ -122,7 +122,7 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
       </div>
 
       {visible.length === 0 && (
-        <div className="rounded-[24px] border border-dashed border-white/20 bg-white/6 px-5 py-7 text-center text-sm font-semibold text-white/72">
+        <div className="rounded-[24px] border border-dashed border-[rgba(88,204,2,0.18)] bg-[rgba(88,204,2,0.05)] px-5 py-7 text-center text-sm font-semibold text-[rgba(36,51,17,0.68)]">
           이 상태의 문제가 아직 없어요.
         </div>
       )}
@@ -132,7 +132,7 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
           const isEditing = editingQuestionId === question.id;
 
           return (
-            <li key={question.id} className="paper-panel p-5 sm:p-6">
+            <li key={question.id} className="paper-panel dashboard-bank-item p-5 sm:p-6">
               <div className="flex flex-col gap-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -152,7 +152,7 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
                         rows={3}
                       />
                     ) : (
-                      <p className="mt-3 text-xl font-black text-[var(--panel-text)]">
+                      <p className="mt-3 text-[1.65rem] leading-[1.1] font-black text-[var(--panel-text)]">
                         {question.text}
                       </p>
                     )}

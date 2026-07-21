@@ -161,7 +161,7 @@ export default function DashboardPage() {
       <div className="stage-shell">
         <div className="stage-content flex min-h-screen items-center justify-center">
           <div className="quiz-panel px-6 py-5 text-center">
-            <p className="text-white/70">{error ?? "교사용 퀴즈를 준비하는 중..."}</p>
+            <p className="paper-muted">{error ?? "교사용 퀴즈를 준비하는 중..."}</p>
           </div>
         </div>
       </div>
@@ -169,35 +169,40 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="stage-shell dashboard-scroll-shell">
+    <div className="stage-shell dashboard-concept-shell dashboard-scroll-shell">
       <div className="stage-content dashboard-stage dashboard-scroll-canvas flex min-h-screen flex-col gap-8 py-8">
-        <header className="quiz-panel p-6 sm:p-8">
-          <div className="flex items-end justify-between gap-8">
-            <div className="min-w-0 flex-1 space-y-3">
-              <p className="text-sm font-black uppercase tracking-[0.22em] text-white/58">
+        <header className="quiz-panel dashboard-hero p-8">
+          <div className="dashboard-hero-grid">
+            <div className="dashboard-hero-copy min-w-0 space-y-4">
+              <p className="dashboard-hero-kicker text-sm font-black uppercase tracking-[0.22em]">
                 Teacher Stage
               </p>
               <ResponsiveDisplayTitle
                 leading={room.displayName}
                 suffix="선생님의 퀴즈"
                 overflowMode={teacherTitleOverflowMode}
-                className="text-white"
+                className="dashboard-hero-title"
               />
-              <p className="max-w-3xl text-sm leading-6 text-white/74 sm:text-base">
+              <p className="dashboard-hero-description max-w-3xl text-sm leading-6 sm:text-base">
                 문제를 승인하고, 바로 새 게임을 열고, 참가 코드를 학생에게 공유할 수 있는
                 교사용 진행 화면이에요.
               </p>
             </div>
 
-            <div className="flex flex-none flex-col items-end gap-3">
-              <button onClick={() => signOutUser()} className="secondary-button">
+            <div className="dashboard-hero-side flex flex-none flex-col items-end gap-4">
+              <button
+                onClick={() => signOutUser()}
+                className="secondary-button dashboard-hero-logout"
+              >
                 로그아웃
               </button>
-              <div className="rounded-[26px] bg-white px-5 py-4 text-[var(--panel-text)] shadow-[0_14px_0_rgba(38,18,87,0.18)]">
+              <div className="dashboard-room-card rounded-[26px] bg-white px-5 py-4 text-[var(--panel-text)] shadow-[0_14px_0_rgba(38,18,87,0.18)]">
                 <p className="paper-ghost text-xs font-black uppercase tracking-[0.2em]">
                   Room Code
                 </p>
-                <p className="display-font mt-2 text-5xl sm:text-6xl">{room.roomCode}</p>
+                <p className="display-font dashboard-room-code mt-2 text-5xl sm:text-6xl">
+                  {room.roomCode}
+                </p>
               </div>
             </div>
           </div>

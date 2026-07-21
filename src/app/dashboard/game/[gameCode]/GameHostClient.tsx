@@ -109,7 +109,7 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
       <div className="stage-shell">
         <div className="stage-content flex min-h-screen items-center justify-center">
           <div className="quiz-panel px-6 py-5 text-center">
-            <p className="text-white/70">게임 진행 화면을 불러오는 중...</p>
+            <p className="paper-muted">게임 진행 화면을 불러오는 중...</p>
           </div>
         </div>
       </div>
@@ -121,7 +121,7 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
       <div className="stage-shell">
         <div className="stage-content flex min-h-screen items-center justify-center">
           <div className="quiz-panel px-6 py-5 text-center">
-            <p className="text-white/70">게임을 찾을 수 없어요.</p>
+            <p className="paper-muted">게임을 찾을 수 없어요.</p>
           </div>
         </div>
       </div>
@@ -133,7 +133,7 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
       <div className="stage-shell">
         <div className="stage-content flex min-h-screen items-center justify-center">
           <div className="quiz-panel px-6 py-5 text-center">
-            <p className="text-white/70">권한이 없어요.</p>
+            <p className="paper-muted">권한이 없어요.</p>
           </div>
         </div>
       </div>
@@ -172,8 +172,8 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
           <section className="quiz-panel flex flex-col gap-6 p-6 text-center sm:p-8">
             <div className="space-y-3">
               <p className="hero-chip">Game Finished</p>
-              <h1 className="display-font text-5xl text-white sm:text-6xl">최종 순위</h1>
-              <p className="text-sm leading-6 text-white/74 sm:text-base">
+              <h1 className="display-font text-5xl text-[var(--panel-text)] sm:text-6xl">최종 순위</h1>
+              <p className="paper-muted text-sm leading-6 sm:text-base">
                 전체 라운드가 끝났어요. 최종 리더보드를 확인해 보세요.
               </p>
             </div>
@@ -222,7 +222,7 @@ function LobbyView({
           </div>
 
           <div className="flex flex-col gap-4 xl:items-end">
-            <div className="paper-purple-bg w-full rounded-[28px] px-5 py-5 xl:max-w-[32rem]">
+            <div className="w-full rounded-[28px] border border-[rgba(88,204,2,0.14)] bg-[rgba(232,249,216,0.94)] px-5 py-5 xl:max-w-[32rem]">
               <p className="paper-ghost text-xs font-black uppercase tracking-[0.2em]">
                 Join Code
               </p>
@@ -242,7 +242,7 @@ function LobbyView({
         </div>
       </div>
 
-      <div className="quiz-panel min-h-[26rem] p-6 sm:p-8">
+      <div className="paper-panel min-h-[26rem] p-6 sm:p-8">
         <PlayerRoster
           players={players}
           onRemovePlayer={onRemovePlayer}
@@ -278,7 +278,7 @@ function ActiveView({
             Current Question
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-[rgba(70,23,143,0.1)] px-4 py-2 text-sm font-black text-[var(--kahoot-purple)]">
+            <span className="rounded-full bg-[rgba(88,204,2,0.12)] px-4 py-2 text-sm font-black text-[var(--duo-green-dark)]">
               문제 {game.currentQuestionIndex + 1} / {game.questions.length}
             </span>
             <span className="rounded-full bg-[rgba(216,158,0,0.12)] px-4 py-2 text-sm font-black text-[#8a6100]">
@@ -295,7 +295,7 @@ function ActiveView({
             <span>응답 진행도</span>
             <span>{Math.round(answerRatio * 100)}%</span>
           </div>
-          <div className="progress-track bg-[rgba(38,18,87,0.08)]">
+          <div className="progress-track bg-[rgba(88,204,2,0.08)]">
             <div
               className="progress-bar"
               style={{ width: `${answerRatio * 100}%` } as CSSProperties}
@@ -331,14 +331,14 @@ function ActiveView({
       <div className="quiz-panel flex flex-col gap-5 p-6 sm:p-8">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
           <div className="metric-card">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/58">Answered</p>
-            <p className="display-font mt-2 text-5xl text-white">{answeredCount}</p>
-            <p className="mt-1 text-sm font-semibold text-white/72">지금까지 제출한 학생 수</p>
+            <p className="paper-faint text-xs font-black uppercase tracking-[0.18em]">Answered</p>
+            <p className="display-font mt-2 text-5xl text-[var(--panel-text)]">{answeredCount}</p>
+            <p className="paper-subtle mt-1 text-sm font-semibold">지금까지 제출한 학생 수</p>
           </div>
           <div className="metric-card">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/58">Players</p>
-            <p className="display-font mt-2 text-5xl text-white">{players.length}</p>
-            <p className="mt-1 text-sm font-semibold text-white/72">현재 게임에 참가 중인 학생 수</p>
+            <p className="paper-faint text-xs font-black uppercase tracking-[0.18em]">Players</p>
+            <p className="display-font mt-2 text-5xl text-[var(--panel-text)]">{players.length}</p>
+            <p className="paper-subtle mt-1 text-sm font-semibold">현재 게임에 참가 중인 학생 수</p>
           </div>
         </div>
 
@@ -346,7 +346,7 @@ function ActiveView({
           {advancing ? "처리 중..." : isLastQuestion ? "게임 종료" : "다음 문제"}
         </button>
 
-        <div className="rounded-[28px] border border-white/12 bg-white/6 p-5">
+        <div className="rounded-[28px] border border-[rgba(88,204,2,0.14)] bg-[rgba(255,255,255,0.72)] p-5">
           <PlayerRoster players={players} />
         </div>
       </div>

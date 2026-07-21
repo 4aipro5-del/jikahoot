@@ -9,6 +9,7 @@ export default function QuestionForm({ teacherUid }: { teacherUid: string }) {
       title="새 문제 만들기"
       submitLabel="문제 은행에 추가"
       successMessage="문제를 추가했습니다."
+      className="dashboard-builder-card"
       onSubmit={(input) => createTeacherQuestion(teacherUid, input)}
     />
   );

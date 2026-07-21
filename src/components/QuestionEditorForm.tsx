@@ -135,7 +135,7 @@ export default function QuestionEditorForm({
       <div className="flex flex-col items-center gap-3 text-center">
         <p className={`w-full ${isDark ? "hero-chip" : "hero-chip hero-chip-paper"}`}>Quiz Builder</p>
         <h2
-          className={`display-font text-[2.4rem] leading-none ${
+          className={`display-font text-[2rem] leading-none ${
             isDark ? "text-white" : "text-[var(--panel-text)]"
           }`}
         >
@@ -183,7 +183,7 @@ export default function QuestionEditorForm({
               className={`rounded-full px-4 py-2 text-sm font-black text-white ${
                 isDark
                   ? "bg-white/12 shadow-[0_8px_0_rgba(8,15,42,0.26)] hover:bg-white/18"
-                  : "bg-[var(--kahoot-purple)] shadow-[0_8px_0_rgba(39,12,80,0.22)]"
+                  : "bg-[var(--duo-green)] shadow-[0_8px_0_rgba(70,163,2,0.24)]"
               }`}
             >
               + 선택지 추가

@@ -56,7 +56,7 @@ export default function PlayingGame({
       <div className="stage-shell">
         <div className="stage-content flex min-h-screen items-center justify-center">
           <div className="quiz-panel px-6 py-5 text-center">
-            <p className="text-white/70">게임 상태를 불러오는 중...</p>
+            <p className="paper-muted">게임 상태를 불러오는 중...</p>
           </div>
         </div>
       </div>
@@ -70,8 +70,8 @@ export default function PlayingGame({
           <section className="quiz-panel mx-auto flex w-full max-w-5xl flex-col gap-6 p-6 text-center sm:p-8">
             <div className="space-y-3">
               <p className="hero-chip">Final Leaderboard</p>
-              <h1 className="display-font text-5xl text-white sm:text-6xl">최종 순위</h1>
-              <p className="text-sm leading-6 text-white/74 sm:text-base">
+              <h1 className="display-font text-5xl text-[var(--panel-text)] sm:text-6xl">최종 순위</h1>
+              <p className="paper-muted text-sm leading-6 sm:text-base">
                 마지막 문제까지 모두 끝났어요. 내 점수와 전체 순위를 확인해 보세요.
               </p>
             </div>
@@ -105,18 +105,18 @@ function LobbyView({
           <div className="flex flex-col justify-between gap-5">
             <div className="space-y-4">
               <p className="hero-chip">Waiting Lobby</p>
-              <h1 className="display-font text-4xl text-white sm:text-5xl">
+              <h1 className="display-font text-4xl text-[var(--panel-text)] sm:text-5xl">
                 {nickname}님,
                 <br />
                 곧 시작돼요!
               </h1>
-              <p className="text-sm leading-6 text-white/74 sm:text-base">
+              <p className="paper-muted text-sm leading-6 sm:text-base">
                 선생님이 시작 버튼을 누르면 바로 첫 문제가 펼쳐져요. 지금은 친구들이
                 들어오는 중입니다.
               </p>
             </div>
 
-            <div className="rounded-[28px] bg-white px-5 py-5 text-[var(--panel-text)] shadow-[0_16px_0_rgba(38,18,87,0.18)]">
+            <div className="rounded-[28px] border border-[rgba(88,204,2,0.16)] bg-white px-5 py-5 text-[var(--panel-text)] shadow-[0_12px_0_rgba(88,204,2,0.16)]">
               <p className="paper-ghost text-xs font-black uppercase tracking-[0.2em]">
                 Game Code
               </p>
@@ -124,7 +124,7 @@ function LobbyView({
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-white/10 bg-white/6 p-5 sm:p-6">
+          <div className="rounded-[28px] border border-[rgba(88,204,2,0.14)] bg-[rgba(255,255,255,0.72)] p-5 sm:p-6">
             <PlayerRoster players={players} />
           </div>
         </section>
@@ -200,40 +200,42 @@ function ActiveView({
         <section className="quiz-panel mx-auto flex w-full max-w-6xl flex-col gap-6 p-5 sm:p-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-white/58">
+              <p className="paper-faint text-sm font-black uppercase tracking-[0.2em]">
                 Live Question
               </p>
-              <h1 className="display-font mt-2 text-3xl text-white sm:text-4xl">{nickname}의 문제 화면</h1>
+              <h1 className="display-font mt-2 text-3xl text-[var(--panel-text)] sm:text-4xl">
+                {nickname}의 문제 화면
+              </h1>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="metric-card">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-white/58">
+                <p className="paper-faint text-xs font-black uppercase tracking-[0.18em]">
                   Round
                 </p>
-                <p className="display-font mt-2 text-4xl text-white">
+                <p className="display-font mt-2 text-4xl text-[var(--panel-text)]">
                   {questionIndex + 1}/{game.questions.length}
                 </p>
               </div>
               <div className="metric-card">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-white/58">
+                <p className="paper-faint text-xs font-black uppercase tracking-[0.18em]">
                   Time Left
                 </p>
-                <p className="display-font mt-2 text-4xl text-white">
+                <p className="display-font mt-2 text-4xl text-[var(--panel-text)]">
                   {timeUp ? "0" : remainingSec}
                 </p>
               </div>
               <div className="metric-card">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-white/58">
+                <p className="paper-faint text-xs font-black uppercase tracking-[0.18em]">
                   Game Code
                 </p>
-                <p className="display-font mt-2 text-4xl text-white">{gameCode}</p>
+                <p className="display-font mt-2 text-4xl text-[var(--panel-text)]">{gameCode}</p>
               </div>
             </div>
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm font-black text-white/72">
+            <div className="paper-subtle flex items-center justify-between text-sm font-black">
               <span>타이머</span>
               <span>{timeUp ? "시간 종료" : `${remainingSec}초 남음`}</span>
             </div>
