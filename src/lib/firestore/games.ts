@@ -13,7 +13,7 @@ import {
 import { db } from '@/lib/firebase/client'
 import { signInStudentAnonymously } from '@/lib/firebase/auth'
 import type { Answer, Game, NicknameReservation, Player, PublicQuestion } from '@/types/firestore'
-import { streakBonusMultiplier } from '@/types/firestore'
+import { streakBonusMultiplier, rankBonusMultiplier } from '@/types/firestore'
 import { BASE_POINTS_PER_CORRECT_ANSWER } from '@/lib/gameConfig'
 
 // no 0/O/1/I/L — easy to read aloud and type on a Chromebook
@@ -231,35 +231,49 @@ export function subscribeToAnswer(
 }
 
 // called right before the host advances past a question (or ends the game).
-// The live subscribeToAnswer-based grading in useGrading can miss an answer
-// that's written right as the host advances — its listener is torn down the
-// moment currentQuestionIndex/status changes, so a late write can arrive
-// with nobody left listening. This re-reads every player's answer straight
-// from the server and grades anything still ungraded, so a slow submit near
-// the deadline can't leave a player's final score permanently short.
+// This is the only place grading happens: the rank bonus needs every
+// player's answer at once to compare submission order, so nothing is graded
+// live while the question is still active — students see a "grading..."
+// state (PlayingGame.tsx) until the host advances.
 export async function finalizeQuestion(
   gameCode: string,
   playerIds: string[],
   questionIndex: number,
   correctChoiceId: string,
 ) {
-  await Promise.all(
+  const entries = await Promise.all(
     playerIds.map(async (playerUid) => {
       try {
         const snap = await getDoc(answerRef(gameCode, playerUid, questionIndex))
-        if (!snap.exists()) {
+        return { playerUid, answer: snap.exists() ? (snap.data() as Answer) : null }
+      } catch (err) {
+        console.error('finalizeQuestion: 답안 조회 실패', playerUid, err)
+        return { playerUid, answer: null }
+      }
+    }),
+  )
+
+  const correctByRank = entries
+    .filter((entry) => entry.answer && entry.answer.choiceId === correctChoiceId)
+    .sort((a, b) => a.answer!.answeredAt.toMillis() - b.answer!.answeredAt.toMillis())
+  const correctCount = correctByRank.length
+  const rankByPlayerId = new Map(correctByRank.map((entry, index) => [entry.playerUid, index + 1]))
+
+  await Promise.all(
+    entries.map(async ({ playerUid, answer }) => {
+      try {
+        if (!answer) {
           await resetStreak(gameCode, playerUid)
           return
         }
-        const answer = snap.data() as Answer
-        if (answer.isCorrect === null) {
-          await gradeAnswer(gameCode, playerUid, questionIndex, answer.choiceId === correctChoiceId)
-        }
+        if (answer.isCorrect !== null) return
+
+        const isCorrect = answer.choiceId === correctChoiceId
+        const rankMultiplier = isCorrect
+          ? rankBonusMultiplier(rankByPlayerId.get(playerUid)!, correctCount)
+          : 1
+        await gradeAnswer(gameCode, playerUid, questionIndex, isCorrect, rankMultiplier)
       } catch (err) {
-        // the live per-answer listener in useGrading may have graded this
-        // exact answer between our read and write (rules reject a second
-        // write once isCorrect is no longer null) — the score is already
-        // correct either way, so this race is safe to ignore.
         console.error('finalizeQuestion: 답안 정리 실패', playerUid, err)
       }
     }),
@@ -267,13 +281,14 @@ export async function finalizeQuestion(
 }
 
 // grades a single answer and folds the result into the player's running
-// score/streak; only ever called from the host client, which is the only
-// one that knows the correct choice for this question
+// score/streak; only ever called from finalizeQuestion, which is the only
+// place that knows the correct choice and every player's submission rank
 export async function gradeAnswer(
   gameCode: string,
   playerUid: string,
   questionIndex: number,
   isCorrect: boolean,
+  rankMultiplier: number,
 ) {
   const playerRef = doc(db, 'games', gameCode, 'players', playerUid)
 
@@ -282,7 +297,9 @@ export async function gradeAnswer(
     const player = playerSnap.data() as Player
 
     const newStreak = isCorrect ? player.currentStreak + 1 : 0
-    const points = isCorrect ? Math.round(BASE_POINTS_PER_CORRECT_ANSWER * streakBonusMultiplier(newStreak)) : 0
+    const points = isCorrect
+      ? Math.round(BASE_POINTS_PER_CORRECT_ANSWER * streakBonusMultiplier(newStreak) * rankMultiplier)
+      : 0
 
     tx.update(answerRef(gameCode, playerUid, questionIndex), {
       isCorrect,

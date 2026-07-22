@@ -83,3 +83,14 @@ export function streakBonusMultiplier(streak: number): number {
   const bonusPercent = Math.min((streak - 2) * 50, 200)
   return 1 + bonusPercent / 100
 }
+
+// Rank bonus: correct answers are ranked by submission order (earliest first).
+// The top ceil(correctCount * 0.25) ranks (at least 1) share a bonus zone where
+// 1st place always gets +30%, decaying linearly to just above 0% at the back
+// of the zone; every rank outside the zone gets +0%.
+export function rankBonusMultiplier(rank: number, correctCount: number): number {
+  const zoneSize = Math.max(1, Math.ceil(correctCount * 0.25))
+  if (rank > zoneSize) return 1
+  const bonusPercent = (30 * (zoneSize - rank + 1)) / zoneSize
+  return 1 + bonusPercent / 100
+}

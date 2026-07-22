@@ -59,7 +59,7 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     ).then(setCorrectChoiceMap);
   }, [game, user]);
 
-  const answers = useGrading(gameCode, game, players, correctChoiceMap);
+  const answers = useGrading(gameCode, game, players);
 
   async function handleAdvance() {
     if (!game) return;
