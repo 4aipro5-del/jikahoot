@@ -89,24 +89,25 @@ function SubmitPageContent() {
       <div className="stage-shell">
         <div className="stage-content flex min-h-screen flex-col justify-center gap-6 py-8">
           <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-            <section className="quiz-panel kahoot-spectrum-panel p-6 sm:p-8">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                  <p className="hero-chip">Question Lab</p>
-                  <h1 className="display-font mt-4 text-4xl text-[var(--panel-text)] sm:text-5xl">
-                    {step.nickname}님, 문제를 내 볼까요?
-                  </h1>
-                  <p className="paper-muted mt-2 max-w-3xl text-sm leading-6 sm:text-base lg:max-w-4xl">
-                    제출한 문제는 선생님 확인 후 게임에 반영돼요. 질문과 선택지를 분명하게
-                    쓰면 더 재미있는 퀴즈가 돼요.
-                  </p>
-                </div>
-
-                <button onClick={() => setStep({ kind: "join" })} className="secondary-button">
-                  다른 방 코드로 이동
-                </button>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="hero-chip">Question Lab</p>
+                <h1 className="display-font mt-4 text-4xl text-white sm:text-5xl">
+                  {step.nickname}님, 문제를 내 볼까요?
+                </h1>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-[color:var(--foreground-muted)] sm:text-base lg:max-w-4xl">
+                  제출한 문제는 선생님 확인 후 게임에 반영돼요. 질문과 선택지를 분명하게
+                  쓰면 더 재미있는 퀴즈가 돼요.
+                </p>
               </div>
-            </section>
+
+              <button
+                onClick={() => setStep({ kind: "join" })}
+                className="secondary-button secondary-button-compact"
+              >
+                다른 방 코드로 이동
+              </button>
+            </div>
 
             <QuestionEditorForm
               variant="light"
@@ -132,15 +133,15 @@ function SubmitPageContent() {
     <div className="stage-shell">
       <div className="stage-content flex min-h-screen items-center justify-center py-8">
         <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[1fr_0.92fr]">
-          <section className="quiz-panel kahoot-spectrum-panel flex flex-col justify-between gap-6 p-6 sm:p-8">
+          <div className="flex flex-col justify-between gap-8 py-2">
             <div className="space-y-4">
               <span className="hero-chip">Student Submission</span>
-              <h1 className="display-font text-5xl leading-none text-[var(--panel-text)] sm:text-6xl">
+              <h1 className="display-font text-5xl leading-none text-white sm:text-6xl">
                 우리 반 퀴즈도
                 <br />
                 직접 출제.
               </h1>
-              <p className="paper-muted max-w-xl text-base leading-7 sm:text-lg">
+              <p className="max-w-xl text-base leading-7 text-[color:var(--foreground-muted)] sm:text-lg">
                 학생이 직접 낸 문제를 선생님이 승인한 뒤 게임에 포함할 수 있어요.
                 참여감이 확 올라가는 흐름으로 구성했습니다.
               </p>
@@ -148,21 +149,17 @@ function SubmitPageContent() {
 
             <div className="grid gap-4 sm:grid-cols-3">
               {[
-                ["학생 참여", "문제를 만드는 순간부터 수업 몰입도가 높아져요", "red"],
-                ["선생님 승인", "제출 후 바로 공개되지 않고 확인 과정을 거쳐요", "blue"],
-                ["같은 무드", "입장부터 제출까지 한 화면 톤으로 이어집니다", "green"],
-              ].map(([title, desc, tone], index) => (
-                <div
-                  key={title}
-                  data-tone={tone}
-                  className={`kahoot-accent-card rounded-[24px] p-4 ${index === 1 ? "floaty" : ""}`}
-                >
-                  <p className="display-font text-2xl text-[var(--panel-text)]">{title}</p>
-                  <p className="paper-muted mt-2 text-sm leading-6">{desc}</p>
+                ["학생 참여", "문제를 만드는 순간부터 수업 몰입도가 높아져요"],
+                ["선생님 승인", "제출 후 바로 공개되지 않고 확인 과정을 거쳐요"],
+                ["같은 무드", "입장부터 제출까지 한 화면 톤으로 이어집니다"],
+              ].map(([title, desc]) => (
+                <div key={title} className="rounded-[24px] bg-[var(--surface)] p-4">
+                  <p className="display-font text-lg text-white">{title}</p>
+                  <p className="mt-2 text-sm leading-6 text-[color:var(--foreground-muted)]">{desc}</p>
                 </div>
               ))}
             </div>
-          </section>
+          </div>
 
           <section className="paper-panel kahoot-spectrum-paper p-6 sm:p-8">
             <div className="flex flex-col gap-5">

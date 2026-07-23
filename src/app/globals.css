@@ -1,60 +1,65 @@
-@font-face {
-  font-family: "KblJumpExtended";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-5@1.0/KBLJump_EB_ExtendedTTF.woff2")
-    format("woff2");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "KblJump";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-5@1.0/KBLJump_RTTF.woff2")
-    format("woff2");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "KblJump";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-5@1.0/KBLJump_BTTF.woff2")
-    format("woff2");
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-}
-
 @import "tailwindcss";
 
 :root {
-  --background: #f7fff1;
-  --foreground: #21310f;
-  --panel-text: #243311;
-  --muted: #6d7b58;
-  --surface: rgba(236, 255, 220, 0.9);
-  --surface-strong: rgba(88, 204, 2, 0.12);
-  --panel: rgba(255, 255, 255, 0.98);
-  --duo-green: #58cc02;
-  --duo-green-dark: #46a302;
-  --duo-green-soft: #e8f9d8;
-  --duo-sky-soft: #e7f5ff;
-  --duo-border: #d8ecbf;
-  --kahoot-red: #e21b3c;
-  --kahoot-blue: #1368ce;
-  --kahoot-yellow: #d89e00;
-  --kahoot-green: #26890c;
-  --kahoot-purple: #46a302;
-  --kahoot-card-blue: #1cb0f6;
-  --kahoot-card-red: #ff4b4b;
-  --kahoot-card-yellow: #ffc800;
-  --kahoot-card-purple: #ce82ff;
+  /* ---- base surfaces ---- */
+  --background: #0a0a0f;
+  --foreground: #ffffff;
+  --foreground-muted: rgba(255, 255, 255, 0.72);
+
+  --panel: #ffffff;
+  --panel-text: #18161f;
+  --muted: rgba(24, 22, 31, 0.62);
+
+  --surface: #201f1f;
+  --surface-strong: rgba(32, 31, 31, 0.94);
+  --surface-border: rgba(255, 255, 255, 0.1);
+
+  /* ---- brand palette ---- */
+  --primary: #3200e0;
+  --primary-dark: #22019e;
+  --primary-soft: rgba(50, 0, 224, 0.14);
+
+  --warning: #ffb71e;
+  --warning-dark: #8a5a00;
+  --warning-soft: rgba(255, 183, 30, 0.16);
+
+  /* ---- eyebrow/label accent: separate from --warning (pending-state
+     semantics) — this is purely the page-eyebrow identity color ---- */
+  --accent: #f4ba47;
+  --accent-dark: #8a5a00;
+
+  --error: #fd443a;
+  --error-dark: #971b14;
+  --error-soft: rgba(253, 68, 58, 0.14);
+
+  --success: #2ed573;
+  --success-dark: #14532d;
+  --success-soft: rgba(46, 213, 115, 0.15);
+
+  /* ---- legacy aliases: existing components read these, now resolved to the palette above ---- */
+  --duo-green: var(--primary);
+  --duo-green-dark: var(--primary-dark);
+  --duo-green-soft: var(--primary-soft);
+  --duo-sky-soft: rgba(50, 0, 224, 0.05);
+  --duo-border: rgba(17, 15, 26, 0.1);
+
+  --kahoot-red: var(--error);
+  --kahoot-blue: var(--primary);
+  --kahoot-yellow: var(--warning);
+  --kahoot-green: var(--success);
+  --kahoot-purple: var(--primary);
+
+  --kahoot-card-blue: var(--primary);
+  --kahoot-card-red: var(--error);
+  --kahoot-card-yellow: var(--warning);
+  --kahoot-card-purple: var(--primary);
+
   --shadow-soft:
-    0 22px 54px rgba(109, 152, 74, 0.14),
-    0 0 0 1px rgba(123, 176, 72, 0.05);
+    0 22px 54px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
   --shadow-panel:
-    0 14px 0 rgba(123, 161, 72, 0.18),
-    0 24px 50px rgba(126, 157, 84, 0.14);
+    0 14px 0 rgba(0, 0, 0, 0.3),
+    0 24px 50px rgba(0, 0, 0, 0.4);
   --radius-xl: 30px;
   --radius-lg: 22px;
 }
@@ -62,8 +67,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "KblJump", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-  --font-mono: "KblJump", monospace;
+  --font-sans: var(--font-pretendard), "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --font-mono: var(--font-pretendard), monospace;
 }
 
 * {
@@ -100,8 +105,8 @@ html {
 body {
   min-height: 100vh;
   color: var(--foreground);
-  font-family: "KblJump", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-  background: #f5fbef;
+  font-family: var(--font-pretendard), "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  background: var(--background);
 }
 
 body::before {
@@ -127,8 +132,8 @@ body::after {
 }
 
 ::selection {
-  background: rgba(88, 204, 2, 0.26);
-  color: #173003;
+  background: rgba(50, 0, 224, 0.4);
+  color: #ffffff;
 }
 
 a,
@@ -152,52 +157,11 @@ button:disabled {
 }
 
 .display-font {
-  font-family: "KblJumpExtended", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-  font-weight: 400;
+  font-family: var(--font-pretendard), "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-weight: 900;
   letter-spacing: -0.01em;
   word-break: keep-all;
   text-wrap: balance;
-}
-
-.display-title-wrap {
-  display: block;
-  max-inline-size: 100%;
-  font-size: clamp(2rem, 4.8vw, 4.7rem);
-  line-height: 0.94;
-  word-break: keep-all;
-  text-wrap: balance;
-}
-
-.display-title-wrap > span {
-  display: inline;
-  max-inline-size: 100%;
-}
-
-.display-title-wrap [data-display-suffix="true"] {
-  display: inline-block;
-  margin-left: 0.14em;
-}
-
-.display-title-shrink {
-  display: block;
-  max-inline-size: 100%;
-  font-size: clamp(1.55rem, 7.6vw, 4.7rem);
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.display-title-shrink > span {
-  display: inline;
-}
-
-.display-title-shrink [data-display-suffix="true"] {
-  margin-left: 0.18em;
-}
-
-@media (max-width: 1279px) {
-  .display-title-wrap {
-    font-size: clamp(1.9rem, 5.2vw, 3.8rem);
-  }
 }
 
 .balance-wrap {
@@ -285,165 +249,15 @@ button:disabled {
   filter: none;
 }
 
-.dashboard-hero {
-  position: relative;
-  overflow: hidden;
-  min-height: 22rem;
-  border-color: var(--duo-border);
-  background: rgba(255, 255, 255, 0.99);
-  box-shadow:
-    0 24px 60px rgba(118, 146, 87, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.94);
-}
-
-.dashboard-hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: transparent;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.dashboard-hero .dashboard-hero-grid {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(18rem, 0.7fr);
-  align-items: end;
-  gap: 2rem;
-}
-
-.dashboard-hero .dashboard-hero-kicker {
-  color: rgba(70, 163, 2, 0.78);
-}
-
-.dashboard-hero .dashboard-hero-title {
-  font-size: clamp(2.9rem, 5.2vw, 5rem);
-  line-height: 0.94;
-  color: var(--panel-text);
-  text-shadow: none;
-}
-
-.dashboard-hero .dashboard-hero-description {
-  max-width: 38rem;
-  font-size: 0.95rem;
-  line-height: 1.65;
-  color: rgba(36, 51, 17, 0.72);
-}
-
-.secondary-button.dashboard-hero-logout {
-  min-width: 8rem;
-  border-color: rgba(88, 204, 2, 0.18);
-  background: rgba(255, 255, 255, 0.92);
-}
-
-.dashboard-hero .dashboard-room-card {
-  min-width: 18rem;
-  border: 1px solid rgba(88, 204, 2, 0.24);
-  background: #ffffff;
-  box-shadow:
-    0 14px 0 rgba(88, 204, 2, 0.14),
-    0 26px 56px rgba(122, 146, 95, 0.15);
-}
-
-.dashboard-hero .dashboard-room-code {
-  letter-spacing: 0.02em;
-}
-
-.paper-panel.dashboard-launch-card {
-  position: relative;
-  overflow: hidden;
-  border-color: var(--duo-border);
-  background: #ffffff;
-  color: var(--panel-text);
-  box-shadow:
-    0 22px 54px rgba(121, 145, 91, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.94);
-}
-
-.paper-panel.dashboard-launch-card .hero-chip-paper {
-  background: #e8f9d8;
-  color: var(--duo-green-dark);
-}
-
-.paper-panel.dashboard-launch-card h2,
-.paper-panel.dashboard-launch-card .paper-muted,
-.paper-panel.dashboard-launch-card .paper-subtle {
-  color: var(--panel-text);
-}
-
-.paper-panel.dashboard-launch-card .dashboard-launch-copy {
-  color: rgba(36, 51, 17, 0.72) !important;
-}
-
-.dashboard-launch-card .dashboard-launch-metric {
-  min-height: 13rem;
-  border: 1px solid rgba(88, 204, 2, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
-}
-
-.dashboard-launch-card .dashboard-launch-metric-blue {
-  background: #edf8df;
-}
-
-.dashboard-launch-card .dashboard-launch-metric-yellow {
-  background: #fff5dd;
-}
-
-.primary-button.dashboard-launch-button {
-  min-width: 15rem;
-  box-shadow: 0 12px 0 rgba(70, 163, 2, 0.24);
-}
-
-.dashboard-bank-card {
-  position: relative;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.99);
-  border-color: var(--duo-border);
-}
-
-.dashboard-bank-card .dashboard-bank-kicker {
-  color: rgba(70, 163, 2, 0.78);
-}
-
-.dashboard-bank-card .dashboard-bank-title {
-  font-size: clamp(2rem, 3vw, 3.5rem);
-  line-height: 0.92;
-  color: var(--panel-text);
-}
-
-.dashboard-bank-card .dashboard-bank-tabs .tab-button[data-active="true"] {
-  background: #effedb;
-  color: var(--duo-green-dark);
-}
-
-.dashboard-bank-card .dashboard-bank-tabs .tab-button[data-active="false"] {
-  background: rgba(88, 204, 2, 0.08);
-  color: rgba(36, 51, 17, 0.7);
-}
-
-.paper-panel.dashboard-bank-item {
-  border-color: rgba(88, 204, 2, 0.12);
-  background: #ffffff;
-  box-shadow:
-    0 14px 0 rgba(88, 204, 2, 0.1),
-    0 20px 42px rgba(121, 145, 91, 0.12);
-}
-
 .paper-panel.dashboard-builder-card {
-  border-color: rgba(88, 204, 2, 0.12);
+  border-color: var(--duo-border);
   background: #ffffff;
-}
-
-.paper-panel.dashboard-builder-card .hero-chip-paper {
-  background: #e8f9d8;
 }
 
 .paper-panel.dashboard-builder-card .text-area,
 .paper-panel.dashboard-builder-card .text-input {
   background: rgba(255, 255, 255, 1);
-  border-color: rgba(88, 204, 2, 0.12);
+  border-color: var(--duo-border);
 }
 
 .quiz-panel {
@@ -454,7 +268,7 @@ button:disabled {
 }
 
 .paper-panel {
-  border: 1px solid rgba(88, 204, 2, 0.14);
+  border: 1px solid var(--duo-border);
   border-radius: var(--radius-xl);
   background: #ffffff;
   color: var(--panel-text);
@@ -464,45 +278,41 @@ button:disabled {
 .hero-chip {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: #e8f9d8;
-  color: var(--duo-green-dark);
-  box-shadow: inset 0 -2px 0 rgba(88, 204, 2, 0.1);
-  padding: 0.55rem 0.9rem;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.24em;
+  color: var(--accent);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
+/* on a white/paper surface, raw --accent has near-zero contrast — swap to
+   the same hue's dark variant instead of a different color family */
 .hero-chip-paper {
-  background: #e8f9d8;
-  color: var(--duo-green-dark);
+  color: var(--accent-dark);
 }
 
 .paper-muted {
-  color: rgba(36, 51, 17, 0.72);
+  color: rgba(24, 22, 31, 0.72);
 }
 
 .paper-subtle {
-  color: rgba(36, 51, 17, 0.64);
+  color: rgba(24, 22, 31, 0.64);
 }
 
 .paper-faint {
-  color: rgba(36, 51, 17, 0.56);
+  color: rgba(24, 22, 31, 0.56);
 }
 
 .paper-ghost {
-  color: rgba(36, 51, 17, 0.54);
+  color: rgba(24, 22, 31, 0.5);
 }
 
 .paper-purple-bg {
-  background: rgba(28, 176, 246, 0.08);
+  background: rgba(50, 0, 224, 0.08);
 }
 
 .paper-yellow-bg {
-  background: rgba(255, 200, 0, 0.12);
+  background: rgba(255, 183, 30, 0.14);
 }
 
 .kahoot-signal-row {
@@ -550,7 +360,7 @@ button:disabled {
   bottom: auto;
   height: 0.3rem;
   border-radius: 999px;
-  background: rgba(88, 204, 2, 0.72);
+  background: rgba(50, 0, 224, 0.75);
   opacity: 0.95;
 }
 
@@ -573,53 +383,53 @@ button:disabled {
 }
 
 .kahoot-accent-card {
-  border: 2px solid rgba(88, 204, 2, 0.14);
+  border: 2px solid var(--duo-border);
   position: relative;
   overflow: hidden;
   background: #ffffff;
   color: var(--panel-text);
-  box-shadow: 0 12px 24px rgba(124, 150, 89, 0.08);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
 }
 
 .kahoot-accent-card[data-tone="red"] {
   border-color: var(--kahoot-card-red);
   box-shadow:
-    0 12px 24px rgba(255, 75, 75, 0.12),
-    inset 0 0 0 1px rgba(255, 75, 75, 0.14);
+    0 12px 24px rgba(253, 68, 58, 0.14),
+    inset 0 0 0 1px rgba(253, 68, 58, 0.16);
 }
 
 .kahoot-accent-card[data-tone="blue"] {
   border-color: var(--kahoot-card-blue);
   box-shadow:
-    0 12px 24px rgba(28, 176, 246, 0.12),
-    inset 0 0 0 1px rgba(28, 176, 246, 0.14);
+    0 12px 24px rgba(50, 0, 224, 0.14),
+    inset 0 0 0 1px rgba(50, 0, 224, 0.16);
 }
 
 .kahoot-accent-card[data-tone="yellow"] {
   border-color: var(--kahoot-card-yellow);
   box-shadow:
-    0 12px 24px rgba(255, 200, 0, 0.12),
-    inset 0 0 0 1px rgba(255, 200, 0, 0.14);
+    0 12px 24px rgba(255, 183, 30, 0.14),
+    inset 0 0 0 1px rgba(255, 183, 30, 0.16);
 }
 
 .kahoot-accent-card[data-tone="green"] {
   border-color: var(--kahoot-card-purple);
   box-shadow:
-    0 12px 24px rgba(206, 130, 255, 0.14),
-    inset 0 0 0 1px rgba(206, 130, 255, 0.16);
+    0 12px 24px rgba(50, 0, 224, 0.14),
+    inset 0 0 0 1px rgba(50, 0, 224, 0.16);
 }
 
 .kahoot-accent-card[data-tone="purple"] {
   border-color: var(--kahoot-card-purple);
   box-shadow:
-    0 12px 24px rgba(206, 130, 255, 0.14),
-    inset 0 0 0 1px rgba(206, 130, 255, 0.16);
+    0 12px 24px rgba(50, 0, 224, 0.14),
+    inset 0 0 0 1px rgba(50, 0, 224, 0.16);
 }
 
 .primary-button-spectrum {
   position: relative;
   overflow: hidden;
-  background: #58cc02;
+  background: var(--primary);
 }
 
 .primary-button-spectrum::before {
@@ -627,51 +437,51 @@ button:disabled {
   position: absolute;
   inset: auto 0 0;
   height: 0.42rem;
-  background: rgba(54, 125, 0, 0.24);
+  background: rgba(0, 0, 0, 0.22);
   opacity: 1;
 }
 
 .kahoot-soft-note {
-  background: #eef8e3;
+  background: rgba(17, 15, 26, 0.04);
 }
 
 .text-input {
   width: 100%;
   min-height: 3.8rem;
-  border: 2px solid rgba(88, 204, 2, 0.14);
+  border: 2px solid var(--duo-border);
   border-radius: 22px;
   background: rgba(255, 255, 255, 1);
   color: var(--panel-text);
   padding: 0.95rem 1.1rem;
   font-size: 1rem;
   font-weight: 700;
-  box-shadow: inset 0 -3px 0 rgba(88, 204, 2, 0.08);
+  box-shadow: inset 0 -3px 0 rgba(17, 15, 26, 0.06);
 }
 
 .text-input::placeholder,
 .text-area::placeholder {
-  color: rgba(36, 51, 17, 0.36);
+  color: rgba(24, 22, 31, 0.36);
 }
 
 .text-input:focus-visible,
 .text-area:focus-visible {
   outline: none;
-  border-color: rgba(88, 204, 2, 0.6);
+  border-color: rgba(50, 0, 224, 0.55);
   box-shadow:
-    inset 0 -3px 0 rgba(88, 204, 2, 0.08),
-    0 0 0 4px rgba(88, 204, 2, 0.14);
+    inset 0 -3px 0 rgba(17, 15, 26, 0.06),
+    0 0 0 4px rgba(50, 0, 224, 0.16);
 }
 
 .text-area {
   width: 100%;
-  border: 2px solid rgba(88, 204, 2, 0.14);
+  border: 2px solid var(--duo-border);
   border-radius: 22px;
   background: rgba(255, 255, 255, 1);
   color: var(--panel-text);
   padding: 1rem 1.1rem;
   font-size: 1rem;
   font-weight: 700;
-  box-shadow: inset 0 -3px 0 rgba(88, 204, 2, 0.08);
+  box-shadow: inset 0 -3px 0 rgba(17, 15, 26, 0.06);
   resize: vertical;
 }
 
@@ -679,24 +489,23 @@ button:disabled {
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  font-family: "KblJump", monospace;
-  font-weight: 700;
+  font-weight: 800;
   font-size: clamp(1.2rem, 3vw, 1.7rem);
   box-shadow: none;
 }
 
 .code-input:focus-visible {
-  box-shadow: 0 0 0 4px rgba(88, 204, 2, 0.14);
+  box-shadow: 0 0 0 4px rgba(50, 0, 224, 0.16);
 }
 
 .student-entry-input {
-  box-shadow: 0 10px 0 rgba(196, 221, 177, 0.95);
+  box-shadow: 0 10px 0 rgba(17, 15, 26, 0.1);
 }
 
 .student-entry-input:focus-visible {
   box-shadow:
-    0 10px 0 rgba(196, 221, 177, 0.95),
-    0 0 0 4px rgba(88, 204, 2, 0.14);
+    0 10px 0 rgba(17, 15, 26, 0.1),
+    0 0 0 4px rgba(50, 0, 224, 0.16);
 }
 
 .student-entry-name-input {
@@ -709,40 +518,40 @@ button:disabled {
   min-height: 3.9rem;
   align-items: center;
   justify-content: center;
-  border: 2px solid rgba(255, 255, 255, 0.7);
+  border: 2px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
-  background: #58cc02;
+  background: var(--primary);
   color: white;
   padding: 0.85rem 1.6rem;
   font-size: 1.14rem;
   font-weight: 900;
-  box-shadow: 0 10px 0 rgba(70, 163, 2, 0.34);
+  box-shadow: 0 10px 0 var(--primary-dark);
 }
 
 .primary-button-hero {
   min-height: clamp(6rem, 8vw, 7.6rem);
   padding: 1rem 1.8rem;
-  font-family: "KblJumpExtended", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-weight: 900;
   font-size: clamp(3.6rem, 5vw, 5.2rem);
   line-height: 1;
 }
 
 .primary-button-stage {
-  min-height: clamp(4.8rem, 5.8vw, 5.6rem);
-  padding: 0.9rem 1.5rem;
-  font-family: "KblJumpExtended", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-  font-size: clamp(1.8rem, 2.4vw, 2.5rem);
+  min-height: clamp(6rem, 7.5vw, 7.2rem);
+  padding: 1.1rem 1.8rem;
+  font-weight: 900;
+  font-size: clamp(2.2rem, 3vw, 3rem);
   line-height: 1;
 }
 
 .primary-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 12px 0 rgba(70, 163, 2, 0.34);
+  box-shadow: 0 12px 0 var(--primary-dark);
 }
 
 .primary-button:active:not(:disabled) {
   transform: translateY(3px);
-  box-shadow: 0 7px 0 rgba(70, 163, 2, 0.34);
+  box-shadow: 0 7px 0 var(--primary-dark);
 }
 
 .secondary-button {
@@ -750,31 +559,37 @@ button:disabled {
   min-height: 3.4rem;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(88, 204, 2, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.98);
-  color: var(--duo-green-dark);
+  background: var(--surface);
+  color: #ffffff;
   padding: 0.8rem 1.25rem;
   font-size: 0.95rem;
   font-weight: 700;
 }
 
 .secondary-button-soft-green {
-  border-color: rgba(88, 204, 2, 0.22);
-  background: #eef8e3;
-  color: var(--duo-green-dark);
+  border-color: rgba(50, 0, 224, 0.3);
+  background: var(--primary-soft);
+  color: #ffffff;
   box-shadow:
-    inset 0 -2px 0 rgba(88, 204, 2, 0.08),
-    0 8px 18px rgba(123, 164, 76, 0.12);
+    inset 0 -2px 0 rgba(50, 0, 224, 0.1),
+    0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
+.secondary-button-compact {
+  min-height: 2.5rem;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.85rem;
 }
 
 .secondary-button:hover:not(:disabled) {
   transform: translateY(-1px);
-  background: #f1f9e8;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .secondary-button-soft-green:hover:not(:disabled) {
-  background: #e7f5d9;
+  background: rgba(50, 0, 224, 0.22);
 }
 
 .tab-button {
@@ -788,14 +603,14 @@ button:disabled {
 }
 
 .tab-button[data-active="true"] {
-  background: #effedb;
-  color: var(--duo-green-dark);
-  box-shadow: 0 8px 20px rgba(123, 164, 76, 0.14);
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(50, 0, 224, 0.35);
 }
 
 .tab-button[data-active="false"] {
-  background: rgba(88, 204, 2, 0.08);
-  color: rgba(36, 51, 17, 0.72);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.66);
 }
 
 .status-banner {
@@ -806,26 +621,26 @@ button:disabled {
 }
 
 .status-banner[data-tone="error"] {
-  border: 1px solid rgba(226, 27, 60, 0.32);
-  background: #ffe3e9;
-  color: #6f1025 !important;
+  border: 1px solid rgba(253, 68, 58, 0.35);
+  background: var(--error-soft);
+  color: var(--error) !important;
   opacity: 1;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .status-banner[data-tone="success"] {
-  background: rgba(88, 204, 2, 0.14);
-  color: #2b5e08;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .status-banner[data-tone="warning"] {
-  background: rgba(255, 200, 0, 0.14);
-  color: #7b5700;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .metric-card {
   border-radius: 24px;
-  border: 1px solid rgba(88, 204, 2, 0.12);
+  border: 1px solid var(--duo-border);
   background: rgba(255, 255, 255, 0.96);
   padding: 1rem 1.15rem;
 }
@@ -858,7 +673,7 @@ button:disabled {
 }
 
 .answer-tile.is-selected {
-  outline: 4px solid rgba(255, 255, 255, 0.92);
+  outline: 4px solid var(--tile-outline, rgba(255, 255, 255, 0.92));
   outline-offset: -4px;
 }
 
@@ -884,7 +699,8 @@ button:disabled {
   font-weight: 900;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.78);
+  color: currentColor;
+  opacity: 0.78;
 }
 
 .progress-track {
@@ -898,16 +714,16 @@ button:disabled {
 .progress-bar {
   height: 100%;
   border-radius: 999px;
-  background: #58cc02;
+  background: var(--primary);
 }
 
 .subtle-link {
-  color: rgba(70, 163, 2, 0.82);
+  color: rgba(50, 0, 224, 0.85);
   font-weight: 700;
 }
 
 .subtle-link:hover {
-  color: var(--duo-green-dark);
+  color: var(--primary-dark);
 }
 
 .choice-swatch {
@@ -929,6 +745,21 @@ button:disabled {
 
 .floaty {
   animation: floaty 3.4s ease-in-out infinite;
+}
+
+@keyframes tile-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.tile-enter {
+  animation: tile-in 220ms ease-out;
 }
 
 @media (max-width: 640px) {

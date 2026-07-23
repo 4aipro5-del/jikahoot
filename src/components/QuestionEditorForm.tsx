@@ -33,6 +33,7 @@ export default function QuestionEditorForm({
   onSubmit,
   variant = "light",
   className = "",
+  hideTitle = false,
 }: {
   title: string;
   submitLabel: string;
@@ -40,6 +41,7 @@ export default function QuestionEditorForm({
   onSubmit: (input: { text: string; choices: Choice[]; correctChoiceId: string }) => Promise<unknown>;
   variant?: "light" | "dark";
   className?: string;
+  hideTitle?: boolean;
 }) {
   const isDark = variant === "dark";
   const [text, setText] = useState("");
@@ -132,16 +134,18 @@ export default function QuestionEditorForm({
           : "paper-panel"
       } ${className}`}
     >
-      <div className="flex flex-col items-center gap-3 text-center">
-        <p className={`w-full ${isDark ? "hero-chip" : "hero-chip hero-chip-paper"}`}>Quiz Builder</p>
-        <h2
-          className={`display-font text-[2rem] leading-none ${
-            isDark ? "text-white" : "text-[var(--panel-text)]"
-          }`}
-        >
-          {title}
-        </h2>
-      </div>
+      {!hideTitle && (
+        <div className="flex flex-col items-center gap-3 text-center">
+          <p className={`w-full ${isDark ? "hero-chip" : "hero-chip hero-chip-paper"}`}>Quiz Builder</p>
+          <h2
+            className={`display-font text-[2rem] leading-none ${
+              isDark ? "text-white" : "text-[var(--panel-text)]"
+            }`}
+          >
+            {title}
+          </h2>
+        </div>
+      )}
 
       <label className="flex flex-col gap-2">
         <span

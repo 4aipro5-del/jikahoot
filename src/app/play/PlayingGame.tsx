@@ -9,15 +9,16 @@ import {
   submitAnswer,
   type PlayerWithId,
 } from "@/lib/firestore/games";
-import type { Answer, Game } from "@/types/firestore";
+import type { Answer, Game, Player } from "@/types/firestore";
 import PlayerRoster from "@/components/PlayerRoster";
 import Leaderboard from "@/components/Leaderboard";
+import { useNow } from "@/lib/useNow";
 
 const ANSWER_THEMES = [
-  { bg: "var(--kahoot-red)", shadow: "rgba(105, 11, 28, 0.42)", shape: "▲", label: "Red" },
-  { bg: "var(--kahoot-blue)", shadow: "rgba(8, 45, 89, 0.42)", shape: "◆", label: "Blue" },
-  { bg: "var(--kahoot-yellow)", shadow: "rgba(132, 92, 0, 0.34)", shape: "●", label: "Yellow" },
-  { bg: "var(--kahoot-green)", shadow: "rgba(18, 73, 8, 0.4)", shape: "■", label: "Green" },
+  { bg: "var(--primary)", shadow: "rgba(34, 1, 158, 0.42)", shape: "▲", label: "A", light: false },
+  { bg: "var(--warning)", shadow: "rgba(138, 90, 0, 0.4)", shape: "●", label: "B", light: false },
+  { bg: "var(--error)", shadow: "rgba(151, 27, 20, 0.42)", shape: "◆", label: "C", light: false },
+  { bg: "#ffffff", shadow: "rgba(0, 0, 0, 0.25)", shape: "■", label: "D", light: true },
 ];
 
 export default function PlayingGame({
@@ -33,14 +34,27 @@ export default function PlayingGame({
 }) {
   const [game, setGame] = useState<Game | null | undefined>(undefined);
   const [players, setPlayers] = useState<PlayerWithId[]>([]);
+  const [myPlayer, setMyPlayer] = useState<Player | null | undefined>(undefined);
   const [wasRegistered, setWasRegistered] = useState(false);
 
   useEffect(() => subscribeToGame(gameCode, setGame), [gameCode]);
 
-  useEffect(() => subscribeToPlayers(gameCode, setPlayers), [gameCode, game?.status]);
+  useEffect(() => {
+    // The players list is intentionally locked down to the host-only during
+    // active play (so a student can't see everyone else's live scores/streaks
+    // mid-round) — subscribing here anyway throws an uncaught permission-
+    // denied, so this pauses the listener rather than trying to read data the
+    // rules correctly refuse to hand out.
+    if (game?.status === "active") return;
+    return subscribeToPlayers(gameCode, setPlayers);
+  }, [gameCode, game?.status]);
 
   useEffect(() => {
+    // A single-document read of the player's own doc is allowed in every
+    // game status (unlike the full list above), so this doubles as the
+    // source for "my score" during active play as well as forced-out detection.
     return subscribeToPlayer(gameCode, authorUid, (player) => {
+      setMyPlayer(player);
       if (player) {
         setWasRegistered(true);
         return;
@@ -67,23 +81,31 @@ export default function PlayingGame({
     return (
       <div className="stage-shell">
         <div className="stage-content flex min-h-screen flex-col justify-center gap-6 py-8">
-          <section className="quiz-panel mx-auto flex w-full max-w-5xl flex-col gap-6 p-6 text-center sm:p-8">
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 text-center">
             <div className="space-y-3">
-              <p className="hero-chip">Final Leaderboard</p>
-              <h1 className="display-font text-5xl text-[var(--panel-text)] sm:text-6xl">최종 순위</h1>
-              <p className="paper-muted text-sm leading-6 sm:text-base">
+              <p className="hero-chip self-center">Final Leaderboard</p>
+              <h1 className="display-font text-5xl text-white sm:text-6xl">최종 순위</h1>
+              <p className="text-sm leading-6 text-[color:var(--foreground-muted)] sm:text-base">
                 마지막 문제까지 모두 끝났어요. 내 점수와 전체 순위를 확인해 보세요.
               </p>
             </div>
             <Leaderboard players={players} highlightPlayerId={authorUid} />
-          </section>
+          </div>
         </div>
       </div>
     );
   }
 
   if (game.status === "active") {
-    return <ActiveView game={game} gameCode={gameCode} authorUid={authorUid} nickname={nickname} />;
+    return (
+      <ActiveView
+        game={game}
+        gameCode={gameCode}
+        authorUid={authorUid}
+        nickname={nickname}
+        myScore={myPlayer?.totalScore ?? 0}
+      />
+    );
   }
 
   return <LobbyView gameCode={gameCode} nickname={nickname} players={players} />;
@@ -100,46 +122,35 @@ function LobbyView({
 }) {
   return (
     <div className="stage-shell">
-      <div className="stage-content flex min-h-screen flex-col justify-center gap-6 py-8">
-        <section className="quiz-panel mx-auto grid w-full max-w-5xl gap-6 p-6 sm:p-8 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="flex flex-col justify-between gap-5">
+      <div className="stage-content flex min-h-screen flex-col justify-center gap-8 py-8">
+        <div className="mx-auto grid w-full max-w-5xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="flex flex-col justify-between gap-6">
             <div className="space-y-4">
               <p className="hero-chip">Waiting Lobby</p>
-              <h1 className="display-font text-4xl text-[var(--panel-text)] sm:text-5xl">
+              <h1 className="display-font text-4xl text-white sm:text-5xl">
                 {nickname}님,
                 <br />
                 곧 시작돼요!
               </h1>
-              <p className="paper-muted text-sm leading-6 sm:text-base">
+              <p className="text-sm leading-6 text-[color:var(--foreground-muted)] sm:text-base">
                 선생님이 시작 버튼을 누르면 바로 첫 문제가 펼쳐져요. 지금은 친구들이
                 들어오는 중입니다.
               </p>
             </div>
 
-            <div className="rounded-[28px] border border-[rgba(88,204,2,0.16)] bg-white px-5 py-5 text-[var(--panel-text)] shadow-[0_12px_0_rgba(88,204,2,0.16)]">
-              <p className="paper-ghost text-xs font-black uppercase tracking-[0.2em]">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-white/50">
                 Game Code
               </p>
-              <p className="display-font mt-2 text-5xl sm:text-6xl">{gameCode}</p>
+              <p className="display-font mt-2 text-6xl text-white sm:text-7xl">{gameCode}</p>
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-[rgba(88,204,2,0.14)] bg-[rgba(255,255,255,0.72)] p-5 sm:p-6">
-            <PlayerRoster players={players} />
-          </div>
-        </section>
+          <PlayerRoster players={players} />
+        </div>
       </div>
     </div>
   );
-}
-
-function useNow(intervalMs: number) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(id);
-  }, [intervalMs]);
-  return now;
 }
 
 function ActiveView({
@@ -147,11 +158,13 @@ function ActiveView({
   gameCode,
   authorUid,
   nickname,
+  myScore,
 }: {
   game: Game;
   gameCode: string;
   authorUid: string;
   nickname: string;
+  myScore: number;
 }) {
   const questionIndex = game.currentQuestionIndex;
   const question = game.questions[questionIndex];
@@ -180,6 +193,7 @@ function ActiveView({
     : 0;
   const timeUp = deadline !== null && remainingSec <= 0;
   const hasAnswered = Boolean(answer);
+  const timeLow = !timeUp && remainingSec <= 5;
 
   async function handleChoose(choiceId: string) {
     if (hasAnswered || timeUp || submitting) return;
@@ -196,97 +210,76 @@ function ActiveView({
 
   return (
     <div className="stage-shell">
-      <div className="stage-content flex min-h-screen flex-col justify-center gap-6 py-6">
-        <section className="quiz-panel mx-auto flex w-full max-w-6xl flex-col gap-6 p-5 sm:p-8">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="paper-faint text-sm font-black uppercase tracking-[0.2em]">
-                Live Question
-              </p>
-              <h1 className="display-font mt-2 text-3xl text-[var(--panel-text)] sm:text-4xl">
-                {nickname}의 문제 화면
-              </h1>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="metric-card">
-                <p className="paper-faint text-xs font-black uppercase tracking-[0.18em]">
-                  Round
-                </p>
-                <p className="display-font mt-2 text-4xl text-[var(--panel-text)]">
-                  {questionIndex + 1}/{game.questions.length}
-                </p>
-              </div>
-              <div className="metric-card">
-                <p className="paper-faint text-xs font-black uppercase tracking-[0.18em]">
-                  Time Left
-                </p>
-                <p className="display-font mt-2 text-4xl text-[var(--panel-text)]">
-                  {timeUp ? "0" : remainingSec}
-                </p>
-              </div>
-              <div className="metric-card">
-                <p className="paper-faint text-xs font-black uppercase tracking-[0.18em]">
-                  Game Code
-                </p>
-                <p className="display-font mt-2 text-4xl text-[var(--panel-text)]">{gameCode}</p>
-              </div>
+      <div className="stage-content flex min-h-screen flex-col justify-center gap-5 py-6">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
+          <div className="flex items-center justify-between gap-4">
+            <p className="min-w-0 truncate text-sm font-bold text-[color:var(--foreground-muted)]">
+              방 코드 {gameCode}
+            </p>
+            <div className="flex flex-none items-center gap-3">
+              <span className="rounded-full bg-[var(--surface)] px-4 py-1.5 text-sm font-black text-white">
+                {questionIndex + 1}/{game.questions.length}
+              </span>
+              <span
+                className={`flex h-14 w-14 flex-none items-center justify-center rounded-full border-2 text-xl font-black ${
+                  timeUp || timeLow
+                    ? "border-[var(--error)] text-[var(--error)]"
+                    : "border-[var(--primary)] text-white"
+                }`}
+              >
+                {timeUp ? "0" : remainingSec}
+              </span>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="paper-subtle flex items-center justify-between text-sm font-black">
-              <span>타이머</span>
-              <span>{timeUp ? "시간 종료" : `${remainingSec}초 남음`}</span>
-            </div>
-            <div className="progress-track">
-              <div
-                className="progress-bar"
-                style={{ width: `${remainingRatio * 100}%` } as CSSProperties}
-              />
-            </div>
+          <div className="progress-track">
+            <div
+              className="progress-bar"
+              style={{ width: `${remainingRatio * 100}%` } as CSSProperties}
+            />
           </div>
 
           <section className="paper-panel p-6 sm:p-8">
-            <div className="space-y-5">
-              <div>
-                <p className="paper-ghost text-sm font-black uppercase tracking-[0.18em]">
-                  Question
-                </p>
-                <h2 className="display-font mt-3 text-4xl leading-tight text-[var(--panel-text)] sm:text-5xl">
-                  {question.text}
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                {question.choices.map((choice, index) => {
-                  const theme = ANSWER_THEMES[index % ANSWER_THEMES.length];
-                  const isMyChoice = answer?.choiceId === choice.id;
-
-                  return (
-                    <button
-                      key={choice.id}
-                      onClick={() => handleChoose(choice.id)}
-                      disabled={hasAnswered || timeUp || submitting}
-                      className={`answer-tile ${isMyChoice ? "is-selected" : ""}`}
-                      style={
-                        {
-                          "--tile-bg": theme.bg,
-                          "--tile-shadow": theme.shadow,
-                        } as CSSProperties
-                      }
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="answer-shape">{theme.shape}</span>
-                        <span className="answer-kicker">{theme.label}</span>
-                      </div>
-                      <span className="text-base font-black leading-6 sm:text-lg">{choice.text}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <p className="paper-ghost text-sm font-black uppercase tracking-[0.18em]">Question</p>
+            <h2 className="display-font mt-3 text-3xl leading-tight text-[var(--panel-text)] sm:text-4xl lg:text-5xl">
+              {question.text}
+            </h2>
           </section>
+
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            {question.choices.map((choice, index) => {
+              const theme = ANSWER_THEMES[index % ANSWER_THEMES.length];
+              const isMyChoice = answer?.choiceId === choice.id;
+
+              return (
+                <button
+                  key={choice.id}
+                  onClick={() => handleChoose(choice.id)}
+                  disabled={hasAnswered || timeUp || submitting}
+                  className={`answer-tile ${isMyChoice ? "is-selected" : ""}`}
+                  style={
+                    {
+                      "--tile-bg": theme.bg,
+                      "--tile-shadow": theme.shadow,
+                      "--tile-outline": theme.light ? "var(--panel-text)" : "rgba(255,255,255,0.92)",
+                      color: theme.light ? "var(--panel-text)" : "#ffffff",
+                    } as CSSProperties
+                  }
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span
+                      className="answer-shape"
+                      style={{ background: theme.light ? "rgba(23,21,31,0.08)" : "rgba(255,255,255,0.16)" }}
+                    >
+                      {theme.shape}
+                    </span>
+                    <span className="answer-kicker">{theme.label}</span>
+                  </div>
+                  <span className="text-base font-black leading-6 sm:text-lg">{choice.text}</span>
+                </button>
+              );
+            })}
+          </div>
 
           {submitError && (
             <p className="status-banner" data-tone="error">
@@ -308,7 +301,17 @@ function ActiveView({
               시간이 끝났어요. 다음 문제를 기다려 주세요.
             </p>
           )}
-        </section>
+
+          <div className="mt-1 flex items-center justify-between gap-4 rounded-full bg-[var(--surface)] px-5 py-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--primary)] text-sm font-black text-white">
+                {nickname.slice(0, 1).toUpperCase()}
+              </span>
+              <span className="truncate text-base font-black text-white">{nickname}</span>
+            </div>
+            <span className="display-font flex-none text-xl text-white">{myScore} pt</span>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { doc, getDoc, runTransaction, serverTimestamp, setDoc, type Timestamp } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot, runTransaction, serverTimestamp, setDoc, updateDoc, type Timestamp } from 'firebase/firestore'
 import type { User } from 'firebase/auth'
 import { db } from '@/lib/firebase/client'
 import type { Room } from '@/types/firestore'
@@ -61,6 +61,21 @@ export async function ensureRoom(user: User): Promise<Room> {
 export async function getRoomByTeacherUid(teacherUid: string): Promise<Room | null> {
   const roomSnap = await getDoc(doc(db, 'rooms', teacherUid))
   return roomSnap.exists() ? (roomSnap.data() as Room) : null
+}
+
+export function subscribeToRoom(teacherUid: string, callback: (room: Room | null) => void) {
+  return onSnapshot(doc(db, 'rooms', teacherUid), (snap) => {
+    callback(snap.exists() ? (snap.data() as Room) : null)
+  })
+}
+
+// explicit "다시 시작": dismisses the finished game so the next startGame call
+// doesn't try to reuse it, and other sessions viewing this room see it as idle
+export function clearCurrentGame(teacherUid: string) {
+  return updateDoc(doc(db, 'rooms', teacherUid), {
+    currentGameId: null,
+    currentGameStatus: null,
+  })
 }
 
 export async function syncRoomProfile(user: User): Promise<Room> {

@@ -121,153 +121,190 @@ function HomePortal() {
 
   return (
     <div className="stage-shell">
-      <div className="stage-content portal-stage flex min-h-screen flex-col justify-center py-8 sm:py-12">
-        <div className="mx-auto flex w-full max-w-[1380px] flex-col gap-6">
-          <div className="flex justify-center lg:justify-start">
-            <span className="hero-chip">Classroom Quiz Show</span>
-          </div>
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <span className="absolute left-[11%] top-[26%] h-5 w-5 rotate-45 rounded-sm bg-[var(--primary)]" />
+        <span className="absolute left-[7%] top-[54%] h-6 w-6 rotate-12 rounded-sm bg-[var(--warning)]" />
+        <span className="absolute left-[2%] top-[70%] h-5 w-5 -rotate-12 rounded-sm bg-[var(--primary)]/60" />
+        <span className="absolute right-[7%] top-[52%] h-6 w-6 -rotate-12 rounded-sm bg-[var(--error)]" />
+        <span className="absolute right-[15%] top-[16%] text-2xl text-[var(--warning)]">✦</span>
+        <span className="absolute right-[5%] top-[8%] h-2 w-2 rounded-full bg-white/50" />
+        <span className="absolute bottom-[6%] right-[5%] text-6xl text-[var(--primary)]">✦</span>
+      </div>
 
-          <div className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr] xl:gap-8">
-            <div className="flex flex-col gap-4 lg:h-full">
-              <section className="quiz-panel kahoot-spectrum-panel flex flex-col gap-8 p-6 sm:p-8 lg:flex-1 lg:p-10">
-                <div className="space-y-3">
-                  <h1 className="display-font text-4xl leading-[1.08] text-[var(--panel-text)] sm:text-[2.8rem] lg:text-[3.6rem] xl:text-[3.85rem]">
-                    교실을 바로
-                    <br />
-                    퀴즈 쇼로.
-                  </h1>
-                  <p className="paper-muted max-w-2xl text-base leading-7 sm:text-lg">
-                    학생은 코드만 입력하면 바로 참여하고, 선생님은 문제 은행으로 게임을
-                    시작할 수 있어요. 첫 화면부터 에너지 있는 무대감이 느껴지도록
-                    리디자인했어요.
-                  </p>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                  {[
-                    [
-                      "빠른 입장",
-                      "코드와 닉네임만 넣으면 바로 입장해요.",
-                      "kahoot-accent-card",
-                      "blue",
-                    ],
-                    [
-                      "학생 퀴즈",
-                      "학생도 문제를 만들고 바로 참여할 수 있어요.",
-                      "kahoot-accent-card",
-                      "red",
-                    ],
-                    [
-                      "교사용 진행",
-                      "코드, 응답 수, 다음 문제를 한눈에 확인해요.",
-                      "kahoot-accent-card",
-                      "yellow",
-                    ],
-                    [
-                      "정답 보너스",
-                      "연속으로 빠르게 정답을 맞히면 보너스를 얻어요.",
-                      "kahoot-accent-card",
-                      "purple",
-                    ],
-                  ].map(([title, desc, toneClass, tone], index) => (
-                    <div
-                      key={title}
-                      data-tone={tone}
-                      className={`rounded-[26px] border p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] ${
-                        index === 1 ? `floaty ${toneClass}` : toneClass
-                      }`}
-                    >
-                      <p className="display-font text-2xl text-[var(--panel-text)]">{title}</p>
-                      <p className="paper-muted mt-2 text-sm leading-6">{desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="quiz-panel kahoot-spectrum-panel flex flex-col gap-4 p-5 sm:grid sm:grid-cols-[minmax(0,1fr)_14.5rem] sm:items-start sm:gap-5 sm:p-6">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-black uppercase tracking-[0.22em] text-[color:rgba(70,163,2,0.78)]">
-                    Teacher Zone
-                  </p>
-                  <h3 className="display-font mt-2 text-3xl text-[var(--panel-text)]">교사용 페이지</h3>
-                  <p className="paper-muted mt-2 text-sm leading-6 sm:whitespace-nowrap sm:text-[0.95rem]">
-                    Google 로그인 후 방 코드, 승인된 문제, 현재 게임 진행 상황을 관리할 수
-                    있어요.
-                  </p>
-                </div>
-
-                <div className="flex min-w-0 flex-col items-start gap-3 sm:self-start sm:pt-1">
-                  <button
-                    onClick={handleTeacherSignIn}
-                    className="secondary-button secondary-button-soft-green w-full sm:w-[14.5rem]"
-                  >
-                    Google 로그인
-                  </button>
-                  {teacherError && (
-                    <p className="status-banner w-full" data-tone="error">
-                      {teacherError}
-                    </p>
-                  )}
-                </div>
-              </section>
+      <div className="stage-content portal-stage relative flex min-h-screen flex-col justify-center gap-10 py-8 sm:py-12">
+        <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-10">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--primary)] to-[#7b5cff] text-white">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 2c.7 3.9 2.4 6.4 6 8-3.6 1.6-5.3 4.1-6 8-.7-3.9-2.4-6.4-6-8 3.6-1.6 5.3-4.1 6-8Z" />
+                </svg>
+              </span>
+              <span className="display-font text-2xl text-white">Jikahoot</span>
             </div>
 
-            <section className="paper-panel kahoot-spectrum-paper student-entry-panel p-6 sm:p-8 lg:h-full">
-              <div className="grid h-full grid-rows-[auto_1fr_auto] gap-6">
-                <div>
-                  <p className="hero-chip hero-chip-paper">Student Entry</p>
-                  <h2 className="display-font mt-4 text-4xl text-[var(--panel-text)] sm:text-5xl">
-                    게임 코드 입력
-                  </h2>
-                  <p className="paper-muted mt-2 max-w-[32rem] text-sm leading-6 sm:text-base">
-                    선생님이 알려준 코드를 넣으면 문제 제출 또는 플레이 화면으로 자동
-                    연결돼요.
-                  </p>
-                </div>
+            <div className="flex flex-col items-end gap-2">
+              <button
+                onClick={handleTeacherSignIn}
+                className="secondary-button secondary-button-compact inline-flex items-center gap-2"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 21c0-4 3.5-7 8-7s8 3 8 7" />
+                </svg>
+                교사 로그인
+              </button>
+              {teacherError && (
+                <p className="status-banner max-w-[18rem] text-xs" data-tone="error">
+                  {teacherError}
+                </p>
+              )}
+            </div>
+          </div>
 
-                <div className="flex flex-col justify-center">
-                  <form onSubmit={handleStudentJoin} className="flex flex-col gap-4">
-                    <input
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
-                      placeholder="방/게임 코드 6자리"
-                      className="text-input code-input student-entry-input"
-                      maxLength={6}
-                    />
-                    <input
-                      value={nickname}
-                      onChange={(e) => setNickname(e.target.value)}
-                      placeholder="이름(닉네임)"
-                      className="text-input student-entry-input student-entry-name-input"
-                    />
+          <div className="mx-auto flex max-w-2xl flex-col items-center gap-3 text-center">
+            <h1 className="display-font text-4xl leading-[1.15] text-white sm:text-[2.9rem] lg:text-[3.4rem]">
+              지금,
+              <br />
+              우리 반 <span className="text-[var(--primary)]">퀴즈</span>를 시작해요!
+            </h1>
+            <p className="text-base text-[color:var(--foreground-muted)] sm:text-lg">
+              학생이 만들고, 함께 푸는 참여형 퀴즈
+            </p>
+          </div>
 
-                    {studentError && (
-                      <p className="status-banner" data-tone="error">
-                        {studentError}
-                      </p>
-                    )}
-
-                    <button
-                      type="submit"
-                      disabled={joining}
-                      className="primary-button w-full"
-                    >
-                      {joining ? "코드 확인 중..." : "바로 입장하기"}
-                    </button>
-                  </form>
-                </div>
-
-                <div className="kahoot-soft-note flex items-center gap-4 rounded-[24px] p-4 text-sm font-bold sm:p-5">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[var(--kahoot-yellow)] text-xl text-[#432700]">
-                    !
-                  </span>
-                  <p className="paper-muted text-base leading-7">
-                    학생은 한 번 코드와 이름을 넣으면, 방 상태에 따라 제출 화면 또는 게임
-                    화면으로 자연스럽게 이어집니다.
-                  </p>
-                </div>
+          <div className="mx-auto w-full max-w-xl rounded-[28px] border border-white/10 bg-[var(--surface)] p-6 sm:p-8">
+            <form onSubmit={handleStudentJoin} className="flex flex-col gap-4">
+              <div className="relative">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-white/40">
+                  #
+                </span>
+                <input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="방 코드를 입력하세요 (예: ABC123)"
+                  maxLength={6}
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-11 pr-4 text-base font-bold text-white placeholder:font-normal placeholder:text-white/35 focus-visible:border-[var(--primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(50,0,224,0.25)]"
+                />
               </div>
-            </section>
+
+              <div className="relative">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 21c0-4 3.5-7 8-7s8 3 8 7" />
+                  </svg>
+                </span>
+                <input
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="이름을 입력하세요"
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-11 pr-4 text-base font-bold text-white placeholder:font-normal placeholder:text-white/35 focus-visible:border-[var(--primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(50,0,224,0.25)]"
+                />
+              </div>
+
+              {studentError && (
+                <p className="status-banner" data-tone="error">
+                  {studentError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={joining}
+                className="primary-button w-full items-center justify-center gap-2"
+              >
+                {joining ? "코드 확인 중..." : "입장하기"}
+                {!joining && (
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                )}
+              </button>
+            </form>
+          </div>
+
+          <div className="mx-auto grid w-full max-w-3xl gap-4 sm:grid-cols-3">
+            {[
+              {
+                title: "직접 문제 만들기",
+                desc: "내가 만드는 우리 반 퀴즈",
+                bg: "bg-white/10",
+                icon: (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                ),
+              },
+              {
+                title: "실시간으로 함께 풀기",
+                desc: "친구들과 바로바로 참여해요",
+                bg: "bg-[var(--primary)]",
+                icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7Z" />
+                  </svg>
+                ),
+              },
+              {
+                title: "랭킹으로 더 재미있게",
+                desc: "실시간 순위를 확인해요",
+                bg: "bg-[var(--warning)] text-[#4a2c00]",
+                icon: (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M8 21h8" />
+                    <path d="M12 17v4" />
+                    <path d="M7 4h10v5a5 5 0 0 1-10 0Z" />
+                    <path d="M17 5h3a3 3 0 0 1-3 4" />
+                    <path d="M7 5H4a3 3 0 0 0 3 4" />
+                  </svg>
+                ),
+              },
+            ].map(({ title, desc, bg, icon }) => (
+              <div
+                key={title}
+                className="flex flex-col items-center gap-3 rounded-[24px] bg-[var(--surface)] p-6 text-center"
+              >
+                <span
+                  className={`inline-flex h-14 w-14 items-center justify-center rounded-full text-white ${bg}`}
+                >
+                  {icon}
+                </span>
+                <p className="display-font text-lg text-white">{title}</p>
+                <p className="text-sm leading-6 text-[color:var(--foreground-muted)]">{desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

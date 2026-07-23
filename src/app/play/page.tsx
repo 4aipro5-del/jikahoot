@@ -99,7 +99,7 @@ function PlayPageContent() {
         <div className="flex w-full max-w-[52rem] flex-col gap-6">
           <div className="flex flex-col gap-3">
             <span className="hero-chip self-start">Game Entry</span>
-            <h1 className="display-font text-4xl leading-none text-[var(--panel-text)] sm:text-5xl lg:text-6xl">
+            <h1 className="display-font text-4xl leading-none text-white sm:text-5xl lg:text-6xl">
               지금 바로
               <br />
               플레이 시작.
