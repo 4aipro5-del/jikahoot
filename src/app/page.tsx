@@ -191,10 +191,13 @@ function HomePortal() {
                 </span>
                 <input
                   value={code}
-                  onChange={(e) => setCode(e.target.value)}
+                  // room codes are A-Z/0-9 only — uppercase as the user types and
+                  // strip anything else (한글·공백·기호), so Korean IME input never lands
+                  onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
                   placeholder="방 코드를 입력하세요 (예: ABC123)"
                   maxLength={6}
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-11 pr-4 text-base font-bold text-white placeholder:font-normal placeholder:text-white/35 focus-visible:border-[var(--primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(50,0,224,0.25)]"
+                  autoCapitalize="characters"
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-11 pr-4 text-base font-bold text-white placeholder:font-normal placeholder:text-white/60 focus-visible:border-[var(--primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(50,0,224,0.25)]"
                 />
               </div>
 
@@ -219,7 +222,7 @@ function HomePortal() {
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
                   placeholder="이름을 입력하세요"
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-11 pr-4 text-base font-bold text-white placeholder:font-normal placeholder:text-white/35 focus-visible:border-[var(--primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(50,0,224,0.25)]"
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-11 pr-4 text-base font-bold text-white placeholder:font-normal placeholder:text-white/60 focus-visible:border-[var(--primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(50,0,224,0.25)]"
                 />
               </div>
 
