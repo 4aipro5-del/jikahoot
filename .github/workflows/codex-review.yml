@@ -7,6 +7,13 @@ on:
 jobs:
   review:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: p2achAI/codex-reviewer@v2.0.0
+      # Pinned to the v2.0.0 commit SHA for supply-chain safety.
+      - uses: p2achAI/codex-reviewer@3a32e3bddad95fb1d628cd71297a829caa6c206d
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
