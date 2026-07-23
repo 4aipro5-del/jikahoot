@@ -15,7 +15,6 @@ import {
 } from "@/lib/firestore/games";
 import { getCorrectChoiceMap } from "@/lib/firestore/questions";
 import type { Game } from "@/types/firestore";
-import PlayerRoster from "@/components/PlayerRoster";
 import Leaderboard from "@/components/Leaderboard";
 import GameQRCode from "@/components/GameQRCode";
 import { useNow } from "@/lib/useNow";
@@ -274,35 +273,27 @@ function ActiveView({
   const answerRatio = players.length > 0 ? answeredCount / players.length : 0;
 
   return (
-    <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-      <div className="paper-panel flex flex-col gap-5 p-6 sm:p-8">
-        <div className="space-y-3">
-          <p className="paper-faint text-sm font-black uppercase tracking-[0.2em]">
-            Current Question
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-[var(--primary-soft)] px-4 py-2 text-sm font-black text-[var(--primary-dark)]">
-              문제 {game.currentQuestionIndex + 1} / {game.questions.length}
-            </span>
-            <span className="rounded-full bg-[var(--warning-soft)] px-4 py-2 text-sm font-black text-[#8a6100]">
-              응답 {answeredCount} / {players.length}
-            </span>
-          </div>
+    <section className="grid gap-6 lg:grid-cols-[1.7fr_1fr] lg:items-stretch">
+      {/* 현재 문제 — 가장 큰 영역: 문제번호 / 제목 / 제출 현황 / 보기 4개 */}
+      <div className="paper-panel flex flex-col gap-6 p-6 sm:p-8">
+        <div className="space-y-4">
+          <span className="inline-flex rounded-full bg-[var(--primary-soft)] px-4 py-2 text-sm font-black text-[var(--primary-dark)]">
+            문제 {game.currentQuestionIndex + 1} / {game.questions.length}
+          </span>
           <h1 className="display-font text-4xl leading-tight text-[var(--panel-text)] sm:text-5xl">
             {question.text}
           </h1>
         </div>
 
         <div className="space-y-2">
-          <div className="paper-subtle flex items-center justify-between text-sm font-black">
-            <span>응답 진행도</span>
-            <span>{Math.round(answerRatio * 100)}%</span>
+          <div className="flex items-center justify-between text-sm font-black">
+            <span className="paper-subtle">제출 현황</span>
+            <span className="text-[var(--panel-text)]">
+              {answeredCount} / {players.length}명 제출
+            </span>
           </div>
           <div className="progress-track bg-[rgba(17,15,26,0.08)]">
-            <div
-              className="progress-bar"
-              style={{ width: `${answerRatio * 100}%` } as CSSProperties}
-            />
+            <div className="progress-bar" style={{ width: `${answerRatio * 100}%` }} />
           </div>
         </div>
 
@@ -337,29 +328,42 @@ function ActiveView({
         </ul>
       </div>
 
+      {/* 오른쪽: 참가자(아바타 그리드) + 가장 큰 "다음 문제" 버튼(하단 고정) */}
       <div className="flex flex-col gap-5">
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-          <div className="rounded-[24px] bg-[var(--surface)] p-5">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">Answered</p>
-            <p className="display-font mt-2 text-5xl text-white">{answeredCount}</p>
-            <p className="mt-1 text-sm font-semibold text-[color:var(--foreground-muted)]">
-              지금까지 제출한 학생 수
-            </p>
+        <div className="rounded-2xl bg-[var(--surface)] p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-white/60">참가자</p>
+            <p className="text-sm font-bold text-white">{players.length}명</p>
           </div>
-          <div className="rounded-[24px] bg-[var(--surface)] p-5">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">Players</p>
-            <p className="display-font mt-2 text-5xl text-white">{players.length}</p>
-            <p className="mt-1 text-sm font-semibold text-[color:var(--foreground-muted)]">
-              현재 게임에 참가 중인 학생 수
-            </p>
-          </div>
+          {players.length === 0 ? (
+            <p className="text-sm text-white/50">아직 참가한 학생이 없어요.</p>
+          ) : (
+            <ul className="grid grid-cols-5 gap-x-2 gap-y-3 sm:grid-cols-6">
+              {players.map((player) => (
+                <li
+                  key={player.id}
+                  className="flex flex-col items-center gap-1"
+                  title={player.nickname}
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--primary)] text-sm font-black text-white">
+                    {player.nickname.trim().slice(0, 1) || "?"}
+                  </span>
+                  <span className="w-full truncate text-center text-[11px] text-white/60">
+                    {player.nickname}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
-        <button onClick={onAdvance} disabled={advancing} className="primary-button self-start">
-          {advancing ? "처리 중..." : isLastQuestion ? "게임 종료" : "다음 문제"}
+        <button
+          onClick={onAdvance}
+          disabled={advancing}
+          className="primary-button primary-button-stage mt-auto w-full"
+        >
+          {advancing ? "처리 중..." : isLastQuestion ? "게임 종료" : "다음 문제 →"}
         </button>
-
-        <PlayerRoster players={players} />
       </div>
     </section>
   );
