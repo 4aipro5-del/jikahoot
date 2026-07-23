@@ -15,6 +15,16 @@ export interface Room {
   currentGameId?: string | null
   currentGameStatus?: GameStatus | null
   currentGameStartedAt?: Timestamp | null
+  // Teacher-configurable settings (Settings tab). All optional — readers apply
+  // the documented default when a field is absent, so existing rooms keep
+  // working unchanged. The 학생 제출 flags are persisted here but not yet
+  // enforced (server-side enforcement would need firestore.rules changes).
+  useGooglePhoto?: boolean // default true
+  defaultQuestionDurationSec?: number // default 20
+  autoAdvance?: boolean // default true
+  allowStudentSubmission?: boolean // default true
+  allowStudentEdit?: boolean // default true
+  submissionLimit?: number | null // default null (제한 없음)
 }
 
 // roomCodes/{code} — reverse lookup so students can resolve a room by code alone
@@ -58,6 +68,9 @@ export interface Game {
   questions: PublicQuestion[]
   currentQuestionIndex: number // -1 while in lobby
   questionDurationSec: number
+  // snapshot of the teacher's 자동 진행 setting at game-creation time, so the
+  // host client advances (or waits) per the setting the game was started with
+  autoAdvance: boolean
   currentQuestionStartedAt: Timestamp | null
   createdAt: Timestamp
   endedAt: Timestamp | null

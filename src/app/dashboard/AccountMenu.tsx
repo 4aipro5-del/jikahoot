@@ -7,6 +7,9 @@ import type { Room } from "@/types/firestore";
 export default function AccountMenu({ room }: { room: Room }) {
   const [open, setOpen] = useState(false);
   const initial = room.displayName.trim().slice(0, 1) || "T";
+  // honor the "Google 프로필 사진 사용" setting — when off, fall back to the
+  // initial-letter avatar even if a Google photo URL exists
+  const showPhoto = room.useGooglePhoto !== false && room.photoUrl;
 
   return (
     <div className="relative">
@@ -15,9 +18,9 @@ export default function AccountMenu({ room }: { room: Room }) {
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-2 rounded-full bg-white/5 py-1.5 pl-1.5 pr-3 text-white hover:bg-white/10"
       >
-        {room.photoUrl ? (
+        {showPhoto ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={room.photoUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+          <img src={room.photoUrl!} alt="" className="h-7 w-7 rounded-full object-cover" />
         ) : (
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--primary)] text-sm font-black">
             {initial}

@@ -5,7 +5,7 @@ import { createGame, subscribeToGame } from "@/lib/firestore/games";
 import { clearCurrentGame, subscribeToRoom } from "@/lib/firestore/rooms";
 import type { QuestionWithId } from "@/lib/firestore/questions";
 import { QUESTION_DURATION_SEC } from "@/lib/gameConfig";
-import type { Game } from "@/types/firestore";
+import type { Game, Room } from "@/types/firestore";
 import GameHostClient from "./game/[gameCode]/GameHostClient";
 
 // The Game tab is the teacher's one real "run the lesson" surface — Dashboard
@@ -22,11 +22,13 @@ export default function GameTab({
   questions: QuestionWithId[];
 }) {
   const [currentGameId, setCurrentGameId] = useState<string | null | undefined>(undefined);
+  const [room, setRoom] = useState<Room | null>(null);
   const [game, setGame] = useState<Game | null | undefined>(undefined);
 
   useEffect(() => {
-    return subscribeToRoom(teacherUid, (room) => {
-      setCurrentGameId(room?.currentGameId ?? null);
+    return subscribeToRoom(teacherUid, (nextRoom) => {
+      setRoom(nextRoom);
+      setCurrentGameId(nextRoom?.currentGameId ?? null);
     });
   }, [teacherUid]);
 
@@ -55,7 +57,7 @@ export default function GameTab({
   }
 
   if (!currentGameId) {
-    return <StartGameScreen teacherUid={teacherUid} questions={questions} />;
+    return <StartGameScreen teacherUid={teacherUid} questions={questions} room={room} />;
   }
 
   return (
@@ -79,15 +81,22 @@ export default function GameTab({
 function StartGameScreen({
   teacherUid,
   questions,
+  room,
 }: {
   teacherUid: string;
   questions: QuestionWithId[];
+  room: Room | null;
 }) {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // fall back to the built-in defaults until the room settings have loaded (or
+  // for rooms that never touched the Settings tab)
+  const durationSec = room?.defaultQuestionDurationSec ?? QUESTION_DURATION_SEC;
+  const autoAdvance = room?.autoAdvance ?? true;
+
   const approved = questions.filter((q) => q.status === "approved");
-  const estimatedMinutes = Math.round((approved.length * QUESTION_DURATION_SEC) / 60);
+  const estimatedMinutes = Math.round((approved.length * durationSec) / 60);
 
   async function handleStart() {
     setError(null);
@@ -96,7 +105,7 @@ function StartGameScreen({
       const publicQuestions = approved.map((q) => ({ id: q.id, text: q.text, choices: q.choices }));
       // the room's currentGameId subscription above picks up the result and
       // swaps this screen for GameHostClient automatically
-      await createGame(teacherUid, publicQuestions, QUESTION_DURATION_SEC);
+      await createGame(teacherUid, publicQuestions, durationSec, autoAdvance);
     } catch (err) {
       setError(err instanceof Error ? err.message : "게임을 시작하지 못했습니다.");
     } finally {

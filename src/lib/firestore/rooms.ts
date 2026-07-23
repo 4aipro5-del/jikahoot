@@ -69,6 +69,26 @@ export function subscribeToRoom(teacherUid: string, callback: (room: Room | null
   })
 }
 
+// Settings tab writes: persist any subset of the teacher-configurable Room
+// fields (display name, game defaults, student-submission prefs, avatar pref).
+export function updateRoomSettings(
+  teacherUid: string,
+  patch: Partial<
+    Pick<
+      Room,
+      | 'displayName'
+      | 'useGooglePhoto'
+      | 'defaultQuestionDurationSec'
+      | 'autoAdvance'
+      | 'allowStudentSubmission'
+      | 'allowStudentEdit'
+      | 'submissionLimit'
+    >
+  >,
+) {
+  return updateDoc(doc(db, 'rooms', teacherUid), patch)
+}
+
 // explicit "다시 시작": dismisses the finished game so the next startGame call
 // doesn't try to reuse it, and other sessions viewing this room see it as idle
 export function clearCurrentGame(teacherUid: string) {

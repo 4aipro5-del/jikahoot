@@ -102,6 +102,9 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
 
   useEffect(() => {
     if (!game || game.status !== "active" || advancing) return;
+    // respect the teacher's 자동 진행 setting (snapshotted onto the game at
+    // creation); undefined on older games means "on", preserving prior behavior
+    if (game.autoAdvance === false) return;
     if (!game.currentQuestionStartedAt) return;
     const deadline = game.currentQuestionStartedAt.toMillis() + game.questionDurationSec * 1000;
     if (now < deadline) return;
