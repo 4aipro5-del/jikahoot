@@ -8,14 +8,14 @@ import {
   subscribeToAuthState,
   updateTeacherDisplayName,
 } from "@/lib/firebase/auth";
-import { getRoomByTeacherUid, syncRoomProfile } from "@/lib/firestore/rooms";
+import { getRoomByTeacherUid, syncRoomProfile, updateRoomSettings } from "@/lib/firestore/rooms";
 import { subscribeToQuestionBank, type QuestionWithId } from "@/lib/firestore/questions";
 import type { Room } from "@/types/firestore";
 import AccountMenu from "./AccountMenu";
 import DashboardHome from "./DashboardHome";
 import Drawer from "./Drawer";
 import GameTab from "./GameTab";
-import PlaceholderPanel from "./PlaceholderPanel";
+import SettingsPanel from "./SettingsPanel";
 import QuestionForm from "./QuestionForm";
 import QuestionList from "./QuestionList";
 import Sidebar, { type DashboardTab } from "./Sidebar";
@@ -106,6 +106,22 @@ export default function DashboardPage() {
     } finally {
       setSavingDisplayName(false);
     }
+  }
+
+  // Settings tab writes: persist to the Room doc, then optimistically fold the
+  // change into local state so the greeting/account-menu/game defaults reflect
+  // it immediately (the room is loaded once, not subscribed).
+  async function handleUpdateSettings(patch: Partial<Room>) {
+    if (!room) return;
+    await updateRoomSettings(room.teacherUid, patch);
+    setRoom({ ...room, ...patch });
+  }
+
+  async function handleUpdateDisplayName(name: string) {
+    if (!user || !room) return;
+    await updateTeacherDisplayName(user, name);
+    await updateRoomSettings(room.teacherUid, { displayName: name });
+    setRoom({ ...room, displayName: name });
   }
 
   if (user && needsDisplayName) {
@@ -208,7 +224,13 @@ export default function DashboardPage() {
         )}
 
         {tab === "game" && <GameTab teacherUid={room.teacherUid} questions={questions} />}
-        {tab === "settings" && <PlaceholderPanel tag="Settings" label="계정 설정" />}
+        {tab === "settings" && (
+          <SettingsPanel
+            room={room}
+            onUpdateSettings={handleUpdateSettings}
+            onUpdateDisplayName={handleUpdateDisplayName}
+          />
+        )}
       </main>
 
       <Drawer open={isNewQuestionOpen} onClose={() => setIsNewQuestionOpen(false)} title="새 문제 만들기">

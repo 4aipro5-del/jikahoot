@@ -60,6 +60,7 @@ export async function createGame(
   teacherUid: string,
   questions: PublicQuestion[],
   questionDurationSec: number,
+  autoAdvance: boolean,
 ): Promise<string> {
   const roomRef = doc(db, 'rooms', teacherUid)
 
@@ -91,6 +92,7 @@ export async function createGame(
           questions: shuffledQuestions,
           currentQuestionIndex: -1,
           questionDurationSec,
+          autoAdvance,
           currentQuestionStartedAt: null,
           createdAt: serverTimestamp() as unknown as Game['createdAt'],
           endedAt: null,
