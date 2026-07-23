@@ -1,0 +1,12 @@
+name: Codex PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: p2achAI/codex-reviewer@v2.0.0
