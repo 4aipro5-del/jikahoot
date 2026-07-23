@@ -8,15 +8,19 @@ import {
   subscribeToAuthState,
   updateTeacherDisplayName,
 } from "@/lib/firebase/auth";
-import ResponsiveDisplayTitle from "@/components/ResponsiveDisplayTitle";
 import { getRoomByTeacherUid, syncRoomProfile } from "@/lib/firestore/rooms";
+import { subscribeToQuestionBank, type QuestionWithId } from "@/lib/firestore/questions";
 import type { Room } from "@/types/firestore";
+import AccountMenu from "./AccountMenu";
+import DashboardHome from "./DashboardHome";
+import Drawer from "./Drawer";
+import GameTab from "./GameTab";
+import PlaceholderPanel from "./PlaceholderPanel";
 import QuestionForm from "./QuestionForm";
 import QuestionList from "./QuestionList";
-import StartGameButton from "./StartGameButton";
+import Sidebar, { type DashboardTab } from "./Sidebar";
 
 export default function DashboardPage() {
-  const teacherTitleOverflowMode = "wrap";
   const router = useRouter();
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [room, setRoom] = useState<Room | null>(null);
@@ -25,8 +29,16 @@ export default function DashboardPage() {
   const [displayNameInput, setDisplayNameInput] = useState("");
   const [savingDisplayName, setSavingDisplayName] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<QuestionWithId[]>([]);
+  const [tab, setTab] = useState<DashboardTab>("dashboard");
+  const [isNewQuestionOpen, setIsNewQuestionOpen] = useState(false);
 
   useEffect(() => subscribeToAuthState(setUser), []);
+
+  useEffect(() => {
+    if (!room) return;
+    return subscribeToQuestionBank(room.teacherUid, setQuestions);
+  }, [room]);
 
   useEffect(() => {
     if (user === null) {
@@ -168,60 +180,40 @@ export default function DashboardPage() {
     );
   }
 
+  const pendingCount = questions.filter((q) => q.status === "pending").length;
+
   return (
-    <div className="stage-shell dashboard-concept-shell dashboard-scroll-shell">
-      <div className="stage-content dashboard-stage dashboard-scroll-canvas flex min-h-screen flex-col gap-8 py-8">
-        <header className="quiz-panel dashboard-hero p-8">
-          <div className="dashboard-hero-grid">
-            <div className="dashboard-hero-copy min-w-0 space-y-4">
-              <p className="dashboard-hero-kicker text-sm font-black uppercase tracking-[0.22em]">
-                Teacher Stage
-              </p>
-              <ResponsiveDisplayTitle
-                leading={room.displayName}
-                suffix="선생님의 퀴즈"
-                overflowMode={teacherTitleOverflowMode}
-                className="dashboard-hero-title"
-              />
-              <p className="dashboard-hero-description max-w-3xl text-sm leading-6 sm:text-base">
-                문제를 승인하고, 바로 새 게임을 열고, 참가 코드를 학생에게 공유할 수 있는
-                교사용 진행 화면이에요.
-              </p>
-            </div>
+    <div className="flex min-h-screen w-full flex-col bg-[var(--background)] lg:flex-row">
+      <Sidebar active={tab} onSelect={setTab} pendingCount={pendingCount} />
 
-            <div className="dashboard-hero-side flex flex-none flex-col items-end gap-4">
-              <button
-                onClick={() => signOutUser()}
-                className="secondary-button dashboard-hero-logout"
-              >
-                로그아웃
-              </button>
-              <div className="dashboard-room-card rounded-[26px] bg-white px-5 py-4 text-[var(--panel-text)] shadow-[0_14px_0_rgba(38,18,87,0.18)]">
-                <p className="paper-ghost text-xs font-black uppercase tracking-[0.2em]">
-                  Room Code
-                </p>
-                <p className="display-font dashboard-room-code mt-2 text-5xl sm:text-6xl">
-                  {room.roomCode}
-                </p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <div className="grid grid-cols-[26rem_34rem_28rem] items-start gap-8">
-          <div className="flex flex-col gap-6">
-            <StartGameButton teacherUid={room.teacherUid} />
-          </div>
-
-          <div className="flex flex-col gap-6">
-            <QuestionList teacherUid={room.teacherUid} />
-          </div>
-
-          <div className="flex flex-col gap-6">
-            <QuestionForm teacherUid={room.teacherUid} />
-          </div>
+      <main className="min-w-0 flex-1 px-5 py-6 sm:px-8 sm:py-8 lg:px-10">
+        <div className="mb-6 flex justify-end">
+          <AccountMenu room={room} />
         </div>
-      </div>
+
+        {tab === "dashboard" && (
+          <DashboardHome
+            room={room}
+            questions={questions}
+            onViewApprovals={() => setTab("approval")}
+          />
+        )}
+
+        {tab === "approval" && (
+          <QuestionList
+            teacherUid={room.teacherUid}
+            questions={questions}
+            onNewQuestion={() => setIsNewQuestionOpen(true)}
+          />
+        )}
+
+        {tab === "game" && <GameTab teacherUid={room.teacherUid} questions={questions} />}
+        {tab === "settings" && <PlaceholderPanel tag="Settings" label="계정 설정" />}
+      </main>
+
+      <Drawer open={isNewQuestionOpen} onClose={() => setIsNewQuestionOpen(false)} title="새 문제 만들기">
+        <QuestionForm teacherUid={room.teacherUid} />
+      </Drawer>
     </div>
   );
 }

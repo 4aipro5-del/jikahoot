@@ -8,6 +8,13 @@ export interface Room {
   photoUrl: string | null
   roomCode: string
   createdAt: Timestamp
+  // Points at the teacher's current game session so the dashboard can resume
+  // it after a reload. Only updated at lifecycle boundaries (created/finished),
+  // not on every in-game transition — live status comes from subscribing to
+  // games/{currentGameId} directly, this is just "which game to subscribe to".
+  currentGameId?: string | null
+  currentGameStatus?: GameStatus | null
+  currentGameStartedAt?: Timestamp | null
 }
 
 // roomCodes/{code} — reverse lookup so students can resolve a room by code alone

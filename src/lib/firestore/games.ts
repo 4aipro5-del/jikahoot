@@ -12,7 +12,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
 import { signInStudentAnonymously } from '@/lib/firebase/auth'
-import type { Answer, Game, NicknameReservation, Player, PublicQuestion } from '@/types/firestore'
+import type { Answer, Game, NicknameReservation, Player, PublicQuestion, Room } from '@/types/firestore'
 import { streakBonusMultiplier } from '@/types/firestore'
 import { BASE_POINTS_PER_CORRECT_ANSWER } from '@/lib/gameConfig'
 
@@ -52,17 +52,33 @@ function shuffleChoicesForGame(questions: PublicQuestion[]): PublicQuestion[] {
   })
 }
 
+// Creates a new game AND links it as the room's current session, atomically.
+// If the room already points at a game that hasn't finished, that game is
+// returned instead of creating a duplicate — this is what makes a reload, a
+// double-click, or a second tab all converge on the same live session.
 export async function createGame(
   teacherUid: string,
   questions: PublicQuestion[],
   questionDurationSec: number,
 ): Promise<string> {
+  const roomRef = doc(db, 'rooms', teacherUid)
+
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const code = generateGameCode()
     const gameRef = doc(db, 'games', code)
 
     try {
-      await runTransaction(db, async (tx) => {
+      return await runTransaction(db, async (tx) => {
+        const roomSnap = await tx.get(roomRef)
+        const room = roomSnap.data() as Room | undefined
+
+        if (room?.currentGameId) {
+          const existingSnap = await tx.get(doc(db, 'games', room.currentGameId))
+          if (existingSnap.exists() && (existingSnap.data() as Game).status !== 'finished') {
+            return room.currentGameId
+          }
+        }
+
         const snap = await tx.get(gameRef)
         if (snap.exists()) {
           throw new Error('GAME_CODE_TAKEN')
@@ -80,8 +96,13 @@ export async function createGame(
           endedAt: null,
         }
         tx.set(gameRef, game)
+        tx.update(roomRef, {
+          currentGameId: code,
+          currentGameStatus: 'lobby',
+          currentGameStartedAt: serverTimestamp(),
+        })
+        return code
       })
-      return code
     } catch (err) {
       if (err instanceof Error && err.message === 'GAME_CODE_TAKEN') continue
       throw err
@@ -111,9 +132,19 @@ export function subscribeToPlayers(
   callback: (players: PlayerWithId[]) => void,
 ) {
   const q = query(collection(db, 'games', gameCode, 'players'), orderBy('joinedAt', 'asc'))
-  return onSnapshot(q, (snapshot) => {
-    callback(snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Player) })))
-  })
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      callback(snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Player) })))
+    },
+    () => {
+      // Expected right as the game flips from 'lobby' to 'active': the full
+      // roster is host-only once play starts, so a listener still open from
+      // the lobby phase can catch one permission-denied in the instant before
+      // its caller unsubscribes. Not a real failure — just stop delivering
+      // updates instead of letting it surface as an uncaught console error.
+    },
+  )
 }
 
 export function subscribeToPlayer(
@@ -187,10 +218,24 @@ export function advanceQuestion(gameCode: string, nextIndex: number) {
   })
 }
 
-export function finishGame(gameCode: string) {
-  return updateDoc(doc(db, 'games', gameCode), {
-    status: 'finished',
-    endedAt: serverTimestamp(),
+// also flips the room's currentGameStatus to 'finished' (read from the game
+// doc itself, so callers never need to pass teacherUid separately) — the
+// room keeps pointing at this game so its results stay reachable until the
+// teacher explicitly dismisses it via clearCurrentGame ("다시 시작")
+export async function finishGame(gameCode: string) {
+  const gameRef = doc(db, 'games', gameCode)
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(gameRef)
+    if (!snap.exists()) return
+    const game = snap.data() as Game
+
+    tx.update(gameRef, {
+      status: 'finished',
+      endedAt: serverTimestamp(),
+    })
+    tx.update(doc(db, 'rooms', game.teacherUid), {
+      currentGameStatus: 'finished',
+    })
   })
 }
 
@@ -294,3 +339,4 @@ export async function gradeAnswer(
     })
   })
 }
+

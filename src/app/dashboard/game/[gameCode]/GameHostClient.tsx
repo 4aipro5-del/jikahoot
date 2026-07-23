@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { User } from "firebase/auth";
@@ -9,7 +9,6 @@ import {
   advanceQuestion,
   finalizeQuestion,
   finishGame,
-  removePlayerFromGame,
   subscribeToGame,
   subscribeToPlayers,
   type PlayerWithId,
@@ -18,13 +17,15 @@ import { getCorrectChoiceMap } from "@/lib/firestore/questions";
 import type { Game } from "@/types/firestore";
 import PlayerRoster from "@/components/PlayerRoster";
 import Leaderboard from "@/components/Leaderboard";
+import GameQRCode from "@/components/GameQRCode";
+import { useNow } from "@/lib/useNow";
 import { useGrading } from "./useGrading";
 
 const CHOICE_THEMES = [
-  { bg: "var(--kahoot-red)", shadow: "rgba(105, 11, 28, 0.42)", shape: "▲" },
-  { bg: "var(--kahoot-blue)", shadow: "rgba(8, 45, 89, 0.42)", shape: "◆" },
-  { bg: "var(--kahoot-yellow)", shadow: "rgba(132, 92, 0, 0.34)", shape: "●" },
-  { bg: "var(--kahoot-green)", shadow: "rgba(18, 73, 8, 0.4)", shape: "■" },
+  { bg: "var(--primary)", shadow: "rgba(34, 1, 158, 0.42)", shape: "▲", light: false },
+  { bg: "var(--warning)", shadow: "rgba(138, 90, 0, 0.4)", shape: "●", light: false },
+  { bg: "var(--error)", shadow: "rgba(151, 27, 20, 0.42)", shape: "◆", light: false },
+  { bg: "#ffffff", shadow: "rgba(0, 0, 0, 0.25)", shape: "■", light: true },
 ];
 
 export default function GameHostClient({ gameCode }: { gameCode: string }) {
@@ -34,7 +35,6 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   const [players, setPlayers] = useState<PlayerWithId[]>([]);
   const [correctChoiceMap, setCorrectChoiceMap] = useState<Record<string, string>>({});
   const [advancing, setAdvancing] = useState(false);
-  const [removingPlayerId, setRemovingPlayerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => subscribeToAuthState(setUser), []);
@@ -92,17 +92,27 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     }
   }
 
-  async function handleRemovePlayer(player: PlayerWithId) {
-    setError(null);
-    setRemovingPlayerId(player.id);
-    try {
-      await removePlayerFromGame(gameCode, player.id, player.nickname);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "참가자를 내보내지 못했습니다.");
-    } finally {
-      setRemovingPlayerId(null);
-    }
-  }
+  // Auto-advance once a question's timer runs out, without waiting for the
+  // teacher to click "다음 문제" — mirrors clicking it manually, just
+  // triggered by the clock instead of a click. Guarded by
+  // autoAdvancedIndexRef so it only fires once per question even though the
+  // clock effect below re-checks on every tick.
+  const now = useNow(500);
+  const autoAdvancedIndexRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!game || game.status !== "active" || advancing) return;
+    if (!game.currentQuestionStartedAt) return;
+    const deadline = game.currentQuestionStartedAt.toMillis() + game.questionDurationSec * 1000;
+    if (now < deadline) return;
+    if (autoAdvancedIndexRef.current === game.currentQuestionIndex) return;
+    autoAdvancedIndexRef.current = game.currentQuestionIndex;
+    handleAdvance();
+    // handleAdvance is defined above and only depends on state already
+    // covered by this effect's own deps + component state, not worth
+    // memoizing separately for this dev-tool-only lint concern
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game, now, advancing]);
 
   if (!user || game === undefined) {
     return (
@@ -142,18 +152,18 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
 
   return (
     <div className="stage-shell">
-      <div className="stage-content flex min-h-screen flex-col gap-6 py-8">
-        <Link href="/dashboard" className="subtle-link self-start">
-          ← 대시보드로
-        </Link>
+      <div className="stage-content dashboard-stage flex min-h-screen flex-col gap-6 py-8">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <Link href="/dashboard" className="subtle-link self-start">
+            ← 대시보드로
+          </Link>
+        </div>
 
         {game.status === "lobby" && (
           <LobbyView
             gameCode={gameCode}
-            players={players}
+            canStart={players.length > 0}
             onStart={handleAdvance}
-            onRemovePlayer={handleRemovePlayer}
-            removingPlayerId={removingPlayerId}
             starting={advancing}
           />
         )}
@@ -169,16 +179,16 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
         )}
 
         {game.status === "finished" && (
-          <section className="quiz-panel flex flex-col gap-6 p-6 text-center sm:p-8">
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 text-center">
             <div className="space-y-3">
-              <p className="hero-chip">Game Finished</p>
-              <h1 className="display-font text-5xl text-[var(--panel-text)] sm:text-6xl">최종 순위</h1>
-              <p className="paper-muted text-sm leading-6 sm:text-base">
+              <p className="hero-chip self-center">Game Finished</p>
+              <h1 className="display-font text-5xl text-white sm:text-6xl">최종 순위</h1>
+              <p className="text-sm leading-6 text-[color:var(--foreground-muted)] sm:text-base">
                 전체 라운드가 끝났어요. 최종 리더보드를 확인해 보세요.
               </p>
             </div>
             <Leaderboard players={players} />
-          </section>
+          </div>
         )}
 
         {error && (
@@ -193,61 +203,51 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
 
 function LobbyView({
   gameCode,
-  players,
+  canStart,
   onStart,
-  onRemovePlayer,
-  removingPlayerId,
   starting,
 }: {
   gameCode: string;
-  players: PlayerWithId[];
+  canStart: boolean;
   onStart: () => void;
-  onRemovePlayer: (player: PlayerWithId) => void;
-  removingPlayerId: string | null;
   starting: boolean;
 }) {
   return (
-    <section className="flex flex-col gap-6">
-      <div className="paper-panel p-6 sm:p-8">
-        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr] xl:items-center">
-          <div>
-            <p className="hero-chip hero-chip-paper">Host Stage</p>
-            <h1 className="display-font balance-wrap mt-4 text-4xl text-[var(--panel-text)] sm:text-5xl">
-              퀴즈 준비 완료
-            </h1>
-            <p className="paper-muted pretty-wrap mt-2 flex w-fit max-w-full flex-col gap-2 text-sm leading-[1.45] sm:text-base">
-              <span className="block whitespace-nowrap">참가 코드를 공유하고 학생들이 들어오는 동안 명단을 확인하세요.</span>
-              <span className="block whitespace-nowrap">준비가 되면 바로 시작할 수 있습니다.</span>
-            </p>
-          </div>
+    <section className="mx-auto flex w-full max-w-4xl flex-col items-center gap-8 text-center">
+      <div>
+        <p className="hero-chip">Host Stage</p>
+        <h1 className="display-font balance-wrap mt-4 text-4xl text-white sm:text-5xl">
+          퀴즈 준비 완료
+        </h1>
+        <p className="pretty-wrap mt-2 text-sm leading-[1.45] text-[color:var(--foreground-muted)] sm:text-base">
+          <span className="block">학생들에게 게임 코드를 공유하고</span>
+          <span className="block">모두 참여하면 게임을 시작하세요.</span>
+        </p>
+      </div>
 
-          <div className="flex flex-col gap-4 xl:items-end">
-            <div className="w-full rounded-[28px] border border-[rgba(88,204,2,0.14)] bg-[rgba(232,249,216,0.94)] px-5 py-5 xl:max-w-[32rem]">
-              <p className="paper-ghost text-xs font-black uppercase tracking-[0.2em]">
-                Join Code
-              </p>
-              <p className="display-font balance-wrap mt-2 text-6xl text-[var(--panel-text)] sm:text-7xl">
-                {gameCode}
-              </p>
-            </div>
-
-            <button
-              onClick={onStart}
-              disabled={players.length === 0 || starting}
-              className="primary-button primary-button-stage w-full xl:max-w-[32rem]"
-            >
-              {starting ? "시작하는 중..." : "게임 시작"}
-            </button>
-          </div>
+      <div className="grid w-full gap-5 sm:grid-cols-2">
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-[var(--surface)] px-6 py-10">
+          <p className="text-sm font-semibold text-white/60">게임 코드</p>
+          <p className="display-font text-6xl text-white sm:text-7xl">{gameCode}</p>
+        </div>
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-[var(--surface)] px-6 py-10">
+          <p className="text-sm font-semibold text-white/60">참가 QR 코드</p>
+          <GameQRCode gameCode={gameCode} size={180} />
         </div>
       </div>
 
-      <div className="paper-panel min-h-[26rem] p-6 sm:p-8">
-        <PlayerRoster
-          players={players}
-          onRemovePlayer={onRemovePlayer}
-          removingPlayerId={removingPlayerId}
-        />
+      <div className="w-full">
+        <button
+          onClick={onStart}
+          disabled={!canStart || starting}
+          className="primary-button primary-button-stage flex w-full items-center justify-center gap-2"
+        >
+          <span aria-hidden="true">▶</span>
+          {starting ? "시작하는 중..." : "게임 시작하기"}
+        </button>
+        {!canStart && (
+          <p className="mt-2 text-sm text-white/50">아직 참여한 학생이 없어요.</p>
+        )}
       </div>
     </section>
   );
@@ -278,10 +278,10 @@ function ActiveView({
             Current Question
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-[rgba(88,204,2,0.12)] px-4 py-2 text-sm font-black text-[var(--duo-green-dark)]">
+            <span className="rounded-full bg-[var(--primary-soft)] px-4 py-2 text-sm font-black text-[var(--primary-dark)]">
               문제 {game.currentQuestionIndex + 1} / {game.questions.length}
             </span>
-            <span className="rounded-full bg-[rgba(216,158,0,0.12)] px-4 py-2 text-sm font-black text-[#8a6100]">
+            <span className="rounded-full bg-[var(--warning-soft)] px-4 py-2 text-sm font-black text-[#8a6100]">
               응답 {answeredCount} / {players.length}
             </span>
           </div>
@@ -295,7 +295,7 @@ function ActiveView({
             <span>응답 진행도</span>
             <span>{Math.round(answerRatio * 100)}%</span>
           </div>
-          <div className="progress-track bg-[rgba(88,204,2,0.08)]">
+          <div className="progress-track bg-[rgba(17,15,26,0.08)]">
             <div
               className="progress-bar"
               style={{ width: `${answerRatio * 100}%` } as CSSProperties}
@@ -314,11 +314,17 @@ function ActiveView({
                   {
                     "--tile-bg": theme.bg,
                     "--tile-shadow": theme.shadow,
+                    color: theme.light ? "var(--panel-text)" : "#ffffff",
                   } as CSSProperties
                 }
               >
                 <div className="flex items-center justify-between gap-3">
-                  <span className="answer-shape">{theme.shape}</span>
+                  <span
+                    className="answer-shape"
+                    style={{ background: theme.light ? "rgba(23,21,31,0.08)" : "rgba(255,255,255,0.16)" }}
+                  >
+                    {theme.shape}
+                  </span>
                   <span className="answer-kicker">Choice {index + 1}</span>
                 </div>
                 <span className="text-base font-black leading-6 sm:text-lg">{choice.text}</span>
@@ -328,17 +334,21 @@ function ActiveView({
         </ul>
       </div>
 
-      <div className="quiz-panel flex flex-col gap-5 p-6 sm:p-8">
+      <div className="flex flex-col gap-5">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-          <div className="metric-card">
-            <p className="paper-faint text-xs font-black uppercase tracking-[0.18em]">Answered</p>
-            <p className="display-font mt-2 text-5xl text-[var(--panel-text)]">{answeredCount}</p>
-            <p className="paper-subtle mt-1 text-sm font-semibold">지금까지 제출한 학생 수</p>
+          <div className="rounded-[24px] bg-[var(--surface)] p-5">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">Answered</p>
+            <p className="display-font mt-2 text-5xl text-white">{answeredCount}</p>
+            <p className="mt-1 text-sm font-semibold text-[color:var(--foreground-muted)]">
+              지금까지 제출한 학생 수
+            </p>
           </div>
-          <div className="metric-card">
-            <p className="paper-faint text-xs font-black uppercase tracking-[0.18em]">Players</p>
-            <p className="display-font mt-2 text-5xl text-[var(--panel-text)]">{players.length}</p>
-            <p className="paper-subtle mt-1 text-sm font-semibold">현재 게임에 참가 중인 학생 수</p>
+          <div className="rounded-[24px] bg-[var(--surface)] p-5">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">Players</p>
+            <p className="display-font mt-2 text-5xl text-white">{players.length}</p>
+            <p className="mt-1 text-sm font-semibold text-[color:var(--foreground-muted)]">
+              현재 게임에 참가 중인 학생 수
+            </p>
           </div>
         </div>
 
@@ -346,9 +356,7 @@ function ActiveView({
           {advancing ? "처리 중..." : isLastQuestion ? "게임 종료" : "다음 문제"}
         </button>
 
-        <div className="rounded-[28px] border border-[rgba(88,204,2,0.14)] bg-[rgba(255,255,255,0.72)] p-5">
-          <PlayerRoster players={players} />
-        </div>
+        <PlayerRoster players={players} />
       </div>
     </section>
   );

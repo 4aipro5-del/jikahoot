@@ -1,22 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   approveQuestion,
   buildChoices,
   deleteQuestion,
   rejectQuestion,
-  subscribeToQuestionBank,
   updateQuestion,
   type QuestionWithId,
 } from "@/lib/firestore/questions";
 import type { QuestionStatus } from "@/types/firestore";
 
 const TABS: { key: QuestionStatus; label: string }[] = [
-  { key: "approved", label: "승인됨" },
-  { key: "pending", label: "대기중" },
-  { key: "rejected", label: "반려됨" },
+  { key: "pending", label: "승인 대기" },
+  { key: "approved", label: "승인 완료" },
+  { key: "rejected", label: "반려" },
 ];
+
+const STATUS_BADGE: Record<QuestionStatus, string> = {
+  approved: "bg-[var(--success-soft)] text-[var(--success)]",
+  pending: "bg-[var(--warning-soft)] text-[var(--warning)]",
+  rejected: "bg-[var(--error-soft)] text-[var(--error)]",
+};
 
 const CHOICE_COLORS = [
   "bg-[var(--kahoot-red)]",
@@ -25,9 +30,24 @@ const CHOICE_COLORS = [
   "bg-[var(--kahoot-green)]",
 ];
 
-export default function QuestionList({ teacherUid }: { teacherUid: string }) {
-  const [questions, setQuestions] = useState<QuestionWithId[]>([]);
-  const [tab, setTab] = useState<QuestionStatus>("approved");
+const CREATOR_FILTERS: { key: "all" | "student" | "teacher"; label: string }[] = [
+  { key: "all", label: "전체" },
+  { key: "student", label: "학생 제출" },
+  { key: "teacher", label: "교사 작성" },
+];
+
+export default function QuestionList({
+  teacherUid,
+  questions,
+  onNewQuestion,
+}: {
+  teacherUid: string;
+  questions: QuestionWithId[];
+  onNewQuestion?: () => void;
+}) {
+  const [tab, setTab] = useState<QuestionStatus>("pending");
+  const [search, setSearch] = useState("");
+  const [creatorFilter, setCreatorFilter] = useState<"all" | "student" | "teacher">("all");
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [draftText, setDraftText] = useState("");
   const [draftChoices, setDraftChoices] = useState<string[]>([]);
@@ -35,9 +55,17 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  useEffect(() => subscribeToQuestionBank(teacherUid, setQuestions), [teacherUid]);
-
-  const visible = questions.filter((q) => q.status === tab);
+  const normalizedSearch = search.trim().toLowerCase();
+  const visible = questions
+    .filter((q) => q.status === tab)
+    .filter((q) => creatorFilter === "all" || q.createdBy === creatorFilter)
+    .filter((q) => {
+      if (!normalizedSearch) return true;
+      return (
+        q.text.toLowerCase().includes(normalizedSearch) ||
+        (q.authorNickname ?? "").toLowerCase().includes(normalizedSearch)
+      );
+    });
 
   function startEditing(question: QuestionWithId) {
     setEditingQuestionId(question.id);
@@ -93,37 +121,82 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
   }
 
   return (
-    <section className="paper-panel dashboard-bank-card flex flex-col gap-5 p-8">
-      <div className="flex items-end justify-between gap-4">
-        <div className="flex flex-col gap-3">
-          <p className="dashboard-bank-kicker text-sm font-black uppercase tracking-[0.2em]">
-            Question Bank
-          </p>
-          <h2 className="display-font dashboard-bank-title text-[1.75rem] leading-none sm:text-[2rem]">
-            문제 현황
+    <section className="flex flex-col gap-5 rounded-2xl border border-white/10 bg-[var(--surface)] p-6 sm:p-8">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <p className="hero-chip">Question Bank</p>
+          <h2 className="display-font text-[1.75rem] leading-none text-white sm:text-[2rem]">
+            문제 관리
           </h2>
         </div>
 
-        <div className="dashboard-bank-tabs flex flex-wrap gap-2">
-          {TABS.map(({ key, label }) => {
-            const count = questions.filter((q) => q.status === key).length;
-            return (
-              <button
-                key={key}
-                onClick={() => setTab(key)}
-                className="tab-button"
-                data-active={tab === key}
-              >
-                {label} {count}
-              </button>
-            );
-          })}
+        {onNewQuestion && (
+          <button
+            type="button"
+            onClick={onNewQuestion}
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-white transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            새 문제 만들기
+          </button>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {TABS.map(({ key, label }) => {
+          const count = questions.filter((q) => q.status === key).length;
+          return (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className="tab-button"
+              data-active={tab === key}
+            >
+              {label} {count}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative min-w-[14rem] flex-1">
+          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+          </span>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="문제 내용이나 제출자로 검색"
+            className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-10 pr-4 text-sm font-medium text-white placeholder:text-white/35 focus-visible:border-[var(--primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(50,0,224,0.16)]"
+          />
+        </div>
+
+        <div className="flex flex-none gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
+          {CREATOR_FILTERS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setCreatorFilter(key)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${
+                creatorFilter === key ? "bg-[var(--primary)] text-white" : "text-white/55 hover:text-white"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
       {visible.length === 0 && (
-        <div className="rounded-[24px] border border-dashed border-[rgba(88,204,2,0.18)] bg-[rgba(88,204,2,0.05)] px-5 py-7 text-center text-sm font-semibold text-[rgba(36,51,17,0.68)]">
-          이 상태의 문제가 아직 없어요.
+        <div className="rounded-2xl border border-dashed border-white/12 bg-white/[0.04] px-5 py-7 text-center text-sm font-semibold text-white/60">
+          {normalizedSearch || creatorFilter !== "all"
+            ? "검색 결과가 없어요."
+            : "이 상태의 문제가 아직 없어요."}
         </div>
       )}
 
@@ -132,15 +205,20 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
           const isEditing = editingQuestionId === question.id;
 
           return (
-            <li key={question.id} className="paper-panel dashboard-bank-item p-5 sm:p-6">
+            <li
+              key={question.id}
+              className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 transition-transform duration-150 hover:-translate-y-0.5 sm:p-6"
+            >
               <div className="flex flex-col gap-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="hero-chip-paper rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.18em]">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.18em] ${STATUS_BADGE[question.status]}`}
+                      >
                         {question.status}
                       </span>
-                      <span className="rounded-full bg-[rgba(38,18,87,0.08)] px-3 py-1 text-xs font-black text-[rgba(38,18,87,0.7)]">
+                      <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-white/70">
                         {question.createdBy === "student" ? "학생 제출" : "교사 작성"}
                       </span>
                     </div>
@@ -152,19 +230,19 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
                         rows={3}
                       />
                     ) : (
-                      <p className="mt-3 text-[1.65rem] leading-[1.1] font-black text-[var(--panel-text)]">
+                      <p className="mt-3 text-[1.65rem] leading-[1.1] font-black text-white">
                         {question.text}
                       </p>
                     )}
                     {question.createdBy === "student" && (
-                      <p className="paper-subtle mt-2 text-sm font-semibold">
+                      <p className="mt-2 text-sm font-semibold text-white/60">
                         제출자: {question.authorNickname ?? "익명 학생"}
                       </p>
                     )}
                   </div>
                   <button
                     onClick={() => deleteQuestion(teacherUid, question.id)}
-                    className="self-start rounded-full border border-[rgba(38,18,87,0.1)] bg-white/55 px-4 py-2 text-sm font-black text-[rgba(38,18,87,0.62)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38)] hover:bg-[rgba(38,18,87,0.08)] hover:text-[var(--panel-text)] sm:shrink-0"
+                    className="self-start rounded-full border border-white/12 bg-white/10 px-4 py-2 text-sm font-black text-white/70 hover:bg-white/16 hover:text-white sm:shrink-0"
                   >
                     삭제
                   </button>
@@ -182,8 +260,8 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
                           key={isEditing ? `draft-${question.id}-${index}` : question.choices[index]?.id}
                           className={`flex items-center gap-3 rounded-[20px] px-4 py-3 ${
                             isCorrect
-                              ? "bg-[rgba(38,137,12,0.12)] text-[var(--kahoot-green)]"
-                              : "bg-[rgba(38,18,87,0.06)] text-[rgba(38,18,87,0.72)]"
+                              ? "bg-[var(--success-soft)] text-[var(--success)]"
+                              : "bg-white/[0.05] text-white/75"
                           }`}
                         >
                           <span className={`choice-swatch ${CHOICE_COLORS[index % CHOICE_COLORS.length]}`} />
@@ -197,7 +275,7 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
                                   ),
                                 )
                               }
-                              className="min-w-0 flex-1 rounded-full border border-[rgba(38,18,87,0.08)] bg-white/70 px-4 py-2 text-sm font-black text-[var(--panel-text)] outline-none"
+                              className="min-w-0 flex-1 rounded-full border border-white/12 bg-white/90 px-4 py-2 text-sm font-black text-[var(--panel-text)] outline-none"
                             />
                           ) : (
                             <span className="text-sm font-black">{choiceText}</span>
@@ -246,21 +324,21 @@ export default function QuestionList({ teacherUid }: { teacherUid: string }) {
                       <>
                         <button
                           onClick={() => approveQuestion(teacherUid, question.id)}
-                          className="rounded-full bg-[var(--kahoot-green)] px-4 py-2 text-sm font-black text-white"
+                          className="rounded-full bg-[var(--kahoot-purple)] px-4 py-2 text-sm font-black text-white transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
                         >
                           승인
                         </button>
                         {question.createdBy === "student" && (
                           <button
                             onClick={() => startEditing(question)}
-                            className="rounded-full bg-white px-4 py-2 text-sm font-black text-[var(--kahoot-purple)]"
+                            className="rounded-full bg-[var(--warning)] px-4 py-2 text-sm font-black text-[#4a2c00] transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
                           >
                             수정 후 승인
                           </button>
                         )}
                         <button
                           onClick={() => rejectQuestion(teacherUid, question.id)}
-                          className="rounded-full bg-[var(--kahoot-red)] px-4 py-2 text-sm font-black text-white"
+                          className="rounded-full bg-[var(--kahoot-red)] px-4 py-2 text-sm font-black text-white transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
                         >
                           반려
                         </button>
