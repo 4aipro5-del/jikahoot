@@ -6,14 +6,14 @@ import { clearCurrentGame, subscribeToRoom } from "@/lib/firestore/rooms";
 import type { QuestionWithId } from "@/lib/firestore/questions";
 import { QUESTION_DURATION_SEC } from "@/lib/gameConfig";
 import type { Game, Room } from "@/types/firestore";
-import GameHostClient from "./game/[gameCode]/GameHostClient";
+import GameHostClient from "./GameHostClient";
 
 // The Game tab is the teacher's one real "run the lesson" surface — Dashboard
 // no longer controls games at all. This is a thin router around the room's
 // currentGameId: no game yet → the big "start" screen below; a game already
-// exists → hand off entirely to the existing, unmodified GameHostClient
-// (Lobby/Active/Finished + auto-advance + the players/active-status fix all
-// live there untouched).
+// exists → hand off entirely to GameHostClient (Lobby/Active/Finished +
+// auto-advance). GameHostClient is embedded here rather than reached via its
+// own route; the sidebar's Dashboard tab is how the teacher leaves the game.
 export default function GameTab({
   teacherUid,
   questions,
