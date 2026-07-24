@@ -6,6 +6,7 @@ import QuestionEditorForm from "@/components/QuestionEditorForm";
 import { signInStudentAnonymously } from "@/lib/firebase/auth";
 import { getRoomCodeInfo, subscribeToRoomCode } from "@/lib/firestore/roomCodes";
 import { submitStudentQuestion } from "@/lib/firestore/questions";
+import StageSkeleton from "@/components/StageSkeleton";
 
 type Step =
   | { kind: "join" }
@@ -13,21 +14,9 @@ type Step =
 
 export default function SubmitPage() {
   return (
-    <Suspense fallback={<SubmitPageFallback />}>
+    <Suspense fallback={<StageSkeleton />}>
       <SubmitPageContent />
     </Suspense>
-  );
-}
-
-function SubmitPageFallback() {
-  return (
-    <div className="stage-shell">
-        <div className="stage-content flex min-h-screen items-center justify-center">
-          <div className="quiz-panel px-6 py-5 text-center">
-            <p className="paper-muted">제출 화면 준비 중...</p>
-          </div>
-        </div>
-    </div>
   );
 }
 

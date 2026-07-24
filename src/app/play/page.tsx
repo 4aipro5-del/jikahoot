@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { joinGame } from "@/lib/firestore/games";
+import StageSkeleton from "@/components/StageSkeleton";
 import PlayingGame from "./PlayingGame";
 
 type Step =
@@ -11,21 +12,9 @@ type Step =
 
 export default function PlayPage() {
   return (
-    <Suspense fallback={<PlayPageFallback />}>
+    <Suspense fallback={<StageSkeleton />}>
       <PlayPageContent />
     </Suspense>
-  );
-}
-
-function PlayPageFallback() {
-  return (
-    <div className="stage-shell">
-        <div className="stage-content flex min-h-screen items-center justify-center">
-          <div className="quiz-panel px-6 py-5 text-center">
-            <p className="paper-muted">게임 입장 준비 중...</p>
-          </div>
-        </div>
-    </div>
   );
 }
 

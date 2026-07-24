@@ -10,24 +10,13 @@ import {
 } from "@/lib/firebase/auth";
 import { gameExists } from "@/lib/firestore/games";
 import { resolveRoomCode } from "@/lib/firestore/roomCodes";
+import StageSkeleton from "@/components/StageSkeleton";
 
 export default function Home() {
   return (
-    <Suspense fallback={<PortalFallback />}>
+    <Suspense fallback={<StageSkeleton />}>
       <HomePortal />
     </Suspense>
-  );
-}
-
-function PortalFallback() {
-  return (
-    <div className="stage-shell">
-        <div className="stage-content portal-stage flex min-h-screen items-center justify-center">
-          <div className="quiz-panel px-6 py-5 text-center">
-            <p className="paper-muted">퀴즈를 준비하는 중...</p>
-          </div>
-        </div>
-    </div>
   );
 }
 
@@ -107,16 +96,10 @@ function HomePortal() {
     }
   }
 
+  // the effect above redirects signed-in teachers to /dashboard; show the
+  // neutral loading shell (not a blank screen) while that navigation happens
   if (user && !user.isAnonymous) {
-    return (
-      <div className="stage-shell">
-        <div className="stage-content portal-stage flex min-h-screen items-center justify-center">
-          <div className="quiz-panel px-6 py-5 text-center">
-            <p className="paper-muted">교사용 대시보드로 이동 중...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <StageSkeleton />;
   }
 
   return (

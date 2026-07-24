@@ -12,6 +12,7 @@ import {
 import type { Answer, Game, Player } from "@/types/firestore";
 import PlayerRoster from "@/components/PlayerRoster";
 import Leaderboard from "@/components/Leaderboard";
+import StageSkeleton from "@/components/StageSkeleton";
 import { useNow } from "@/lib/useNow";
 
 const ANSWER_THEMES = [
@@ -66,15 +67,7 @@ export default function PlayingGame({
   }, [authorUid, gameCode, onForcedOut, wasRegistered]);
 
   if (!game) {
-    return (
-      <div className="stage-shell">
-        <div className="stage-content flex min-h-screen items-center justify-center">
-          <div className="quiz-panel px-6 py-5 text-center">
-            <p className="paper-muted">게임 상태를 불러오는 중...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <StageSkeleton />;
   }
 
   if (game.status === "finished") {

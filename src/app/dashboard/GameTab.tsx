@@ -49,11 +49,7 @@ export default function GameTab({
   }
 
   if (currentGameId === undefined) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-white/50">게임 상태를 확인하는 중이에요...</p>
-      </div>
-    );
+    return null;
   }
 
   if (!currentGameId) {

@@ -20,6 +20,7 @@ import QuestionForm from "./QuestionForm";
 import QuestionList from "./QuestionList";
 import StudentSubmissionPanel from "./StudentSubmissionPanel";
 import Sidebar, { type DashboardTab } from "./Sidebar";
+import StageSkeleton from "@/components/StageSkeleton";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -193,11 +194,16 @@ export default function DashboardPage() {
   }
 
   if (!user || !checkedProfile || !room) {
+    // no loading message while auth/room restore — show the neutral shell, and
+    // only surface a real error if one occurred
+    if (!error) return <StageSkeleton />;
     return (
       <div className="stage-shell">
         <div className="stage-content flex min-h-screen items-center justify-center">
           <div className="quiz-panel px-6 py-5 text-center">
-            <p className="paper-muted">{error ?? "교사용 퀴즈를 준비하는 중..."}</p>
+            <p className="status-banner" data-tone="error">
+              {error}
+            </p>
           </div>
         </div>
       </div>
