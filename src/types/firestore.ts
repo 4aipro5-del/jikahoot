@@ -17,19 +17,26 @@ export interface Room {
   currentGameStartedAt?: Timestamp | null
   // Teacher-configurable settings (Settings tab). All optional — readers apply
   // the documented default when a field is absent, so existing rooms keep
-  // working unchanged. The 학생 제출 flags are persisted here but not yet
-  // enforced (server-side enforcement would need firestore.rules changes).
+  // working unchanged.
   useGooglePhoto?: boolean // default true
   defaultQuestionDurationSec?: number // default 20
   autoAdvance?: boolean // default true
-  allowStudentSubmission?: boolean // default true
-  allowStudentEdit?: boolean // default true
-  submissionLimit?: number | null // default null (제한 없음)
+  // 학생 문제 제출 허용 여부. This is the ENFORCEMENT source of truth: the
+  // questionBank create rule get()s this room by its {teacherUid} path (rules
+  // can't map teacherUid -> roomCode, so the flag must be reachable here). It is
+  // mirrored onto roomCodes.submissionOpen for the student client to read, and
+  // both are written together atomically. Absent means "open" (하위호환).
+  submissionOpen?: boolean
 }
 
-// roomCodes/{code} — reverse lookup so students can resolve a room by code alone
+// roomCodes/{code} — reverse lookup so students can resolve a room by code alone.
+// submissionOpen here is a student-READABLE mirror of Room.submissionOpen:
+// anonymous students can read roomCodes but never the private room doc, so this
+// copy lets /submit gate its UI. The rule enforcement reads Room.submissionOpen,
+// not this — this is UX only. Absent means "open".
 export interface RoomCode {
   teacherUid: string
+  submissionOpen?: boolean
 }
 
 export type QuestionStatus = 'pending' | 'approved' | 'rejected'
