@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import type { User } from "firebase/auth";
 import { subscribeToAuthState } from "@/lib/firebase/auth";
 import {
@@ -148,12 +147,6 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   return (
     <div className="stage-shell">
       <div className="stage-content dashboard-stage flex min-h-screen flex-col gap-6 py-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <Link href="/dashboard" className="subtle-link self-start">
-            ← 대시보드로
-          </Link>
-        </div>
-
         {game.status === "lobby" && (
           <LobbyView
             gameCode={gameCode}
