@@ -253,14 +253,26 @@ function LobbyView({
           </p>
         </div>
 
-        <button
-          onClick={onStart}
-          disabled={!canStart || starting}
-          className="inline-flex min-h-[3.4rem] flex-none items-center justify-center gap-2 rounded-2xl border-2 border-white/15 bg-[var(--error)] px-7 text-lg font-black text-white shadow-[0_7px_0_var(--error-dark)] transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-1 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <span aria-hidden="true">▶</span>
-          {starting ? "시작하는 중..." : "게임 시작하기"}
-        </button>
+        <div className="flex flex-none flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => window.open(`/display/${gameCode}`, "_blank")}
+            className="inline-flex min-h-[3.4rem] items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.06] px-5 text-sm font-bold text-white transition-colors duration-150 hover:bg-white/12"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            </svg>
+            디스플레이 열기
+          </button>
+          <button
+            onClick={onStart}
+            disabled={!canStart || starting}
+            className="inline-flex min-h-[3.4rem] items-center justify-center gap-2 rounded-2xl border-2 border-white/15 bg-[var(--error)] px-7 text-lg font-black text-white shadow-[0_7px_0_var(--error-dark)] transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-1 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span aria-hidden="true">▶</span>
+            {starting ? "시작하는 중..." : "게임 시작하기"}
+          </button>
+        </div>
       </div>
 
       {/* headline — only while nobody has joined yet */}
