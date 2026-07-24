@@ -22,10 +22,10 @@ import { useNow } from "@/lib/useNow";
 import { useGrading } from "./useGrading";
 
 const CHOICE_THEMES = [
-  { bg: "var(--primary)", shadow: "rgba(34, 1, 158, 0.42)", shape: "▲", light: false },
-  { bg: "var(--warning)", shadow: "rgba(138, 90, 0, 0.4)", shape: "●", light: false },
-  { bg: "var(--error)", shadow: "rgba(151, 27, 20, 0.42)", shape: "◆", light: false },
-  { bg: "#ffffff", shadow: "rgba(0, 0, 0, 0.25)", shape: "■", light: true },
+  { bg: "var(--primary)", shadow: "rgba(34, 1, 158, 0.42)", shape: "▲", label: "A", light: false },
+  { bg: "var(--warning)", shadow: "rgba(138, 90, 0, 0.4)", shape: "●", label: "B", light: false },
+  { bg: "var(--error)", shadow: "rgba(151, 27, 20, 0.42)", shape: "◆", label: "C", light: false },
+  { bg: "#ffffff", shadow: "rgba(0, 0, 0, 0.25)", shape: "■", label: "D", light: true },
 ];
 
 export default function GameHostClient({ gameCode }: { gameCode: string }) {
@@ -214,7 +214,7 @@ function LobbyView({
         <h1 className="display-font balance-wrap mt-4 text-4xl text-white sm:text-5xl">
           퀴즈 준비 완료
         </h1>
-        <p className="pretty-wrap mt-2 text-sm leading-[1.45] text-[color:var(--foreground-muted)] sm:text-base">
+        <p className="pretty-wrap mt-3 text-sm leading-[1.45] text-[color:var(--foreground-muted)] sm:text-base">
           <span className="block">학생들에게 게임 코드를 공유하고</span>
           <span className="block">모두 참여하면 게임을 시작하세요.</span>
         </p>
@@ -241,7 +241,7 @@ function LobbyView({
           {starting ? "시작하는 중..." : "게임 시작하기"}
         </button>
         {!canStart && (
-          <p className="mt-2 text-sm text-white/50">아직 참여한 학생이 없어요.</p>
+          <p className="mt-5 text-sm text-white/50">아직 참여한 학생이 없어요.</p>
         )}
       </div>
     </section>
@@ -312,7 +312,7 @@ function ActiveView({
                   >
                     {theme.shape}
                   </span>
-                  <span className="answer-kicker">Choice {index + 1}</span>
+                  <span className="answer-kicker">{theme.label}</span>
                 </div>
                 <span className="text-base font-black leading-6 sm:text-lg">{choice.text}</span>
               </li>

@@ -251,7 +251,7 @@ function HomePortal() {
               {
                 title: "직접 문제 만들기",
                 desc: "내가 만드는 우리 반 퀴즈",
-                bg: "bg-white/10",
+                bg: "bg-[var(--error)]",
                 icon: (
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 20h9" />

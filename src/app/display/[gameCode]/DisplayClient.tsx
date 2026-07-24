@@ -10,10 +10,10 @@ import Leaderboard from "@/components/Leaderboard";
 import GameQRCode from "@/components/GameQRCode";
 
 const ANSWER_THEMES = [
-  { bg: "var(--primary)", shape: "▲", light: false },
-  { bg: "var(--warning)", shape: "●", light: false },
-  { bg: "var(--error)", shape: "◆", light: false },
-  { bg: "#ffffff", shape: "■", light: true },
+  { bg: "var(--primary)", shadow: "rgba(34, 1, 158, 0.42)", shape: "▲", label: "A", light: false },
+  { bg: "var(--warning)", shadow: "rgba(138, 90, 0, 0.4)", shape: "●", label: "B", light: false },
+  { bg: "var(--error)", shadow: "rgba(151, 27, 20, 0.42)", shape: "◆", label: "C", light: false },
+  { bg: "#ffffff", shadow: "rgba(0, 0, 0, 0.25)", shape: "■", label: "D", light: true },
 ];
 
 export default function DisplayClient({ gameCode }: { gameCode: string }) {
@@ -209,16 +209,28 @@ function ActiveDisplay({ game, playerCount }: { game: Game; playerCount: number 
             return (
               <div
                 key={choice.id}
-                className="flex min-h-[7rem] items-center gap-4 rounded-[26px] px-7 py-6"
+                className="flex min-h-[7rem] items-center gap-5 rounded-[26px] border-2 border-white/25 px-7 py-6"
                 style={
                   {
                     background: theme.bg,
                     color: theme.light ? "var(--panel-text)" : "#ffffff",
+                    boxShadow: `0 12px 0 ${theme.shadow}`,
                   } as CSSProperties
                 }
               >
-                <span className="text-3xl">{theme.shape}</span>
-                <span className="text-2xl font-black leading-tight">{choice.text}</span>
+                <span
+                  className="flex h-14 w-14 flex-none items-center justify-center rounded-full text-3xl font-black"
+                  style={{ background: theme.light ? "rgba(23,21,31,0.08)" : "rgba(255,255,255,0.16)" }}
+                >
+                  {theme.shape}
+                </span>
+                <span className="flex-1 text-2xl font-black leading-tight">{choice.text}</span>
+                <span
+                  className="text-xl font-black opacity-70"
+                  style={{ letterSpacing: "0.06em" }}
+                >
+                  {theme.label}
+                </span>
               </div>
             );
           })}
