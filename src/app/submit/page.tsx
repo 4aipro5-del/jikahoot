@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import QuestionEditorForm from "@/components/QuestionEditorForm";
 import { signInStudentAnonymously } from "@/lib/firebase/auth";
-import { getRoomCodeInfo } from "@/lib/firestore/roomCodes";
+import { getRoomCodeInfo, subscribeToRoomCode } from "@/lib/firestore/roomCodes";
 import { submitStudentQuestion } from "@/lib/firestore/questions";
 
 type Step =
@@ -38,7 +38,19 @@ function SubmitPageContent() {
   const [nickname, setNickname] = useState(() => searchParams.get("nickname")?.trim() ?? "");
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submissionClosed, setSubmissionClosed] = useState(false);
   const autoJoinTried = useRef(false);
+
+  // While the student is on the writing screen, watch the (student-readable)
+  // roomCodes mirror live: the moment the teacher presses 제출 종료, flip to the
+  // "제출이 종료되었어요" screen — no need to wait for a submit attempt.
+  const submitCode = step.kind === "submit" ? step.code : null;
+  useEffect(() => {
+    if (!submitCode) return;
+    return subscribeToRoomCode(submitCode, (info) => {
+      setSubmissionClosed(!!info && !info.submissionOpen);
+    });
+  }, [submitCode]);
 
   async function join(trimmedCode: string, trimmedNickname: string) {
     setError(null);
@@ -54,6 +66,9 @@ function SubmitPageContent() {
         setError("문제 제출이 종료되었어요. 선생님께 확인해 주세요.");
         return;
       }
+      // start the writing session fresh; the live subscription (effect) takes
+      // over from here and flips this true the instant the teacher closes it
+      setSubmissionClosed(false);
       setStep({
         kind: "submit",
         teacherUid: info.teacherUid,
@@ -92,6 +107,37 @@ function SubmitPageContent() {
     }
 
     join(trimmedCode, trimmedNickname);
+  }
+
+  if (step.kind === "submit" && submissionClosed) {
+    return (
+      <div className="stage-shell">
+        <div className="stage-content flex min-h-screen items-center justify-center py-8">
+          <div className="paper-panel w-full max-w-xl p-6 text-center sm:p-8">
+            <div className="flex flex-col items-center gap-4">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--error-soft)] text-[var(--error)]">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M15 9l-6 6M9 9l6 6" />
+                </svg>
+              </span>
+              <h1 className="display-font text-3xl text-[var(--panel-text)] sm:text-4xl">
+                문제 제출이 종료되었어요
+              </h1>
+              <p className="paper-muted text-sm leading-6 sm:text-base">
+                선생님이 제출을 종료했어요. 더 이상 문제를 제출할 수 없어요.
+              </p>
+              <button
+                onClick={() => setStep({ kind: "join" })}
+                className="secondary-button secondary-button-compact mt-1"
+              >
+                다른 방 코드로 이동
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (step.kind === "submit") {
