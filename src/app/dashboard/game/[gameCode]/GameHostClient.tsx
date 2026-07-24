@@ -117,15 +117,7 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   }, [game, now, advancing]);
 
   if (!user || game === undefined) {
-    return (
-      <div className="stage-shell">
-        <div className="stage-content flex min-h-screen items-center justify-center">
-          <div className="quiz-panel px-6 py-5 text-center">
-            <p className="paper-muted">게임 진행 화면을 불러오는 중...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   if (game === null) {

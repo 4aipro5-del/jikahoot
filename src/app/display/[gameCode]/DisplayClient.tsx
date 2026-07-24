@@ -51,11 +51,7 @@ export default function DisplayClient({ gameCode }: { gameCode: string }) {
   }, [gameCode, user, game]);
 
   if (user === undefined || game === undefined) {
-    return (
-      <FullscreenStage>
-        <p className="text-xl font-bold text-white/60">화면을 불러오는 중...</p>
-      </FullscreenStage>
-    );
+    return null;
   }
 
   if (game === null) {

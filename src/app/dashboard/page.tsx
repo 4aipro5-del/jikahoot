@@ -185,11 +185,15 @@ export default function DashboardPage() {
   }
 
   if (!user || !checkedProfile || !room) {
+    // no loading message while auth/room restore; only surface a real error
+    if (!error) return null;
     return (
       <div className="stage-shell">
         <div className="stage-content flex min-h-screen items-center justify-center">
           <div className="quiz-panel px-6 py-5 text-center">
-            <p className="paper-muted">{error ?? "교사용 퀴즈를 준비하는 중..."}</p>
+            <p className="status-banner" data-tone="error">
+              {error}
+            </p>
           </div>
         </div>
       </div>

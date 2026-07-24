@@ -11,21 +11,9 @@ type Step =
 
 export default function PlayPage() {
   return (
-    <Suspense fallback={<PlayPageFallback />}>
+    <Suspense fallback={null}>
       <PlayPageContent />
     </Suspense>
-  );
-}
-
-function PlayPageFallback() {
-  return (
-    <div className="stage-shell">
-        <div className="stage-content flex min-h-screen items-center justify-center">
-          <div className="quiz-panel px-6 py-5 text-center">
-            <p className="paper-muted">게임 입장 준비 중...</p>
-          </div>
-        </div>
-    </div>
   );
 }
 
