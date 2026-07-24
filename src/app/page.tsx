@@ -168,46 +168,52 @@ function HomePortal() {
 
           <div className="mx-auto w-full max-w-xl rounded-[28px] border border-white/10 bg-[var(--surface)] p-6 sm:p-8">
             <form onSubmit={handleStudentJoin} className="flex flex-col gap-4">
-              <div className="relative">
-                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-white/40">
-                  #
-                </span>
-                <input
-                  value={code}
-                  // room codes are A-Z/0-9 only — uppercase as the user types and
-                  // strip anything else (한글·공백·기호), so Korean IME input never lands
-                  onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
-                  placeholder="방 코드를 입력하세요 (예: ABC123)"
-                  maxLength={6}
-                  autoCapitalize="characters"
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-11 pr-4 text-base font-bold text-white placeholder:font-normal placeholder:text-white/60 focus-visible:border-[var(--primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(50,0,224,0.25)]"
-                />
-              </div>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-bold text-white/80">방 코드</span>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-white/60">
+                    #
+                  </span>
+                  <input
+                    value={code}
+                    // room codes are A-Z/0-9 only — uppercase as the user types and
+                    // strip anything else (한글·공백·기호), so Korean IME input never lands
+                    onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                    placeholder="예: ABC123"
+                    maxLength={6}
+                    autoCapitalize="characters"
+                    className="h-14 w-full rounded-2xl border border-white/20 bg-white/[0.08] pl-11 pr-4 text-lg font-bold text-white transition-colors placeholder:font-normal placeholder:text-white/60 hover:border-white/30 focus-visible:border-[var(--primary)] focus-visible:bg-white/[0.12] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(50,0,224,0.25)]"
+                  />
+                </div>
+              </label>
 
-              <div className="relative">
-                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M4 21c0-4 3.5-7 8-7s8 3 8 7" />
-                  </svg>
-                </span>
-                <input
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  placeholder="이름을 입력하세요"
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-11 pr-4 text-base font-bold text-white placeholder:font-normal placeholder:text-white/60 focus-visible:border-[var(--primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(50,0,224,0.25)]"
-                />
-              </div>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-bold text-white/80">이름</span>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/60">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="8" r="4" />
+                      <path d="M4 21c0-4 3.5-7 8-7s8 3 8 7" />
+                    </svg>
+                  </span>
+                  <input
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    placeholder="이름을 입력하세요"
+                    className="h-14 w-full rounded-2xl border border-white/20 bg-white/[0.08] pl-11 pr-4 text-lg font-bold text-white transition-colors placeholder:font-normal placeholder:text-white/60 hover:border-white/30 focus-visible:border-[var(--primary)] focus-visible:bg-white/[0.12] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(50,0,224,0.25)]"
+                  />
+                </div>
+              </label>
 
               {studentError && (
                 <p className="status-banner" data-tone="error">
