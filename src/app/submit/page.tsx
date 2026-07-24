@@ -6,6 +6,7 @@ import QuestionEditorForm from "@/components/QuestionEditorForm";
 import { signInStudentAnonymously } from "@/lib/firebase/auth";
 import { resolveRoomCode } from "@/lib/firestore/roomCodes";
 import { submitStudentQuestion } from "@/lib/firestore/questions";
+import StageSkeleton from "@/components/StageSkeleton";
 
 type Step =
   | { kind: "join" }
@@ -13,7 +14,7 @@ type Step =
 
 export default function SubmitPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<StageSkeleton />}>
       <SubmitPageContent />
     </Suspense>
   );

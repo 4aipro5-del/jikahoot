@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { joinGame } from "@/lib/firestore/games";
+import StageSkeleton from "@/components/StageSkeleton";
 import PlayingGame from "./PlayingGame";
 
 type Step =
@@ -11,7 +12,7 @@ type Step =
 
 export default function PlayPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<StageSkeleton />}>
       <PlayPageContent />
     </Suspense>
   );

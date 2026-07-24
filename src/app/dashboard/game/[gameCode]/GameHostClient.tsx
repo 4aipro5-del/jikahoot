@@ -17,6 +17,7 @@ import { getCorrectChoiceMap } from "@/lib/firestore/questions";
 import type { Game } from "@/types/firestore";
 import Leaderboard from "@/components/Leaderboard";
 import GameQRCode from "@/components/GameQRCode";
+import StageSkeleton from "@/components/StageSkeleton";
 import { useNow } from "@/lib/useNow";
 import { useGrading } from "./useGrading";
 
@@ -117,7 +118,7 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   }, [game, now, advancing]);
 
   if (!user || game === undefined) {
-    return null;
+    return <StageSkeleton />;
   }
 
   if (game === null) {

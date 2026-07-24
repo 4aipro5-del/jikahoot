@@ -51,7 +51,11 @@ export default function DisplayClient({ gameCode }: { gameCode: string }) {
   }, [gameCode, user, game]);
 
   if (user === undefined || game === undefined) {
-    return null;
+    return (
+      <FullscreenStage>
+        <span className="h-16 w-16 animate-pulse rounded-2xl bg-white/10" aria-hidden="true" />
+      </FullscreenStage>
+    );
   }
 
   if (game === null) {

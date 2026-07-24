@@ -10,10 +10,11 @@ import {
 } from "@/lib/firebase/auth";
 import { gameExists } from "@/lib/firestore/games";
 import { resolveRoomCode } from "@/lib/firestore/roomCodes";
+import StageSkeleton from "@/components/StageSkeleton";
 
 export default function Home() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<StageSkeleton />}>
       <HomePortal />
     </Suspense>
   );
@@ -95,10 +96,10 @@ function HomePortal() {
     }
   }
 
-  // the effect above redirects signed-in teachers to /dashboard; render
-  // nothing (no loading message) while that navigation happens
+  // the effect above redirects signed-in teachers to /dashboard; show the
+  // neutral loading shell (not a blank screen) while that navigation happens
   if (user && !user.isAnonymous) {
-    return null;
+    return <StageSkeleton />;
   }
 
   return (

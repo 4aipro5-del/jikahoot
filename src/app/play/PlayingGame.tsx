@@ -12,6 +12,7 @@ import {
 import type { Answer, Game, Player } from "@/types/firestore";
 import PlayerRoster from "@/components/PlayerRoster";
 import Leaderboard from "@/components/Leaderboard";
+import StageSkeleton from "@/components/StageSkeleton";
 import { useNow } from "@/lib/useNow";
 
 const ANSWER_THEMES = [
@@ -66,7 +67,7 @@ export default function PlayingGame({
   }, [authorUid, gameCode, onForcedOut, wasRegistered]);
 
   if (!game) {
-    return null;
+    return <StageSkeleton />;
   }
 
   if (game.status === "finished") {

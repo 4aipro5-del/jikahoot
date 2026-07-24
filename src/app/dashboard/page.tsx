@@ -19,6 +19,7 @@ import SettingsPanel from "./SettingsPanel";
 import QuestionForm from "./QuestionForm";
 import QuestionList from "./QuestionList";
 import Sidebar, { type DashboardTab } from "./Sidebar";
+import StageSkeleton from "@/components/StageSkeleton";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -185,8 +186,9 @@ export default function DashboardPage() {
   }
 
   if (!user || !checkedProfile || !room) {
-    // no loading message while auth/room restore; only surface a real error
-    if (!error) return null;
+    // no loading message while auth/room restore — show the neutral shell, and
+    // only surface a real error if one occurred
+    if (!error) return <StageSkeleton />;
     return (
       <div className="stage-shell">
         <div className="stage-content flex min-h-screen items-center justify-center">
