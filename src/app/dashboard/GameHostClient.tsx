@@ -8,6 +8,7 @@ import {
   advanceQuestion,
   finalizeQuestion,
   finishGame,
+  removePlayerFromGame,
   subscribeToGame,
   subscribeToPlayers,
   type PlayerWithId,
@@ -59,6 +60,19 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   }, [game, user]);
 
   const answers = useGrading(gameCode, game, players);
+
+  // Host-only moderation: remove a player who joined by mistake while still in
+  // the lobby. Rules already allow the game owner to delete the player +
+  // nickname docs during 'lobby'; the kicked student's own subscription
+  // (PlayingGame) sees its doc vanish and drops back to the join screen.
+  async function handleKick(player: PlayerWithId) {
+    setError(null);
+    try {
+      await removePlayerFromGame(gameCode, player.id, player.nickname);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "참가자를 내보내지 못했습니다.");
+    }
+  }
 
   async function handleAdvance() {
     if (!game) return;
@@ -150,8 +164,10 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
         {game.status === "lobby" && (
           <LobbyView
             gameCode={gameCode}
+            players={players}
             canStart={players.length > 0}
             onStart={handleAdvance}
+            onKick={handleKick}
             starting={advancing}
           />
         )}
@@ -189,52 +205,119 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   );
 }
 
+// Numeric index color: the brand primary is too dark to read on the dark
+// surface, so lighten it toward white for legibility — still derived from the
+// brand token, not a hand-picked hue.
+const LOBBY_NUMBER_COLOR = "color-mix(in srgb, var(--primary) 55%, #ffffff)";
+
 function LobbyView({
   gameCode,
+  players,
   canStart,
   onStart,
+  onKick,
   starting,
 }: {
   gameCode: string;
+  players: PlayerWithId[];
   canStart: boolean;
   onStart: () => void;
+  onKick: (player: PlayerWithId) => void;
   starting: boolean;
 }) {
+  const joinHost = typeof window !== "undefined" ? window.location.host : "";
+
   return (
-    <section className="mx-auto flex w-full max-w-4xl flex-col items-center gap-8 text-center">
-      <div>
-        <p className="hero-chip">Host Stage</p>
-        <h1 className="display-font balance-wrap mt-4 text-4xl text-white sm:text-5xl">
-          퀴즈 준비 완료
-        </h1>
-        <p className="pretty-wrap mt-3 text-sm leading-[1.45] text-[color:var(--foreground-muted)] sm:text-base">
-          <span className="block">학생들에게 게임 코드를 공유하고</span>
-          <span className="block">모두 참여하면 게임을 시작하세요.</span>
-        </p>
-      </div>
-
-      <div className="grid w-full gap-5 sm:grid-cols-2">
-        <div className="flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-[var(--surface)] px-6 py-10">
-          <p className="text-sm font-semibold text-white/60">게임 코드</p>
-          <p className="display-font text-6xl text-white sm:text-7xl">{gameCode}</p>
+    <section className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+      {/* top bar — QR / join instructions / game code / start */}
+      <div className="flex flex-col gap-6 rounded-[24px] border border-white/10 bg-[var(--surface)] px-6 py-6 sm:px-8 lg:flex-row lg:items-center lg:gap-8">
+        <div className="flex items-center gap-4">
+          <div className="flex-none rounded-xl bg-white p-2">
+            <GameQRCode gameCode={gameCode} size={104} />
+          </div>
+          <p className="text-sm font-bold leading-relaxed text-white/90 sm:text-base">
+            웹 브라우저에서
+            <br />
+            <span className="text-[var(--accent)]">{joinHost}</span> 접속 후
+            <br />
+            아래 Game ID 입력
+          </p>
         </div>
-        <div className="flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-[var(--surface)] px-6 py-10">
-          <p className="text-sm font-semibold text-white/60">참가 QR 코드</p>
-          <GameQRCode gameCode={gameCode} size={180} />
-        </div>
-      </div>
 
-      <div className="w-full">
+        <div className="hidden h-16 w-px flex-none bg-white/15 lg:block" />
+
+        <div className="flex-1">
+          <p className="text-sm font-bold text-white/50">게임 코드</p>
+          <p className="display-font mt-1 text-[clamp(2.5rem,5vw,4.5rem)] leading-none text-white">
+            {gameCode}
+          </p>
+        </div>
+
         <button
           onClick={onStart}
           disabled={!canStart || starting}
-          className="primary-button primary-button-stage flex w-full items-center justify-center gap-2"
+          className="inline-flex min-h-[3.4rem] flex-none items-center justify-center gap-2 rounded-2xl border-2 border-white/15 bg-[var(--error)] px-7 text-lg font-black text-white shadow-[0_7px_0_var(--error-dark)] transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-1 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <span aria-hidden="true">▶</span>
           {starting ? "시작하는 중..." : "게임 시작하기"}
         </button>
-        {!canStart && (
-          <p className="mt-5 text-sm text-white/50">아직 참여한 학생이 없어요.</p>
+      </div>
+
+      {/* headline — only while nobody has joined yet */}
+      {players.length === 0 && (
+        <div className="flex flex-col items-center text-center">
+          <p className="hero-chip">Waiting for Players</p>
+          <h1 className="display-font mt-3 text-4xl text-white sm:text-5xl">
+            참가자를 기다리고 있어요!
+          </h1>
+        </div>
+      )}
+
+      {/* headcount + participant grid */}
+      <div className="flex flex-col items-center gap-6">
+        <div className="inline-flex items-center gap-2.5 rounded-full bg-[var(--surface)] px-5 py-2.5 text-lg font-black text-white">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20" />
+            <circle cx="9" cy="7" r="3.5" />
+            <path d="M22 20v-1.5a4 4 0 0 0-3-3.85" />
+            <path d="M16 3.6a4 4 0 0 1 0 6.8" />
+          </svg>
+          참가자 {players.length}명
+        </div>
+
+        {players.length > 0 && (
+          <div className="w-full">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+              {players.map((player, index) => (
+                <button
+                  key={player.id}
+                  type="button"
+                  onClick={() => onKick(player)}
+                  title={`${player.nickname} 내보내기`}
+                  aria-label={`${player.nickname} 내보내기`}
+                  className="group tile-enter flex min-h-[64px] items-center gap-4 rounded-2xl border border-white/10 bg-[var(--surface)] px-5 py-4 text-left transition hover:border-[color:var(--error)] hover:bg-[var(--error-soft)]"
+                >
+                  <span
+                    className="flex-none text-lg font-black tabular-nums"
+                    style={{ color: LOBBY_NUMBER_COLOR }}
+                  >
+                    {index + 1}
+                  </span>
+                  <span className="flex-1 truncate text-base font-black text-white transition-colors group-hover:text-[var(--error)] group-hover:line-through sm:text-lg">
+                    {player.nickname}
+                  </span>
+                  <span className="flex-none text-[var(--error)] opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 6 6 18M6 6l12 12" />
+                    </svg>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="mt-6 text-center text-sm text-white/40">
+              참가자 이름을 누르면 내보낼 수 있어요. 더 많은 참가자가 입장하면 여기에 표시됩니다.
+            </p>
+          </div>
         )}
       </div>
     </section>
