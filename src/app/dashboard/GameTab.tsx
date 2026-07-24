@@ -97,12 +97,19 @@ function StartGameScreen({
   async function handleStart() {
     setError(null);
     setStarting(true);
+    // Open the display window synchronously inside the click gesture so popup
+    // blockers allow it; only navigate it once we know the game code. Awaiting
+    // createGame first would drop the user-gesture context and get blocked.
+    const displayWindow = window.open("about:blank", "_blank");
     try {
       const publicQuestions = approved.map((q) => ({ id: q.id, text: q.text, choices: q.choices }));
       // the room's currentGameId subscription above picks up the result and
-      // swaps this screen for GameHostClient automatically
-      await createGame(teacherUid, publicQuestions, durationSec, autoAdvance);
+      // swaps this screen for GameHostClient (host controls) automatically,
+      // while the new window shows the student-facing display (code + QR).
+      const code = await createGame(teacherUid, publicQuestions, durationSec, autoAdvance);
+      if (displayWindow) displayWindow.location.href = `/display/${code}`;
     } catch (err) {
+      displayWindow?.close();
       setError(err instanceof Error ? err.message : "게임을 시작하지 못했습니다.");
     } finally {
       setStarting(false);
