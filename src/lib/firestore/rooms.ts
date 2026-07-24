@@ -70,20 +70,12 @@ export function subscribeToRoom(teacherUid: string, callback: (room: Room | null
 }
 
 // Settings tab writes: persist any subset of the teacher-configurable Room
-// fields (display name, game defaults, student-submission prefs, avatar pref).
+// fields (display name, game defaults, avatar pref). 학생 제출 여부는 여기가
+// 아니라 roomCodes.submissionOpen 으로 제어한다.
 export function updateRoomSettings(
   teacherUid: string,
   patch: Partial<
-    Pick<
-      Room,
-      | 'displayName'
-      | 'useGooglePhoto'
-      | 'defaultQuestionDurationSec'
-      | 'autoAdvance'
-      | 'allowStudentSubmission'
-      | 'allowStudentEdit'
-      | 'submissionLimit'
-    >
+    Pick<Room, 'displayName' | 'useGooglePhoto' | 'defaultQuestionDurationSec' | 'autoAdvance'>
   >,
 ) {
   return updateDoc(doc(db, 'rooms', teacherUid), patch)

@@ -17,14 +17,11 @@ export interface Room {
   currentGameStartedAt?: Timestamp | null
   // Teacher-configurable settings (Settings tab). All optional — readers apply
   // the documented default when a field is absent, so existing rooms keep
-  // working unchanged. The 학생 제출 flags are persisted here but not yet
-  // enforced (server-side enforcement would need firestore.rules changes).
+  // working unchanged. 학생 제출 여부는 room이 아니라 roomCodes.submissionOpen
+  // 으로만 제어한다(학생이 읽을 수 있는 유일한 교사 소유 문서).
   useGooglePhoto?: boolean // default true
   defaultQuestionDurationSec?: number // default 20
   autoAdvance?: boolean // default true
-  allowStudentSubmission?: boolean // default true
-  allowStudentEdit?: boolean // default true
-  submissionLimit?: number | null // default null (제한 없음)
 }
 
 // roomCodes/{code} — reverse lookup so students can resolve a room by code alone.
