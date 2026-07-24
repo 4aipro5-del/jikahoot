@@ -18,6 +18,7 @@ import GameTab from "./GameTab";
 import SettingsPanel from "./SettingsPanel";
 import QuestionForm from "./QuestionForm";
 import QuestionList from "./QuestionList";
+import StudentSubmissionPanel from "./StudentSubmissionPanel";
 import Sidebar, { type DashboardTab } from "./Sidebar";
 
 export default function DashboardPage() {
@@ -32,6 +33,13 @@ export default function DashboardPage() {
   const [questions, setQuestions] = useState<QuestionWithId[]>([]);
   const [tab, setTab] = useState<DashboardTab>("dashboard");
   const [isNewQuestionOpen, setIsNewQuestionOpen] = useState(false);
+  // within the Question tab, toggles the 학생 문제 제출 관리 sub-view
+  const [showSubmissions, setShowSubmissions] = useState(false);
+
+  function selectTab(next: DashboardTab) {
+    setShowSubmissions(false);
+    setTab(next);
+  }
 
   useEffect(() => subscribeToAuthState(setUser), []);
 
@@ -200,7 +208,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-[var(--background)] lg:flex-row">
-      <Sidebar active={tab} onSelect={setTab} pendingCount={pendingCount} />
+      <Sidebar active={tab} onSelect={selectTab} pendingCount={pendingCount} />
 
       <main className="min-w-0 flex-1 px-5 py-6 sm:px-8 sm:py-8 lg:px-10">
         <div className="mb-6 flex justify-end">
@@ -215,13 +223,21 @@ export default function DashboardPage() {
           />
         )}
 
-        {tab === "approval" && (
-          <QuestionList
-            teacherUid={room.teacherUid}
-            questions={questions}
-            onNewQuestion={() => setIsNewQuestionOpen(true)}
-          />
-        )}
+        {tab === "approval" &&
+          (showSubmissions ? (
+            <StudentSubmissionPanel
+              roomCode={room.roomCode}
+              questions={questions}
+              onBack={() => setShowSubmissions(false)}
+            />
+          ) : (
+            <QuestionList
+              teacherUid={room.teacherUid}
+              questions={questions}
+              onNewQuestion={() => setIsNewQuestionOpen(true)}
+              onReceiveStudentQuestions={() => setShowSubmissions(true)}
+            />
+          ))}
 
         {tab === "game" && <GameTab teacherUid={room.teacherUid} questions={questions} />}
         {tab === "settings" && (

@@ -40,10 +40,12 @@ export default function QuestionList({
   teacherUid,
   questions,
   onNewQuestion,
+  onReceiveStudentQuestions,
 }: {
   teacherUid: string;
   questions: QuestionWithId[];
   onNewQuestion?: () => void;
+  onReceiveStudentQuestions?: () => void;
 }) {
   const [tab, setTab] = useState<QuestionStatus>("pending");
   const [search, setSearch] = useState("");
@@ -122,27 +124,49 @@ export default function QuestionList({
 
   return (
     <section className="flex flex-col gap-5 rounded-2xl border border-white/10 bg-[var(--surface)] p-6 sm:p-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <p className="hero-chip">Question Bank</p>
-          <h2 className="display-font text-[1.75rem] leading-none text-white sm:text-[2rem]">
-            문제 관리
-          </h2>
-        </div>
-
-        {onNewQuestion && (
-          <button
-            type="button"
-            onClick={onNewQuestion}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-white transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            새 문제 만들기
-          </button>
-        )}
+      <div className="flex flex-col gap-2">
+        <p className="hero-chip">Question Bank</p>
+        <h2 className="display-font text-[1.75rem] leading-none text-white sm:text-[2rem]">
+          문제 관리
+        </h2>
+        <p className="text-sm text-[color:var(--foreground-muted)]">
+          교사가 만든 문제와 학생이 제출한 문제를 관리하고 승인합니다.
+        </p>
       </div>
+
+      {/* 두 개의 큰 Action Card: 새 문제 만들기 / 학생 문제 받기 */}
+      {(onNewQuestion || onReceiveStudentQuestions) && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {onNewQuestion && (
+            <ActionCard
+              onClick={onNewQuestion}
+              highlighted
+              title="새 문제 만들기"
+              description="직접 새로운 퀴즈 문제를 만들어 게임에 추가하세요."
+              icon={
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                </svg>
+              }
+            />
+          )}
+          {onReceiveStudentQuestions && (
+            <ActionCard
+              onClick={onReceiveStudentQuestions}
+              title="학생 문제 받기"
+              description="QR 코드 또는 제출 코드를 공유하고 학생들이 만든 문제를 받아보세요."
+              icon={
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              }
+            />
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {TABS.map(({ key, label }) => {
@@ -358,5 +382,48 @@ export default function QuestionList({
         })}
       </ul>
     </section>
+  );
+}
+
+function ActionCard({
+  onClick,
+  title,
+  description,
+  icon,
+  highlighted = false,
+}: {
+  onClick: () => void;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  highlighted?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group flex items-center gap-4 rounded-2xl border p-5 text-left transition-transform duration-150 hover:-translate-y-0.5 sm:p-6 ${
+        highlighted
+          ? "border-[var(--primary)]/50 bg-[var(--primary-soft)]"
+          : "border-white/10 bg-white/[0.04] hover:bg-white/[0.06]"
+      }`}
+    >
+      <span
+        className={`flex h-14 w-14 flex-none items-center justify-center rounded-2xl ${
+          highlighted ? "bg-[var(--primary)] text-white" : "bg-white/10 text-white"
+        }`}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-lg font-black text-white">{title}</span>
+        <span className="mt-1 block text-sm leading-5 text-white/60">{description}</span>
+      </span>
+      <span className="flex-none text-white/40 transition-transform duration-150 group-hover:translate-x-0.5">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="m9 18 6-6-6-6" />
+        </svg>
+      </span>
+    </button>
   );
 }

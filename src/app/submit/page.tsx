@@ -4,12 +4,12 @@ import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import QuestionEditorForm from "@/components/QuestionEditorForm";
 import { signInStudentAnonymously } from "@/lib/firebase/auth";
-import { resolveRoomCode } from "@/lib/firestore/roomCodes";
+import { getRoomCodeInfo } from "@/lib/firestore/roomCodes";
 import { submitStudentQuestion } from "@/lib/firestore/questions";
 
 type Step =
   | { kind: "join" }
-  | { kind: "submit"; teacherUid: string; authorUid: string; nickname: string };
+  | { kind: "submit"; teacherUid: string; code: string; authorUid: string; nickname: string };
 
 export default function SubmitPage() {
   return (
@@ -45,12 +45,22 @@ function SubmitPageContent() {
     setJoining(true);
     try {
       const cred = await signInStudentAnonymously();
-      const teacherUid = await resolveRoomCode(trimmedCode);
-      if (!teacherUid) {
+      const info = await getRoomCodeInfo(trimmedCode);
+      if (!info) {
         setError("방 코드를 찾을 수 없어요. 선생님께 다시 확인해 주세요.");
         return;
       }
-      setStep({ kind: "submit", teacherUid, authorUid: cred.user.uid, nickname: trimmedNickname });
+      if (!info.submissionOpen) {
+        setError("문제 제출이 종료되었어요. 선생님께 확인해 주세요.");
+        return;
+      }
+      setStep({
+        kind: "submit",
+        teacherUid: info.teacherUid,
+        code: trimmedCode,
+        authorUid: cred.user.uid,
+        nickname: trimmedNickname,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "입장하지 못했습니다.");
     } finally {
@@ -115,13 +125,19 @@ function SubmitPageContent() {
               title="문제 만들기"
               submitLabel="선생님께 제출하기"
               successMessage="제출했어요! 선생님 확인을 기다려 주세요."
-              onSubmit={(input) =>
-                submitStudentQuestion(step.teacherUid, {
+              onSubmit={async (input) => {
+                // re-check in case the teacher ended the session while the
+                // student was writing — the join-time gate can't cover that
+                const info = await getRoomCodeInfo(step.code);
+                if (!info || !info.submissionOpen) {
+                  throw new Error("문제 제출이 종료되었어요. 선생님께 확인해 주세요.");
+                }
+                await submitStudentQuestion(step.teacherUid, {
                   ...input,
                   authorUid: step.authorUid,
                   authorNickname: step.nickname,
-                })
-              }
+                });
+              }}
             />
           </div>
         </div>

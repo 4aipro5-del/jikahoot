@@ -63,9 +63,15 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn()
         && request.auth.uid == request.resource.data.teacherUid
-        && request.resource.data.keys().hasOnly(['teacherUid'])
+        && request.resource.data.keys().hasOnly(['teacherUid', 'submissionOpen'])
         && !exists(/databases/$(database)/documents/roomCodes/$(code));
-      allow update, delete: if false;
+      // the owning teacher may toggle submissionOpen (제출 종료/열기); teacherUid
+      // is immutable and no other field may be added
+      allow update: if isSignedIn()
+        && request.auth.uid == resource.data.teacherUid
+        && request.resource.data.teacherUid == resource.data.teacherUid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submissionOpen']);
+      allow delete: if false;
     }
 
     // ---- Ephemeral game sessions, looked up directly by game code ----

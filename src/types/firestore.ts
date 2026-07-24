@@ -27,9 +27,14 @@ export interface Room {
   submissionLimit?: number | null // default null (제한 없음)
 }
 
-// roomCodes/{code} — reverse lookup so students can resolve a room by code alone
+// roomCodes/{code} — reverse lookup so students can resolve a room by code alone.
+// submissionOpen gates 학생 문제 제출: it lives here (not on the room) because
+// anonymous students can read roomCodes but never the private room doc, so this
+// is the only teacher-owned flag a student can check before submitting. Absent
+// means "open" — existing rooms keep accepting submissions unchanged.
 export interface RoomCode {
   teacherUid: string
+  submissionOpen?: boolean
 }
 
 export type QuestionStatus = 'pending' | 'approved' | 'rejected'
