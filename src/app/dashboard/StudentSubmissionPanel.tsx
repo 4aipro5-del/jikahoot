@@ -23,10 +23,12 @@ function collectSubmitters(questions: QuestionWithId[]): Submitter[] {
 }
 
 export default function StudentSubmissionPanel({
+  teacherUid,
   roomCode,
   questions,
   onBack,
 }: {
+  teacherUid: string;
   roomCode: string;
   questions: QuestionWithId[];
   onBack: () => void;
@@ -53,7 +55,7 @@ export default function StudentSubmissionPanel({
     setToggling(true);
     setError(null);
     try {
-      await setSubmissionOpen(roomCode, !submissionOpen);
+      await setSubmissionOpen(teacherUid, roomCode, !submissionOpen);
     } catch {
       setError("상태를 변경하지 못했어요. 다시 시도해 주세요.");
     } finally {

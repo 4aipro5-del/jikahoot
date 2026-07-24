@@ -37,7 +37,13 @@ service cloud.firestore {
         allow read: if isTeacher(teacherUid);
 
         // the teacher is their own reviewer, so their own questions go straight
-        // to 'approved'; anything a student submits is forced into 'pending'
+        // to 'approved'; anything a student submits is forced into 'pending'.
+        // A student create is additionally rejected once 제출 종료 is set — the
+        // room's submissionOpen must not be false. We read it off the room (not
+        // roomCodes) because the rule only knows {teacherUid}, not the code, and
+        // get(rooms/{teacherUid}) is the only submission flag reachable by path.
+        // Absent (get default true) keeps pre-existing rooms open. The teacher's
+        // own creation is never gated by this.
         allow create: if isSignedIn() && (
           (
             isTeacher(teacherUid)
@@ -49,6 +55,7 @@ service cloud.firestore {
             && request.resource.data.createdBy == 'student'
             && request.resource.data.authorUid == request.auth.uid
             && request.resource.data.status == 'pending'
+            && get(/databases/$(database)/documents/rooms/$(teacherUid)).data.get('submissionOpen', true) == true
           )
         );
 

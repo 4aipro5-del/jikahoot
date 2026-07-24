@@ -17,18 +17,23 @@ export interface Room {
   currentGameStartedAt?: Timestamp | null
   // Teacher-configurable settings (Settings tab). All optional — readers apply
   // the documented default when a field is absent, so existing rooms keep
-  // working unchanged. 학생 제출 여부는 room이 아니라 roomCodes.submissionOpen
-  // 으로만 제어한다(학생이 읽을 수 있는 유일한 교사 소유 문서).
+  // working unchanged.
   useGooglePhoto?: boolean // default true
   defaultQuestionDurationSec?: number // default 20
   autoAdvance?: boolean // default true
+  // 학생 문제 제출 허용 여부. This is the ENFORCEMENT source of truth: the
+  // questionBank create rule get()s this room by its {teacherUid} path (rules
+  // can't map teacherUid -> roomCode, so the flag must be reachable here). It is
+  // mirrored onto roomCodes.submissionOpen for the student client to read, and
+  // both are written together atomically. Absent means "open" (하위호환).
+  submissionOpen?: boolean
 }
 
 // roomCodes/{code} — reverse lookup so students can resolve a room by code alone.
-// submissionOpen gates 학생 문제 제출: it lives here (not on the room) because
+// submissionOpen here is a student-READABLE mirror of Room.submissionOpen:
 // anonymous students can read roomCodes but never the private room doc, so this
-// is the only teacher-owned flag a student can check before submitting. Absent
-// means "open" — existing rooms keep accepting submissions unchanged.
+// copy lets /submit gate its UI. The rule enforcement reads Room.submissionOpen,
+// not this — this is UX only. Absent means "open".
 export interface RoomCode {
   teacherUid: string
   submissionOpen?: boolean

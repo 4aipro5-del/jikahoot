@@ -126,17 +126,27 @@ function SubmitPageContent() {
               submitLabel="선생님께 제출하기"
               successMessage="제출했어요! 선생님 확인을 기다려 주세요."
               onSubmit={async (input) => {
-                // re-check in case the teacher ended the session while the
-                // student was writing — the join-time gate can't cover that
+                // Client pre-check (nice UX): re-read the mirror in case the
+                // teacher ended the session while the student was writing.
                 const info = await getRoomCodeInfo(step.code);
                 if (!info || !info.submissionOpen) {
                   throw new Error("문제 제출이 종료되었어요. 선생님께 확인해 주세요.");
                 }
-                await submitStudentQuestion(step.teacherUid, {
-                  ...input,
-                  authorUid: step.authorUid,
-                  authorNickname: step.nickname,
-                });
+                // Firestore Rules are the real gate. If 제출 종료 lands between
+                // the pre-check and the write, the create is rejected server-side
+                // — translate that permission error into the same friendly text.
+                try {
+                  await submitStudentQuestion(step.teacherUid, {
+                    ...input,
+                    authorUid: step.authorUid,
+                    authorNickname: step.nickname,
+                  });
+                } catch (err) {
+                  if ((err as { code?: string }).code === "permission-denied") {
+                    throw new Error("문제 제출이 종료되었어요. 선생님께 확인해 주세요.");
+                  }
+                  throw err;
+                }
               }}
             />
           </div>

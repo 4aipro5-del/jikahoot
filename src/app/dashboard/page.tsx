@@ -226,6 +226,7 @@ export default function DashboardPage() {
         {tab === "approval" &&
           (showSubmissions ? (
             <StudentSubmissionPanel
+              teacherUid={room.teacherUid}
               roomCode={room.roomCode}
               questions={questions}
               onBack={() => setShowSubmissions(false)}

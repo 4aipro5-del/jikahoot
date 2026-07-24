@@ -1,4 +1,4 @@
-import { doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
 import type { RoomCode } from '@/types/firestore'
 
@@ -39,7 +39,15 @@ export function subscribeToRoomCode(
   })
 }
 
-// 제출 종료 / 다시 열기 — only the owning teacher may flip this (enforced in rules)
-export function setSubmissionOpen(code: string, open: boolean) {
-  return updateDoc(doc(db, 'roomCodes', code), { submissionOpen: open })
+// 제출 종료 / 다시 열기.
+// Writes BOTH copies atomically so they never diverge:
+//  - rooms/{teacherUid}.submissionOpen  → the rules ENFORCEMENT source
+//    (questionBank create get()s it by teacherUid)
+//  - roomCodes/{code}.submissionOpen    → student-readable mirror for the UI
+// Only the owning teacher may write either (enforced in firestore.rules).
+export function setSubmissionOpen(teacherUid: string, code: string, open: boolean) {
+  const batch = writeBatch(db)
+  batch.update(doc(db, 'rooms', teacherUid), { submissionOpen: open })
+  batch.update(doc(db, 'roomCodes', code), { submissionOpen: open })
+  return batch.commit()
 }
