@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { buildChoices } from "@/lib/firestore/questions";
 import type { Choice } from "@/types/firestore";
 
@@ -44,6 +44,9 @@ export default function QuestionEditorForm({
   hideTitle?: boolean;
 }) {
   const isDark = variant === "dark";
+  // one radio group per form instance so the "정답" radios single-select
+  // correctly and never collide with another form on the page
+  const answerRadioName = useId();
   const [text, setText] = useState("");
   const [choiceTexts, setChoiceTexts] = useState(DEFAULT_CHOICES);
   const [correctIndex, setCorrectIndex] = useState<number | null>(null);
@@ -99,7 +102,7 @@ export default function QuestionEditorForm({
       return;
     }
     if (correctIndex === null) {
-      const message = isDark ? "O(답)을 표시하세요." : "정답을 선택해 주세요.";
+      const message = "정답이 될 선택지를 선택해 주세요.";
       setError(message);
       if (isDark && typeof window !== "undefined") {
         window.alert(message);
@@ -178,6 +181,9 @@ export default function QuestionEditorForm({
             >
               Choices
             </span>
+            <p className={`mt-1 text-xs font-semibold ${isDark ? "text-white/55" : "text-[rgba(38,18,87,0.55)]"}`}>
+              정답이 될 선택지를 눌러주세요.
+            </p>
           </div>
 
           {choiceTexts.length < MAX_CHOICES && (
@@ -201,12 +207,17 @@ export default function QuestionEditorForm({
             const isCorrect = correctIndex === index;
 
             return (
+              // non-interactive visual wrapper — no role/tabIndex/onClick; the
+              // selection affordance is the native radio below, so no interactive
+              // element is nested inside another
               <div
                 key={index}
-                className={`rounded-[24px] border p-4 ${
-                  isDark
-                    ? "border-white/10 bg-white/4"
-                    : `border-[rgba(38,18,87,0.1)] ${theme.panel}`
+                className={`rounded-[24px] border p-4 transition-all duration-150 ${
+                  isCorrect
+                    ? "border-[var(--primary)] bg-[rgba(50,0,224,0.07)] shadow-[0_0_0_2px_var(--primary)]"
+                    : isDark
+                      ? "border-white/10 bg-white/4"
+                      : `border-[rgba(38,18,87,0.1)] ${theme.panel}`
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -216,7 +227,23 @@ export default function QuestionEditorForm({
                     >
                       {index + 1}
                     </span>
+
+                    {/* native radio = the accessible, single-select answer control */}
                     <input
+                      type="radio"
+                      name={answerRadioName}
+                      checked={isCorrect}
+                      onChange={() => setCorrectIndex(index)}
+                      aria-label={
+                        choice.trim()
+                          ? `"${choice.trim()}"을(를) 정답으로 선택`
+                          : `${index + 1}번 선택지를 정답으로 선택`
+                      }
+                      className="h-5 w-5 flex-none cursor-pointer accent-[var(--primary)]"
+                    />
+
+                    <input
+                      type="text"
                       value={choice}
                       onChange={(e) => updateChoice(index, e.target.value)}
                       placeholder={`선택지 ${index + 1}`}
@@ -229,27 +256,18 @@ export default function QuestionEditorForm({
                   </div>
 
                   <div className="flex items-center justify-end gap-2 sm:shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setCorrectIndex(index)}
-                      aria-label={`선택지 ${index + 1} ${isCorrect ? "정답 선택됨" : "정답으로 선택"}`}
-                      className={`inline-flex h-11 w-11 items-center justify-center rounded-full text-lg font-black ${
-                        isCorrect
-                          ? "bg-[var(--kahoot-green)] text-white"
-                          : isDark
-                            ? "bg-white/10 text-white"
-                            : "bg-white text-[var(--kahoot-purple)]"
-                      }`}
-                    >
-                      {isCorrect ? "O" : "X"}
-                    </button>
+                    {isCorrect && (
+                      <span className="inline-flex flex-none items-center rounded-full bg-[var(--primary)] px-2.5 py-1 text-xs font-black text-white">
+                        정답
+                      </span>
+                    )}
 
                     {choiceTexts.length > MIN_CHOICES && (
                       <button
                         type="button"
                         onClick={() => removeChoice(index)}
                         aria-label={`선택지 ${index + 1} 삭제`}
-                        className={`inline-flex h-11 w-11 items-center justify-center rounded-full ${
+                        className={`inline-flex h-11 w-11 flex-none items-center justify-center rounded-full ${
                           isDark
                             ? "bg-white/10 text-white/72 hover:bg-white/16 hover:text-white"
                             : "bg-white/70 text-[rgba(38,18,87,0.6)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38)] hover:bg-white hover:text-[var(--panel-text)]"
