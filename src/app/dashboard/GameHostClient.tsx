@@ -438,18 +438,6 @@ function ActiveView({
           </h1>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm font-black">
-            <span className="paper-subtle">제출 현황</span>
-            <span className="text-[var(--panel-text)]">
-              {answeredCount} / {players.length}명 제출
-            </span>
-          </div>
-          <div className="progress-track bg-[rgba(17,15,26,0.08)]">
-            <div className="progress-bar" style={{ width: `${answerRatio * 100}%` }} />
-          </div>
-        </div>
-
         <ul className="grid gap-3 sm:grid-cols-2">
           {question.choices.map((choice, index) => {
             const theme = CHOICE_THEMES[index % CHOICE_THEMES.length];
@@ -481,99 +469,91 @@ function ActiveView({
         </ul>
       </div>
 
-      {/* 오른쪽: 참가자(아바타 그리드) + 가장 큰 "다음 문제" 버튼(하단 고정) */}
-      <div className="flex flex-col gap-5">
-        <div className="rounded-2xl bg-[var(--surface)] p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-white/60">참가자</p>
-            <p className="text-sm font-bold text-white">{players.length}명</p>
+      {/* 오른쪽: 제출 현황 + 게임 제어 (위계: 다음 문제 > 일시정지/종료) */}
+      <div className="flex flex-col gap-4">
+        {/* 제출 현황 */}
+        <div className="rounded-2xl border border-white/10 bg-[var(--surface)] p-6">
+          <p className="text-base font-black text-white">제출 현황</p>
+          <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-white transition-[width] duration-300"
+              style={{ width: `${answerRatio * 100}%` }}
+            />
           </div>
-          {players.length === 0 ? (
-            <p className="text-sm text-white/50">아직 참가한 학생이 없어요.</p>
-          ) : (
-            <ul className="grid grid-cols-5 gap-x-2 gap-y-3 sm:grid-cols-6">
-              {players.map((player) => {
-                const answered = answeredIds.has(player.id);
-                return (
-                  <li
-                    key={player.id}
-                    className="flex flex-col items-center gap-1"
-                    title={answered ? `${player.nickname} · 제출 완료` : `${player.nickname} · 대기 중`}
-                  >
-                    <span
-                      className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-black text-white ${
-                        answered ? "bg-[var(--success)]" : "bg-white/12"
-                      }`}
-                    >
-                      {answered ? (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M20 6 9 17l-5-5" />
-                        </svg>
-                      ) : (
-                        player.nickname.trim().slice(0, 1) || "?"
-                      )}
-                    </span>
-                    <span className="w-full truncate text-center text-[11px] text-white/60">
-                      {player.nickname}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <p className="mt-3 text-sm font-bold text-white/70">
+            {answeredCount} / {players.length}명 제출
+          </p>
         </div>
 
-        <div className="mt-auto flex flex-col gap-2">
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onPauseToggle}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/12 bg-[var(--surface)] px-4 py-3 text-sm font-black text-white transition-colors duration-150 hover:bg-white/[0.08]"
-            >
-              {paused ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M8 5v14l11-7z" />
+        {/* 주요 액션: 다음 문제 */}
+        <button
+          onClick={onAdvance}
+          disabled={advancing || !canAdvance}
+          className="w-full rounded-2xl bg-[var(--primary)] px-6 py-6 shadow-[0_6px_0_var(--primary-dark)] transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <span className="flex items-center justify-center gap-3">
+            {!advancing && !isLastQuestion && (
+              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white/20 text-white">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M9 6l6 6-6 6" />
                 </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <rect x="6" y="5" width="4" height="14" rx="1" />
-                  <rect x="14" y="5" width="4" height="14" rx="1" />
-                </svg>
-              )}
-              {paused ? "재개" : "일시정지"}
-            </button>
-            <button
-              type="button"
-              onClick={() => (endConfirm ? onEndNow() : setEndConfirm(true))}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-black transition-colors duration-150"
-              style={
-                endConfirm
-                  ? { background: "var(--error)", borderColor: "var(--error)", color: "#ffffff" }
-                  : { borderColor: "rgba(253,68,58,0.5)", color: "var(--error)" }
-              }
-            >
-              {endConfirm ? "한 번 더 눌러 종료" : "즉시 종료"}
-            </button>
-          </div>
-          <button
-            onClick={onAdvance}
-            disabled={advancing || !canAdvance}
-            className="primary-button primary-button-stage w-full"
-          >
-            {advancing
-              ? "처리 중..."
-              : !canAdvance
-                ? `제출 대기 중 · ${answeredCount}/${players.length}`
-                : isLastQuestion
-                  ? "게임 종료"
-                  : "다음 문제 →"}
-          </button>
-          {!canAdvance && !advancing && (
-            <p className="text-center text-xs text-white/45">
-              모든 학생이 제출하면 넘어갈 수 있어요. 시간이 끝나면 자동으로 넘어가요.
-            </p>
+              </span>
+            )}
+            <span className="text-2xl font-black text-white">
+              {advancing ? "처리 중..." : isLastQuestion ? "게임 종료" : "다음 문제"}
+            </span>
+          </span>
+          {!advancing && !isLastQuestion && (
+            <span className="mt-1 block text-sm font-bold text-white/70">
+              {game.currentQuestionIndex + 2} / {game.questions.length}
+            </span>
           )}
+        </button>
+
+        {/* 보조 액션: 일시정지/재개 · 지금 종료 */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={onPauseToggle}
+            className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border border-white/10 bg-[var(--surface)] py-6 text-lg font-black text-white transition-colors duration-150 hover:bg-white/[0.06]"
+          >
+            {paused ? (
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--warning)" }} aria-hidden="true">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            ) : (
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--warning)" }} aria-hidden="true">
+                <rect x="6" y="5" width="4" height="14" rx="1" />
+                <rect x="14" y="5" width="4" height="14" rx="1" />
+              </svg>
+            )}
+            {paused ? "재개" : "일시정지"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => (endConfirm ? onEndNow() : setEndConfirm(true))}
+            className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border py-6 text-lg font-black transition-colors duration-150"
+            style={
+              endConfirm
+                ? { background: "var(--error-soft)", borderColor: "var(--error)", color: "var(--error)" }
+                : { borderColor: "rgba(255,255,255,0.1)", color: "#ffffff" }
+            }
+          >
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--error)" }} aria-hidden="true">
+              <rect x="6" y="6" width="12" height="12" rx="2" />
+            </svg>
+            {endConfirm ? "한 번 더" : "지금 종료"}
+          </button>
         </div>
+
+        {!canAdvance && !advancing && (
+          <p className="text-sm leading-6 text-white/45">
+            모든 학생이 제출하면 넘어갈 수 있어요.
+            <br />
+            시간이 끝나면 자동으로 넘어가요.
+          </p>
+        )}
       </div>
     </section>
   );
