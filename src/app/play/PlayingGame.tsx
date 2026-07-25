@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import {
   subscribeToAnswer,
   subscribeToGame,
@@ -27,11 +27,13 @@ export default function PlayingGame({
   authorUid,
   nickname,
   onForcedOut,
+  onLeave,
 }: {
   gameCode: string;
   authorUid: string;
   nickname: string;
   onForcedOut: () => void;
+  onLeave: () => void;
 }) {
   const [game, setGame] = useState<Game | null | undefined>(undefined);
   const [players, setPlayers] = useState<PlayerWithId[]>([]);
@@ -83,6 +85,14 @@ export default function PlayingGame({
               </p>
             </div>
             <Leaderboard players={players} highlightPlayerId={authorUid} />
+
+            <button
+              type="button"
+              onClick={onLeave}
+              className="primary-button mx-auto w-full max-w-xs"
+            >
+              다른 게임 시작하기
+            </button>
           </div>
         </div>
       </div>
@@ -95,7 +105,6 @@ export default function PlayingGame({
         game={game}
         gameCode={gameCode}
         authorUid={authorUid}
-        nickname={nickname}
         myScore={myPlayer?.totalScore ?? 0}
       />
     );
@@ -150,13 +159,11 @@ function ActiveView({
   game,
   gameCode,
   authorUid,
-  nickname,
   myScore,
 }: {
   game: Game;
   gameCode: string;
   authorUid: string;
-  nickname: string;
   myScore: number;
 }) {
   const questionIndex = game.currentQuestionIndex;
@@ -181,12 +188,8 @@ function ActiveView({
     ? game.currentQuestionStartedAt.toMillis() + game.questionDurationSec * 1000
     : null;
   const remainingSec = deadline ? Math.max(0, Math.ceil((deadline - now) / 1000)) : 0;
-  const remainingRatio = deadline
-    ? Math.max(0, Math.min(1, (deadline - now) / (game.questionDurationSec * 1000)))
-    : 0;
   const timeUp = deadline !== null && remainingSec <= 0;
   const hasAnswered = Boolean(answer);
-  const timeLow = !timeUp && remainingSec <= 5;
 
   async function handleChoose(choiceId: string) {
     if (hasAnswered || timeUp || submitting) return;
@@ -201,74 +204,84 @@ function ActiveView({
     }
   }
 
+  const timeColor =
+    timeUp || remainingSec <= 5
+      ? "var(--error)"
+      : remainingSec <= 10
+        ? "var(--warning)"
+        : "#ffffff";
+  // 진행 바 = 남은 시간 비율 (시간이 줄수록 바가 줄어듦)
+  const timeRatio = deadline
+    ? Math.max(0, Math.min(1, (deadline - now) / (game.questionDurationSec * 1000)))
+    : 0;
+
   return (
     <div className="stage-shell">
       <div className="stage-content flex min-h-screen flex-col justify-center gap-5 py-6">
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
-          <div className="flex items-center justify-between gap-4">
-            <p className="min-w-0 truncate text-sm font-bold text-[color:var(--foreground-muted)]">
-              방 코드 {gameCode}
-            </p>
-            <div className="flex flex-none items-center gap-3">
-              <span className="rounded-full bg-[var(--surface)] px-4 py-1.5 text-sm font-black text-white">
-                {questionIndex + 1}/{game.questions.length}
-              </span>
+          {/* 상단: 진행 바 + 남은 시간 타이머, 그 아래 문제 번호 */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-4">
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/12">
+                <div
+                  className="h-full rounded-full bg-[var(--primary)] transition-[width] duration-300"
+                  style={{ width: `${timeRatio * 100}%` }}
+                />
+              </div>
               <span
-                className={`flex h-14 w-14 flex-none items-center justify-center rounded-full border-2 text-xl font-black ${
-                  timeUp || timeLow
-                    ? "border-[var(--error)] text-[var(--error)]"
-                    : "border-[var(--primary)] text-white"
-                }`}
+                className="flex h-14 w-14 flex-none items-center justify-center rounded-full border-[3px] text-xl font-black"
+                style={{ borderColor: timeColor, color: timeColor }}
               >
                 {timeUp ? "0" : remainingSec}
               </span>
             </div>
+            <p className="text-sm font-black">
+              <span style={{ color: "var(--primary)" }}>{questionIndex + 1}</span>
+              <span className="text-white/40"> / {game.questions.length}</span>
+            </p>
           </div>
 
-          <div className="progress-track">
-            <div
-              className="progress-bar"
-              style={{ width: `${remainingRatio * 100}%` } as CSSProperties}
-            />
-          </div>
-
-          <section className="paper-panel p-6 sm:p-8">
-            <p className="paper-ghost text-sm font-black uppercase tracking-[0.18em]">Question</p>
-            <h2 className="display-font mt-3 text-3xl leading-tight text-[var(--panel-text)] sm:text-4xl lg:text-5xl">
+          {/* 문제 카드 */}
+          <section className="rounded-2xl bg-white p-6 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:p-7">
+            <p className="paper-ghost text-xs font-black uppercase tracking-[0.18em]">Question</p>
+            <h2 className="display-font mt-2 text-2xl leading-tight text-[var(--panel-text)] sm:text-3xl">
               {question.text}
             </h2>
           </section>
 
+          {/* 보기 2×2 (A/B/C/D 라벨 없음, 도형 + 텍스트) */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
             {question.choices.map((choice, index) => {
               const theme = ANSWER_THEMES[index % ANSWER_THEMES.length];
               const isMyChoice = answer?.choiceId === choice.id;
+              const dim = (hasAnswered || timeUp) && !isMyChoice;
 
               return (
                 <button
                   key={choice.id}
                   onClick={() => handleChoose(choice.id)}
                   disabled={hasAnswered || timeUp || submitting}
-                  className={`answer-tile ${isMyChoice ? "is-selected" : ""}`}
-                  style={
-                    {
-                      "--tile-bg": theme.bg,
-                      "--tile-shadow": theme.shadow,
-                      "--tile-outline": theme.light ? "var(--panel-text)" : "rgba(255,255,255,0.92)",
-                      color: theme.light ? "var(--panel-text)" : "#ffffff",
-                    } as CSSProperties
-                  }
+                  className="flex min-h-[5.25rem] items-center gap-4 rounded-2xl px-5 py-4 text-left transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed"
+                  style={{
+                    background: theme.bg,
+                    color: theme.light ? "var(--panel-text)" : "#ffffff",
+                    boxShadow: `0 5px 0 ${theme.shadow}`,
+                    outline: isMyChoice
+                      ? `3px solid ${theme.light ? "var(--panel-text)" : "rgba(255,255,255,0.92)"}`
+                      : "none",
+                    outlineOffset: "-3px",
+                    opacity: dim ? 0.6 : 1,
+                  }}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <span
-                      className="answer-shape"
-                      style={{ background: theme.light ? "rgba(23,21,31,0.08)" : "rgba(255,255,255,0.16)" }}
-                    >
-                      {theme.shape}
-                    </span>
-                    <span className="answer-kicker">{theme.label}</span>
-                  </div>
-                  <span className="text-base font-black leading-6 sm:text-lg">{choice.text}</span>
+                  <span
+                    className="flex h-11 w-11 flex-none items-center justify-center rounded-full text-lg font-black"
+                    style={{ background: theme.light ? "rgba(23,21,31,0.08)" : "rgba(255,255,255,0.18)" }}
+                  >
+                    {theme.shape}
+                  </span>
+                  <span className="min-w-0 flex-1 text-base font-bold leading-snug sm:text-lg">
+                    {choice.text}
+                  </span>
                 </button>
               );
             })}
@@ -295,14 +308,14 @@ function ActiveView({
             </p>
           )}
 
-          <div className="mt-1 flex items-center justify-between gap-4 rounded-full bg-[var(--surface)] px-5 py-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--primary)] text-sm font-black text-white">
-                {nickname.slice(0, 1).toUpperCase()}
-              </span>
-              <span className="truncate text-base font-black text-white">{nickname}</span>
-            </div>
-            <span className="display-font flex-none text-xl text-white">{myScore} pt</span>
+          {/* 하단 우측: 별 아이콘 + 점수 (이름 없음) */}
+          <div className="flex justify-end">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface)] px-4 py-2 text-sm font-black text-white">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--warning)" aria-hidden="true">
+                <path d="m12 2 2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77 5.82 21l1.18-6.86-5-4.87 7.1-1.01z" />
+              </svg>
+              {myScore} pt
+            </span>
           </div>
         </div>
       </div>
