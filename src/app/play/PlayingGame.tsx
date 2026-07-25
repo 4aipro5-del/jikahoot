@@ -39,6 +39,7 @@ export default function PlayingGame({
   const [players, setPlayers] = useState<PlayerWithId[]>([]);
   const [myPlayer, setMyPlayer] = useState<Player | null | undefined>(undefined);
   const [wasRegistered, setWasRegistered] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   useEffect(() => subscribeToGame(gameCode, setGame), [gameCode]);
 
@@ -67,6 +68,41 @@ export default function PlayingGame({
       }
     });
   }, [authorUid, gameCode, onForcedOut, wasRegistered]);
+
+  const gameStatus = game?.status;
+
+  // 게임 진행 중(로비/진행)에만 브라우저 뒤로가기를 가로채 확인 모달을 띄운다.
+  // 새로고침/탭 닫기는 브라우저 기본 beforeunload 경고로 처리. 게임 종료 후에는
+  // 리스너를 해제해 정상 동작한다. (제출/타이머/점수 로직은 건드리지 않음)
+  useEffect(() => {
+    if (!gameStatus || gameStatus === "finished") return;
+
+    const onPopState = () => {
+      // 트랩을 다시 심어 현재 화면에 머무르게 하고 확인 모달을 띄운다
+      window.history.pushState(null, "", window.location.href);
+      setShowLeaveModal(true);
+    };
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", onPopState);
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [gameStatus]);
+
+  function cancelLeave() {
+    setShowLeaveModal(false);
+  }
+  function confirmLeave() {
+    setShowLeaveModal(false);
+    onLeave();
+  }
 
   if (!game) {
     return <StageSkeleton />;
@@ -101,16 +137,24 @@ export default function PlayingGame({
 
   if (game.status === "active") {
     return (
-      <ActiveView
-        game={game}
-        gameCode={gameCode}
-        authorUid={authorUid}
-        myScore={myPlayer?.totalScore ?? 0}
-      />
+      <>
+        <ActiveView
+          game={game}
+          gameCode={gameCode}
+          authorUid={authorUid}
+          myScore={myPlayer?.totalScore ?? 0}
+        />
+        <LeaveGuardModal open={showLeaveModal} onCancel={cancelLeave} onConfirm={confirmLeave} />
+      </>
     );
   }
 
-  return <LobbyView gameCode={gameCode} nickname={nickname} players={players} />;
+  return (
+    <>
+      <LobbyView gameCode={gameCode} nickname={nickname} players={players} />
+      <LeaveGuardModal open={showLeaveModal} onCancel={cancelLeave} onConfirm={confirmLeave} />
+    </>
+  );
 }
 
 function LobbyView({
@@ -184,15 +228,18 @@ function ActiveView({
     return subscribeToAnswer(gameCode, authorUid, questionIndex, setAnswer);
   }, [gameCode, authorUid, questionIndex]);
 
+  const paused = game.paused ?? false;
+  // 일시정지 중에는 시계를 pausedAt 시점에 고정해 타이머를 멈춘다
+  const nowMs = paused && game.pausedAt ? game.pausedAt.toMillis() : now;
   const deadline = game.currentQuestionStartedAt
     ? game.currentQuestionStartedAt.toMillis() + game.questionDurationSec * 1000
     : null;
-  const remainingSec = deadline ? Math.max(0, Math.ceil((deadline - now) / 1000)) : 0;
+  const remainingSec = deadline ? Math.max(0, Math.ceil((deadline - nowMs) / 1000)) : 0;
   const timeUp = deadline !== null && remainingSec <= 0;
   const hasAnswered = Boolean(answer);
 
   async function handleChoose(choiceId: string) {
-    if (hasAnswered || timeUp || submitting) return;
+    if (hasAnswered || timeUp || submitting || paused) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -212,7 +259,7 @@ function ActiveView({
         : "#ffffff";
   // 진행 바 = 남은 시간 비율 (시간이 줄수록 바가 줄어듦)
   const timeRatio = deadline
-    ? Math.max(0, Math.min(1, (deadline - now) / (game.questionDurationSec * 1000)))
+    ? Math.max(0, Math.min(1, (deadline - nowMs) / (game.questionDurationSec * 1000)))
     : 0;
 
   return (
@@ -249,6 +296,16 @@ function ActiveView({
             </h2>
           </section>
 
+          {paused && (
+            <p className="status-banner flex items-center justify-center gap-2" data-tone="warning">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <rect x="6" y="5" width="4" height="14" rx="1" />
+                <rect x="14" y="5" width="4" height="14" rx="1" />
+              </svg>
+              일시정지됨 · 선생님을 기다려 주세요
+            </p>
+          )}
+
           {/* 보기 2×2 (A/B/C/D 라벨 없음, 도형 + 텍스트) */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
             {question.choices.map((choice, index) => {
@@ -259,7 +316,7 @@ function ActiveView({
                 <button
                   key={choice.id}
                   onClick={() => handleChoose(choice.id)}
-                  disabled={hasAnswered || timeUp || submitting}
+                  disabled={hasAnswered || timeUp || submitting || paused}
                   className="relative flex min-h-[5.25rem] items-center gap-4 rounded-2xl px-5 py-4 text-left transition-transform duration-150 ease-out enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed"
                   style={{
                     background: theme.bg,
@@ -331,6 +388,70 @@ function ActiveView({
               {myScore} pt
             </span>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 게임 이탈 확인 모달. 오버레이 클릭·ESC는 '아니오'(취소)와 동일. 기존 게임
+// 화면과 같은 짙은 배경/테두리/그림자, 버튼은 Primary(아니오)·Error(예).
+function LeaveGuardModal({
+  open,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onCancel]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="leave-modal-title"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl border border-white/10 bg-[var(--surface)] p-6 shadow-[var(--shadow-soft)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 id="leave-modal-title" className="display-font text-xl text-white">
+          게임을 중단하시겠습니까?
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-white/60">
+          지금 나가면 현재 게임 참여가 종료될 수 있습니다.
+        </p>
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            autoFocus
+            className="flex-1 rounded-xl px-4 py-3 text-base font-black text-white transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-0.5"
+            style={{ background: "var(--primary)", boxShadow: "0 5px 0 var(--primary-dark)" }}
+          >
+            아니오
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 rounded-xl px-4 py-3 text-base font-black text-white transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-0.5"
+            style={{ background: "var(--error)", boxShadow: "0 5px 0 var(--error-dark)" }}
+          >
+            예
+          </button>
         </div>
       </div>
     </div>

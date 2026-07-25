@@ -8,6 +8,7 @@ import {
   runTransaction,
   serverTimestamp,
   setDoc,
+  Timestamp,
   updateDoc,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
@@ -217,6 +218,44 @@ export function advanceQuestion(gameCode: string, nextIndex: number) {
     status: 'active',
     currentQuestionIndex: nextIndex,
     currentQuestionStartedAt: serverTimestamp(),
+    // 새 문제로 넘어가면 일시정지 상태는 항상 해제
+    paused: false,
+    pausedAt: null,
+  })
+}
+
+// 진행 중 일시정지: 타이머를 pausedAt 시점에 고정한다(표시/자동진행 게이팅은
+// 클라이언트에서 paused 플래그로 처리).
+export function pauseGame(gameCode: string) {
+  return updateDoc(doc(db, 'games', gameCode), {
+    paused: true,
+    pausedAt: serverTimestamp(),
+  })
+}
+
+// 재개: 일시정지된 시간(now - pausedAt)만큼 currentQuestionStartedAt을 뒤로 밀어
+// 남은 시간을 그대로 이어가게 한다. pausedAt/startedAt이 없으면 플래그만 해제.
+export async function resumeGame(gameCode: string) {
+  const gameRef = doc(db, 'games', gameCode)
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(gameRef)
+    if (!snap.exists()) return
+    const game = snap.data() as Game
+
+    const startedAt = game.currentQuestionStartedAt
+    const pausedAt = game.pausedAt
+    if (!startedAt || !pausedAt) {
+      tx.update(gameRef, { paused: false, pausedAt: null })
+      return
+    }
+
+    const pausedMs = Timestamp.now().toMillis() - pausedAt.toMillis()
+    const shiftedStartedAt = Timestamp.fromMillis(startedAt.toMillis() + Math.max(0, pausedMs))
+    tx.update(gameRef, {
+      paused: false,
+      pausedAt: null,
+      currentQuestionStartedAt: shiftedStartedAt,
+    })
   })
 }
 

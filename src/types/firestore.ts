@@ -81,6 +81,11 @@ export interface Game {
   currentQuestionStartedAt: Timestamp | null
   createdAt: Timestamp
   endedAt: Timestamp | null
+  // 진행 중 일시정지 상태. paused=true면 타이머를 pausedAt 시점에 고정하고
+  // 학생 답안 제출을 막는다(클라이언트 게이팅). 재개 시 currentQuestionStartedAt을
+  // 일시정지된 시간만큼 뒤로 밀어 남은 시간을 보존한다. 없으면 진행 중(하위호환).
+  paused?: boolean
+  pausedAt?: Timestamp | null
 }
 
 // games/{gameCode}/nicknames/{nicknameSlug}

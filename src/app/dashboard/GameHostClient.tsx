@@ -8,7 +8,9 @@ import {
   advanceQuestion,
   finalizeQuestion,
   finishGame,
+  pauseGame,
   removePlayerFromGame,
+  resumeGame,
   subscribeToGame,
   subscribeToPlayers,
   type PlayerWithId,
@@ -105,6 +107,29 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     }
   }
 
+  async function handlePauseToggle() {
+    if (!game) return;
+    setError(null);
+    try {
+      if (game.paused) {
+        await resumeGame(gameCode);
+      } else {
+        await pauseGame(gameCode);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "일시정지 상태를 변경하지 못했습니다.");
+    }
+  }
+
+  async function handleEndNow() {
+    setError(null);
+    try {
+      await finishGame(gameCode);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "게임을 종료하지 못했습니다.");
+    }
+  }
+
   // Auto-advance once a question's timer runs out, without waiting for the
   // teacher to click "다음 문제" — mirrors clicking it manually, just
   // triggered by the clock instead of a click. Guarded by
@@ -115,6 +140,8 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
 
   useEffect(() => {
     if (!game || game.status !== "active" || advancing) return;
+    // 일시정지 중에는 자동 진행하지 않음
+    if (game.paused) return;
     // respect the teacher's 자동 진행 setting (snapshotted onto the game at
     // creation); undefined on older games means "on", preserving prior behavior
     if (game.autoAdvance === false) return;
@@ -164,7 +191,9 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     game.status === "active" && game.currentQuestionStartedAt
       ? game.currentQuestionStartedAt.toMillis() + game.questionDurationSec * 1000
       : null;
-  const activeTimeUp = activeDeadline !== null && now >= activeDeadline;
+  // 일시정지 중에는 시계를 pausedAt에 고정해 '시간 종료' 판정도 멈춘다
+  const effectiveNow = game.paused && game.pausedAt ? game.pausedAt.toMillis() : now;
+  const activeTimeUp = activeDeadline !== null && effectiveNow >= activeDeadline;
 
   return (
     <div className="stage-shell">
@@ -186,7 +215,10 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
             players={players}
             answeredIds={new Set(Object.keys(answers))}
             timeUp={activeTimeUp}
+            paused={game.paused ?? false}
             onAdvance={handleAdvance}
+            onPauseToggle={handlePauseToggle}
+            onEndNow={handleEndNow}
             advancing={advancing}
           />
         )}
@@ -350,19 +382,32 @@ function ActiveView({
   players,
   answeredIds,
   timeUp,
+  paused,
   onAdvance,
+  onPauseToggle,
+  onEndNow,
   advancing,
 }: {
   game: Game;
   players: PlayerWithId[];
   answeredIds: Set<string>;
   timeUp: boolean;
+  paused: boolean;
   onAdvance: () => void;
+  onPauseToggle: () => void;
+  onEndNow: () => void;
   advancing: boolean;
 }) {
   const question = game.questions[game.currentQuestionIndex];
   const isLastQuestion = game.currentQuestionIndex >= game.questions.length - 1;
   const answeredCount = answeredIds.size;
+  // 즉시 종료는 실수 방지를 위해 두 번 눌러 확정. 문제가 바뀌면 확정 상태 초기화.
+  const [endConfirm, setEndConfirm] = useState(false);
+  const [trackedIndex, setTrackedIndex] = useState(game.currentQuestionIndex);
+  if (game.currentQuestionIndex !== trackedIndex) {
+    setTrackedIndex(game.currentQuestionIndex);
+    setEndConfirm(false);
+  }
   const answerRatio = players.length > 0 ? answeredCount / players.length : 0;
   // Gate manual advance on everyone having answered; the timer is the escape
   // hatch so a non-answering student can't stall the whole class.
@@ -374,9 +419,20 @@ function ActiveView({
       {/* 현재 문제 — 가장 큰 영역: 문제번호 / 제목 / 제출 현황 / 보기 4개 */}
       <div className="paper-panel flex flex-col gap-6 p-6 sm:p-8">
         <div className="space-y-4">
-          <span className="inline-flex rounded-full bg-[var(--primary-soft)] px-4 py-2 text-sm font-black text-[var(--primary-dark)]">
-            문제 {game.currentQuestionIndex + 1} / {game.questions.length}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex rounded-full bg-[var(--primary-soft)] px-4 py-2 text-sm font-black text-[var(--primary-dark)]">
+              문제 {game.currentQuestionIndex + 1} / {game.questions.length}
+            </span>
+            {paused && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--warning-soft)] px-3 py-2 text-sm font-black text-[var(--warning-dark)]">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <rect x="6" y="5" width="4" height="14" rx="1" />
+                  <rect x="14" y="5" width="4" height="14" rx="1" />
+                </svg>
+                일시정지됨
+              </span>
+            )}
+          </div>
           <h1 className="display-font text-4xl leading-tight text-[var(--panel-text)] sm:text-5xl">
             {question.text}
           </h1>
@@ -468,6 +524,37 @@ function ActiveView({
         </div>
 
         <div className="mt-auto flex flex-col gap-2">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onPauseToggle}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/12 bg-[var(--surface)] px-4 py-3 text-sm font-black text-white transition-colors duration-150 hover:bg-white/[0.08]"
+            >
+              {paused ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <rect x="6" y="5" width="4" height="14" rx="1" />
+                  <rect x="14" y="5" width="4" height="14" rx="1" />
+                </svg>
+              )}
+              {paused ? "재개" : "일시정지"}
+            </button>
+            <button
+              type="button"
+              onClick={() => (endConfirm ? onEndNow() : setEndConfirm(true))}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-black transition-colors duration-150"
+              style={
+                endConfirm
+                  ? { background: "var(--error)", borderColor: "var(--error)", color: "#ffffff" }
+                  : { borderColor: "rgba(253,68,58,0.5)", color: "var(--error)" }
+              }
+            >
+              {endConfirm ? "한 번 더 눌러 종료" : "즉시 종료"}
+            </button>
+          </div>
           <button
             onClick={onAdvance}
             disabled={advancing || !canAdvance}
