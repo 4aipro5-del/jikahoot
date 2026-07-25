@@ -291,8 +291,8 @@ function LobbyView({
   return (
     <section className="mx-auto flex w-full max-w-6xl flex-col gap-8">
       {/* top bar — QR / join instructions / game code / start */}
-      <div className="flex flex-col gap-6 rounded-[24px] border border-white/10 bg-[var(--surface)] px-6 py-6 sm:px-8 lg:flex-row lg:items-center lg:gap-8">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-6 rounded-[24px] border border-white/10 bg-[var(--surface)] px-6 py-6 sm:px-8">
+        <div className="flex min-w-0 items-center gap-4">
           <div className="flex-none rounded-xl bg-white p-2">
             <GameQRCode gameCode={gameCode} size={104} />
           </div>
@@ -305,11 +305,10 @@ function LobbyView({
           </p>
         </div>
 
-        <div className="hidden h-16 w-px flex-none bg-white/15 lg:block" />
-
-        <div className="flex-1">
+        {/* label + value stay together as one block, and wrap as a unit */}
+        <div className="min-w-0">
           <p className="text-sm font-bold text-white/50">게임 코드</p>
-          <p className="display-font mt-1 text-[clamp(2.5rem,5vw,4.5rem)] leading-none text-white">
+          <p className="display-font mt-1 break-all text-[clamp(2rem,4vw,3.5rem)] leading-none text-white">
             {gameCode}
           </p>
         </div>

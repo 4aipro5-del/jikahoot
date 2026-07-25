@@ -762,6 +762,35 @@ button:disabled {
   animation: tile-in 220ms ease-out;
 }
 
+/* gentle idle drift for the waiting-lobby particles; per-particle duration and
+   delay are injected via --float-dur / --float-delay so they never move in
+   unison */
+@keyframes lobby-float {
+  0% {
+    transform: translate(0, 0);
+  }
+  33% {
+    transform: translate(6px, -12px);
+  }
+  66% {
+    transform: translate(-5px, -18px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+.lobby-particle {
+  will-change: transform;
+  animation: lobby-float var(--float-dur, 7s) ease-in-out var(--float-delay, 0s) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lobby-particle {
+    animation: none;
+  }
+}
+
 @media (max-width: 640px) {
   .hero-chip {
     letter-spacing: 0.18em;
