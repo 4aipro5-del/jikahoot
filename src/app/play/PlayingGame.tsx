@@ -19,7 +19,7 @@ const ANSWER_THEMES = [
   { bg: "var(--primary)", shadow: "rgba(34, 1, 158, 0.42)", shape: "▲", label: "A", light: false },
   { bg: "var(--warning)", shadow: "rgba(138, 90, 0, 0.4)", shape: "●", label: "B", light: false },
   { bg: "var(--error)", shadow: "rgba(151, 27, 20, 0.42)", shape: "◆", label: "C", light: false },
-  { bg: "#ffffff", shadow: "rgba(0, 0, 0, 0.25)", shape: "■", label: "D", light: true },
+  { bg: "var(--success)", shadow: "rgba(20, 83, 45, 0.42)", shape: "■", label: "D", light: false },
 ];
 
 export default function PlayingGame({
@@ -254,23 +254,23 @@ function ActiveView({
             {question.choices.map((choice, index) => {
               const theme = ANSWER_THEMES[index % ANSWER_THEMES.length];
               const isMyChoice = answer?.choiceId === choice.id;
-              const dim = (hasAnswered || timeUp) && !isMyChoice;
 
               return (
                 <button
                   key={choice.id}
                   onClick={() => handleChoose(choice.id)}
                   disabled={hasAnswered || timeUp || submitting}
-                  className="flex min-h-[5.25rem] items-center gap-4 rounded-2xl px-5 py-4 text-left transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed"
+                  className="relative flex min-h-[5.25rem] items-center gap-4 rounded-2xl px-5 py-4 text-left transition-transform duration-150 ease-out enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed"
                   style={{
                     background: theme.bg,
                     color: theme.light ? "var(--panel-text)" : "#ffffff",
                     boxShadow: `0 5px 0 ${theme.shadow}`,
-                    outline: isMyChoice
-                      ? `3px solid ${theme.light ? "var(--panel-text)" : "rgba(255,255,255,0.92)"}`
-                      : "none",
-                    outlineOffset: "-3px",
-                    opacity: dim ? 0.6 : 1,
+                    // 선택 강조: 흰색 5px 테두리(안쪽) + 1.03배 확대. 다른 보기는
+                    // 색/투명도 변화 없음(흐리게 처리하지 않음).
+                    outline: isMyChoice ? "5px solid #ffffff" : "none",
+                    outlineOffset: "-5px",
+                    transform: isMyChoice ? "scale(1.03)" : undefined,
+                    zIndex: isMyChoice ? 1 : undefined,
                   }}
                 >
                   <span
@@ -282,6 +282,20 @@ function ActiveView({
                   <span className="min-w-0 flex-1 text-base font-bold leading-snug sm:text-lg">
                     {choice.text}
                   </span>
+                  {isMyChoice && (
+                    <span
+                      className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.3)]"
+                      style={{
+                        background: theme.light ? "var(--panel-text)" : "#ffffff",
+                        color: theme.light ? "#ffffff" : "var(--panel-text)",
+                      }}
+                      aria-label="선택함"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>
+                    </span>
+                  )}
                 </button>
               );
             })}

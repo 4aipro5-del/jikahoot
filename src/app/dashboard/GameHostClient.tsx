@@ -25,7 +25,7 @@ const CHOICE_THEMES = [
   { bg: "var(--primary)", shadow: "rgba(34, 1, 158, 0.42)", shape: "▲", label: "A", light: false },
   { bg: "var(--warning)", shadow: "rgba(138, 90, 0, 0.4)", shape: "●", label: "B", light: false },
   { bg: "var(--error)", shadow: "rgba(151, 27, 20, 0.42)", shape: "◆", label: "C", light: false },
-  { bg: "#ffffff", shadow: "rgba(0, 0, 0, 0.25)", shape: "■", label: "D", light: true },
+  { bg: "var(--success)", shadow: "rgba(20, 83, 45, 0.42)", shape: "■", label: "D", light: false },
 ];
 
 export default function GameHostClient({ gameCode }: { gameCode: string }) {
@@ -158,6 +158,14 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     );
   }
 
+  // Time-based escape hatch: once the question timer expires the host can
+  // advance even if not everyone answered (and auto-advance fires if enabled).
+  const activeDeadline =
+    game.status === "active" && game.currentQuestionStartedAt
+      ? game.currentQuestionStartedAt.toMillis() + game.questionDurationSec * 1000
+      : null;
+  const activeTimeUp = activeDeadline !== null && now >= activeDeadline;
+
   return (
     <div className="stage-shell">
       <div className="stage-content dashboard-stage flex min-h-screen flex-col gap-6 py-8">
@@ -176,7 +184,8 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
           <ActiveView
             game={game}
             players={players}
-            answeredCount={Object.keys(answers).length}
+            answeredIds={new Set(Object.keys(answers))}
+            timeUp={activeTimeUp}
             onAdvance={handleAdvance}
             advancing={advancing}
           />
@@ -339,19 +348,26 @@ function LobbyView({
 function ActiveView({
   game,
   players,
-  answeredCount,
+  answeredIds,
+  timeUp,
   onAdvance,
   advancing,
 }: {
   game: Game;
   players: PlayerWithId[];
-  answeredCount: number;
+  answeredIds: Set<string>;
+  timeUp: boolean;
   onAdvance: () => void;
   advancing: boolean;
 }) {
   const question = game.questions[game.currentQuestionIndex];
   const isLastQuestion = game.currentQuestionIndex >= game.questions.length - 1;
+  const answeredCount = answeredIds.size;
   const answerRatio = players.length > 0 ? answeredCount / players.length : 0;
+  // Gate manual advance on everyone having answered; the timer is the escape
+  // hatch so a non-answering student can't stall the whole class.
+  const allAnswered = answeredCount >= players.length;
+  const canAdvance = allAnswered || timeUp;
 
   return (
     <section className="grid gap-6 lg:grid-cols-[1.7fr_1fr] lg:items-stretch">
@@ -420,31 +436,57 @@ function ActiveView({
             <p className="text-sm text-white/50">아직 참가한 학생이 없어요.</p>
           ) : (
             <ul className="grid grid-cols-5 gap-x-2 gap-y-3 sm:grid-cols-6">
-              {players.map((player) => (
-                <li
-                  key={player.id}
-                  className="flex flex-col items-center gap-1"
-                  title={player.nickname}
-                >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--primary)] text-sm font-black text-white">
-                    {player.nickname.trim().slice(0, 1) || "?"}
-                  </span>
-                  <span className="w-full truncate text-center text-[11px] text-white/60">
-                    {player.nickname}
-                  </span>
-                </li>
-              ))}
+              {players.map((player) => {
+                const answered = answeredIds.has(player.id);
+                return (
+                  <li
+                    key={player.id}
+                    className="flex flex-col items-center gap-1"
+                    title={answered ? `${player.nickname} · 제출 완료` : `${player.nickname} · 대기 중`}
+                  >
+                    <span
+                      className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-black text-white ${
+                        answered ? "bg-[var(--success)]" : "bg-white/12"
+                      }`}
+                    >
+                      {answered ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                      ) : (
+                        player.nickname.trim().slice(0, 1) || "?"
+                      )}
+                    </span>
+                    <span className="w-full truncate text-center text-[11px] text-white/60">
+                      {player.nickname}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
 
-        <button
-          onClick={onAdvance}
-          disabled={advancing}
-          className="primary-button primary-button-stage mt-auto w-full"
-        >
-          {advancing ? "처리 중..." : isLastQuestion ? "게임 종료" : "다음 문제 →"}
-        </button>
+        <div className="mt-auto flex flex-col gap-2">
+          <button
+            onClick={onAdvance}
+            disabled={advancing || !canAdvance}
+            className="primary-button primary-button-stage w-full"
+          >
+            {advancing
+              ? "처리 중..."
+              : !canAdvance
+                ? `제출 대기 중 · ${answeredCount}/${players.length}`
+                : isLastQuestion
+                  ? "게임 종료"
+                  : "다음 문제 →"}
+          </button>
+          {!canAdvance && !advancing && (
+            <p className="text-center text-xs text-white/45">
+              모든 학생이 제출하면 넘어갈 수 있어요. 시간이 끝나면 자동으로 넘어가요.
+            </p>
+          )}
+        </div>
       </div>
     </section>
   );
