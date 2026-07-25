@@ -45,6 +45,15 @@ function PlayPageContent() {
     setError("다시 입장해주세요.");
   }
 
+  // Return to the code-entry screen after a game ends so the student can join a
+  // different game. Clear the (now-finished) code but keep the nickname for
+  // convenience; the auto-join effect already ran once and won't re-fire.
+  function handleLeave() {
+    setStep({ kind: "join" });
+    setCode("");
+    setError(null);
+  }
+
   useEffect(() => {
     if (autoJoinTried.current) return;
     if (code && nickname) {
@@ -78,6 +87,7 @@ function PlayPageContent() {
         nickname={step.nickname}
         authorUid={step.authorUid}
         onForcedOut={handleForcedOut}
+        onLeave={handleLeave}
       />
     );
   }

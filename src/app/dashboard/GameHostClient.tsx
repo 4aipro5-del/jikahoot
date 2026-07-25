@@ -8,7 +8,9 @@ import {
   advanceQuestion,
   finalizeQuestion,
   finishGame,
+  pauseGame,
   removePlayerFromGame,
+  resumeGame,
   subscribeToGame,
   subscribeToPlayers,
   type PlayerWithId,
@@ -25,7 +27,7 @@ const CHOICE_THEMES = [
   { bg: "var(--primary)", shadow: "rgba(34, 1, 158, 0.42)", shape: "▲", label: "A", light: false },
   { bg: "var(--warning)", shadow: "rgba(138, 90, 0, 0.4)", shape: "●", label: "B", light: false },
   { bg: "var(--error)", shadow: "rgba(151, 27, 20, 0.42)", shape: "◆", label: "C", light: false },
-  { bg: "#ffffff", shadow: "rgba(0, 0, 0, 0.25)", shape: "■", label: "D", light: true },
+  { bg: "var(--success)", shadow: "rgba(20, 83, 45, 0.42)", shape: "■", label: "D", light: false },
 ];
 
 export default function GameHostClient({ gameCode }: { gameCode: string }) {
@@ -36,6 +38,11 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   const [correctChoiceMap, setCorrectChoiceMap] = useState<Record<string, string>>({});
   const [advancing, setAdvancing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Synchronous re-entrancy lock: the `advancing` state flips a render later, so
+  // a second click (or auto-advance firing at the same instant) can slip in
+  // before the button disables. This ref blocks that window so advance/end run
+  // at most once at a time.
+  const busyRef = useRef(false);
 
   useEffect(() => subscribeToAuthState(setUser), []);
   useEffect(() => subscribeToGame(gameCode, setGame), [gameCode]);
@@ -74,23 +81,29 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     }
   }
 
+  // Grade the current question (scores + streaks) before leaving it. Must run
+  // on every path that exits an active question — advancing AND ending early —
+  // or those answers stay ungraded and their points never reach the leaderboard.
+  async function finalizeCurrentQuestion() {
+    if (!game || game.status !== "active") return;
+    const question = game.questions[game.currentQuestionIndex];
+    const correctChoiceId = correctChoiceMap[question.id];
+    if (!correctChoiceId) return;
+    await finalizeQuestion(
+      gameCode,
+      players.map((p) => p.id),
+      game.currentQuestionIndex,
+      correctChoiceId,
+    );
+  }
+
   async function handleAdvance() {
-    if (!game) return;
+    if (!game || busyRef.current) return;
+    busyRef.current = true;
     setError(null);
     setAdvancing(true);
     try {
-      if (game.status === "active") {
-        const question = game.questions[game.currentQuestionIndex];
-        const correctChoiceId = correctChoiceMap[question.id];
-        if (correctChoiceId) {
-          await finalizeQuestion(
-            gameCode,
-            players.map((p) => p.id),
-            game.currentQuestionIndex,
-            correctChoiceId,
-          );
-        }
-      }
+      await finalizeCurrentQuestion();
 
       const nextIndex = game.currentQuestionIndex + 1;
       if (nextIndex >= game.questions.length) {
@@ -101,6 +114,38 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "진행하지 못했습니다. 다시 시도해 주세요.");
     } finally {
+      busyRef.current = false;
+      setAdvancing(false);
+    }
+  }
+
+  async function handlePauseToggle() {
+    if (!game) return;
+    setError(null);
+    try {
+      if (game.paused) {
+        await resumeGame(gameCode);
+      } else {
+        await pauseGame(gameCode);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "일시정지 상태를 변경하지 못했습니다.");
+    }
+  }
+
+  async function handleEndNow() {
+    if (!game || busyRef.current) return;
+    busyRef.current = true;
+    setError(null);
+    setAdvancing(true);
+    try {
+      // 종료 전에 현재 문제를 채점해야 점수/연속정답이 리더보드에 반영된다
+      await finalizeCurrentQuestion();
+      await finishGame(gameCode);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "게임을 종료하지 못했습니다.");
+    } finally {
+      busyRef.current = false;
       setAdvancing(false);
     }
   }
@@ -115,6 +160,8 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
 
   useEffect(() => {
     if (!game || game.status !== "active" || advancing) return;
+    // 일시정지 중에는 자동 진행하지 않음
+    if (game.paused) return;
     // respect the teacher's 자동 진행 setting (snapshotted onto the game at
     // creation); undefined on older games means "on", preserving prior behavior
     if (game.autoAdvance === false) return;
@@ -158,6 +205,16 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     );
   }
 
+  // Time-based escape hatch: once the question timer expires the host can
+  // advance even if not everyone answered (and auto-advance fires if enabled).
+  const activeDeadline =
+    game.status === "active" && game.currentQuestionStartedAt
+      ? game.currentQuestionStartedAt.toMillis() + game.questionDurationSec * 1000
+      : null;
+  // 일시정지 중에는 시계를 pausedAt에 고정해 '시간 종료' 판정도 멈춘다
+  const effectiveNow = game.paused && game.pausedAt ? game.pausedAt.toMillis() : now;
+  const activeTimeUp = activeDeadline !== null && effectiveNow >= activeDeadline;
+
   return (
     <div className="stage-shell">
       <div className="stage-content dashboard-stage flex min-h-screen flex-col gap-6 py-8">
@@ -176,8 +233,12 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
           <ActiveView
             game={game}
             players={players}
-            answeredCount={Object.keys(answers).length}
+            answeredIds={new Set(Object.keys(answers))}
+            timeUp={activeTimeUp}
+            paused={game.paused ?? false}
             onAdvance={handleAdvance}
+            onPauseToggle={handlePauseToggle}
+            onEndNow={handleEndNow}
             advancing={advancing}
           />
         )}
@@ -338,43 +399,62 @@ function LobbyView({
 function ActiveView({
   game,
   players,
-  answeredCount,
+  answeredIds,
+  timeUp,
+  paused,
   onAdvance,
+  onPauseToggle,
+  onEndNow,
   advancing,
 }: {
   game: Game;
   players: PlayerWithId[];
-  answeredCount: number;
+  answeredIds: Set<string>;
+  timeUp: boolean;
+  paused: boolean;
   onAdvance: () => void;
+  onPauseToggle: () => void;
+  onEndNow: () => void;
   advancing: boolean;
 }) {
   const question = game.questions[game.currentQuestionIndex];
   const isLastQuestion = game.currentQuestionIndex >= game.questions.length - 1;
+  const answeredCount = answeredIds.size;
+  // 즉시 종료는 실수 방지를 위해 두 번 눌러 확정. 문제가 바뀌면 확정 상태 초기화.
+  const [endConfirm, setEndConfirm] = useState(false);
+  const [trackedIndex, setTrackedIndex] = useState(game.currentQuestionIndex);
+  if (game.currentQuestionIndex !== trackedIndex) {
+    setTrackedIndex(game.currentQuestionIndex);
+    setEndConfirm(false);
+  }
   const answerRatio = players.length > 0 ? answeredCount / players.length : 0;
+  // Gate manual advance on everyone having answered; the timer is the escape
+  // hatch so a non-answering student can't stall the whole class.
+  const allAnswered = answeredCount >= players.length;
+  const canAdvance = allAnswered || timeUp;
 
   return (
     <section className="grid gap-6 lg:grid-cols-[1.7fr_1fr] lg:items-stretch">
       {/* 현재 문제 — 가장 큰 영역: 문제번호 / 제목 / 제출 현황 / 보기 4개 */}
       <div className="paper-panel flex flex-col gap-6 p-6 sm:p-8">
         <div className="space-y-4">
-          <span className="inline-flex rounded-full bg-[var(--primary-soft)] px-4 py-2 text-sm font-black text-[var(--primary-dark)]">
-            문제 {game.currentQuestionIndex + 1} / {game.questions.length}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex rounded-full bg-[var(--primary-soft)] px-4 py-2 text-sm font-black text-[var(--primary-dark)]">
+              문제 {game.currentQuestionIndex + 1} / {game.questions.length}
+            </span>
+            {paused && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--warning-soft)] px-3 py-2 text-sm font-black text-[var(--warning-dark)]">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <rect x="6" y="5" width="4" height="14" rx="1" />
+                  <rect x="14" y="5" width="4" height="14" rx="1" />
+                </svg>
+                일시정지됨
+              </span>
+            )}
+          </div>
           <h1 className="display-font text-4xl leading-tight text-[var(--panel-text)] sm:text-5xl">
             {question.text}
           </h1>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm font-black">
-            <span className="paper-subtle">제출 현황</span>
-            <span className="text-[var(--panel-text)]">
-              {answeredCount} / {players.length}명 제출
-            </span>
-          </div>
-          <div className="progress-track bg-[rgba(17,15,26,0.08)]">
-            <div className="progress-bar" style={{ width: `${answerRatio * 100}%` }} />
-          </div>
         </div>
 
         <ul className="grid gap-3 sm:grid-cols-2">
@@ -408,42 +488,93 @@ function ActiveView({
         </ul>
       </div>
 
-      {/* 오른쪽: 참가자(아바타 그리드) + 가장 큰 "다음 문제" 버튼(하단 고정) */}
-      <div className="flex flex-col gap-5">
-        <div className="rounded-2xl bg-[var(--surface)] p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-white/60">참가자</p>
-            <p className="text-sm font-bold text-white">{players.length}명</p>
+      {/* 오른쪽: 제출 현황 + 게임 제어 (위계: 다음 문제 > 일시정지/종료) */}
+      <div className="flex flex-col gap-4">
+        {/* 제출 현황 */}
+        <div className="rounded-2xl border border-white/10 bg-[var(--surface)] p-6">
+          <p className="text-base font-black text-white">제출 현황</p>
+          <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-white transition-[width] duration-300"
+              style={{ width: `${answerRatio * 100}%` }}
+            />
           </div>
-          {players.length === 0 ? (
-            <p className="text-sm text-white/50">아직 참가한 학생이 없어요.</p>
-          ) : (
-            <ul className="grid grid-cols-5 gap-x-2 gap-y-3 sm:grid-cols-6">
-              {players.map((player) => (
-                <li
-                  key={player.id}
-                  className="flex flex-col items-center gap-1"
-                  title={player.nickname}
-                >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--primary)] text-sm font-black text-white">
-                    {player.nickname.trim().slice(0, 1) || "?"}
-                  </span>
-                  <span className="w-full truncate text-center text-[11px] text-white/60">
-                    {player.nickname}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <p className="mt-3 text-sm font-bold text-white/70">
+            {answeredCount} / {players.length}명 제출
+          </p>
         </div>
 
+        {/* 주요 액션: 다음 문제 */}
         <button
           onClick={onAdvance}
-          disabled={advancing}
-          className="primary-button primary-button-stage mt-auto w-full"
+          disabled={advancing || !canAdvance}
+          className="w-full rounded-2xl bg-[var(--primary)] px-6 py-6 shadow-[0_6px_0_var(--primary-dark)] transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {advancing ? "처리 중..." : isLastQuestion ? "게임 종료" : "다음 문제 →"}
+          <span className="flex items-center justify-center gap-3">
+            {!advancing && !isLastQuestion && (
+              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white/20 text-white">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M9 6l6 6-6 6" />
+                </svg>
+              </span>
+            )}
+            <span className="text-2xl font-black text-white">
+              {advancing ? "처리 중..." : isLastQuestion ? "게임 종료" : "다음 문제"}
+            </span>
+          </span>
+          {!advancing && !isLastQuestion && (
+            <span className="mt-1 block text-sm font-bold text-white/70">
+              {game.currentQuestionIndex + 2} / {game.questions.length}
+            </span>
+          )}
         </button>
+
+        {/* 보조 액션: 일시정지/재개 · 지금 종료 */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={onPauseToggle}
+            disabled={advancing}
+            className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border border-white/10 bg-[var(--surface)] py-6 text-lg font-black text-white transition-colors duration-150 enabled:hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {paused ? (
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--warning)" }} aria-hidden="true">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            ) : (
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--warning)" }} aria-hidden="true">
+                <rect x="6" y="5" width="4" height="14" rx="1" />
+                <rect x="14" y="5" width="4" height="14" rx="1" />
+              </svg>
+            )}
+            {paused ? "재개" : "일시정지"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => (endConfirm ? onEndNow() : setEndConfirm(true))}
+            disabled={advancing}
+            className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border py-6 text-lg font-black transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50"
+            style={
+              endConfirm
+                ? { background: "var(--error-soft)", borderColor: "var(--error)", color: "var(--error)" }
+                : { borderColor: "rgba(255,255,255,0.1)", color: "#ffffff" }
+            }
+          >
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--error)" }} aria-hidden="true">
+              <rect x="6" y="6" width="12" height="12" rx="2" />
+            </svg>
+            {endConfirm ? "한 번 더" : "지금 종료"}
+          </button>
+        </div>
+
+        {!canAdvance && !advancing && (
+          <p className="text-sm leading-6 text-white/45">
+            모든 학생이 제출하면 넘어갈 수 있어요.
+            <br />
+            시간이 끝나면 자동으로 넘어가요.
+          </p>
+        )}
       </div>
     </section>
   );

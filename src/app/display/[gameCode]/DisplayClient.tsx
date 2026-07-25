@@ -13,7 +13,7 @@ const ANSWER_THEMES = [
   { bg: "var(--primary)", shadow: "rgba(34, 1, 158, 0.42)", shape: "▲", label: "A", light: false },
   { bg: "var(--warning)", shadow: "rgba(138, 90, 0, 0.4)", shape: "●", label: "B", light: false },
   { bg: "var(--error)", shadow: "rgba(151, 27, 20, 0.42)", shape: "◆", label: "C", light: false },
-  { bg: "#ffffff", shadow: "rgba(0, 0, 0, 0.25)", shape: "■", label: "D", light: true },
+  { bg: "var(--success)", shadow: "rgba(20, 83, 45, 0.42)", shape: "■", label: "D", light: false },
 ];
 
 export default function DisplayClient({ gameCode }: { gameCode: string }) {
@@ -158,12 +158,15 @@ function ActiveDisplay({ game, playerCount }: { game: Game; playerCount: number 
   const question = game.questions[questionIndex];
   const now = useNow(250);
 
+  const paused = game.paused ?? false;
+  // 일시정지 중에는 시계를 pausedAt 시점에 고정해 타이머를 멈춘다
+  const nowMs = paused && game.pausedAt ? game.pausedAt.toMillis() : now;
   const deadline = game.currentQuestionStartedAt
     ? game.currentQuestionStartedAt.toMillis() + game.questionDurationSec * 1000
     : null;
-  const remainingSec = deadline ? Math.max(0, Math.ceil((deadline - now) / 1000)) : 0;
+  const remainingSec = deadline ? Math.max(0, Math.ceil((deadline - nowMs) / 1000)) : 0;
   const remainingRatio = deadline
-    ? Math.max(0, Math.min(1, (deadline - now) / (game.questionDurationSec * 1000)))
+    ? Math.max(0, Math.min(1, (deadline - nowMs) / (game.questionDurationSec * 1000)))
     : 0;
 
   if (!question) {
@@ -184,6 +187,15 @@ function ActiveDisplay({ game, playerCount }: { game: Game; playerCount: number 
           <span className="rounded-full bg-[var(--surface)] px-5 py-2 text-lg font-black text-white">
             참여 {playerCount}명
           </span>
+          {paused && (
+            <span className="inline-flex items-center gap-2 rounded-full bg-[var(--warning-soft)] px-5 py-2 text-lg font-black text-[var(--warning)]">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <rect x="6" y="5" width="4" height="14" rx="1" />
+                <rect x="14" y="5" width="4" height="14" rx="1" />
+              </svg>
+              일시정지
+            </span>
+          )}
           <span
             className={`flex h-16 w-16 items-center justify-center rounded-full border-4 text-2xl font-black ${
               remainingSec <= 5 ? "border-[var(--error)] text-[var(--error)]" : "border-[var(--primary)] text-white"
