@@ -180,7 +180,7 @@ function LobbyView({
       </div>
 
       <div className="stage-content flex min-h-screen flex-col items-center justify-center gap-6 py-10 text-center">
-        <p className="inline-flex items-center gap-3 text-sm font-black uppercase tracking-[0.32em] text-[var(--primary)]">
+        <p className="inline-flex items-center gap-3 text-sm font-black uppercase tracking-[0.32em] text-[var(--warning)]">
           <IconSparkle />
           Waiting
           <IconSparkle />
@@ -235,10 +235,10 @@ function LobbyView({
 
         {/* headcount */}
         <div className="inline-flex items-center gap-2.5 rounded-full bg-[var(--surface)] px-5 py-2.5 text-base font-black text-white">
-          <span className="text-[var(--primary)]">
+          <span className="text-[var(--warning)]">
             <IconPeople />
           </span>
-          참가자 <span className="text-[var(--primary)]">{players.length}</span>명
+          참가자 <span className="text-[var(--warning)]">{players.length}</span>명
         </div>
 
         {/* hint */}
