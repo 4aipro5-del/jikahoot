@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { buildChoices } from "@/lib/firestore/questions";
 import type { Choice } from "@/types/firestore";
 
@@ -44,6 +44,9 @@ export default function QuestionEditorForm({
   hideTitle?: boolean;
 }) {
   const isDark = variant === "dark";
+  // one radio group per form instance so the "정답" radios single-select
+  // correctly and never collide with another form on the page
+  const answerRadioName = useId();
   const [text, setText] = useState("");
   const [choiceTexts, setChoiceTexts] = useState(DEFAULT_CHOICES);
   const [correctIndex, setCorrectIndex] = useState<number | null>(null);
@@ -204,52 +207,45 @@ export default function QuestionEditorForm({
             const isCorrect = correctIndex === index;
 
             return (
+              // non-interactive visual wrapper — no role/tabIndex/onClick; the
+              // selection affordance is the native radio below, so no interactive
+              // element is nested inside another
               <div
                 key={index}
-                role="button"
-                tabIndex={0}
-                aria-pressed={isCorrect}
-                aria-label={`선택지 ${index + 1}${isCorrect ? " (정답으로 선택됨)" : "을 정답으로 선택"}`}
-                onClick={() => setCorrectIndex(index)}
-                onKeyDown={(e) => {
-                  // only when the card itself is focused — never swallow typing
-                  // inside the input or clicks on the trash button
-                  if (e.target !== e.currentTarget) return;
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setCorrectIndex(index);
-                  }
-                }}
-                className={`cursor-pointer rounded-[24px] border p-4 outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-[var(--primary)] ${
+                className={`rounded-[24px] border p-4 transition-all duration-150 ${
                   isCorrect
                     ? "border-[var(--primary)] bg-[rgba(50,0,224,0.07)] shadow-[0_0_0_2px_var(--primary)]"
                     : isDark
-                      ? "border-white/10 bg-white/4 hover:border-white/25"
-                      : `border-[rgba(38,18,87,0.1)] ${theme.panel} hover:border-[rgba(50,0,224,0.4)]`
+                      ? "border-white/10 bg-white/4"
+                      : `border-[rgba(38,18,87,0.1)] ${theme.panel}`
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    {/* selection check — reserved slot so nothing shifts on toggle */}
-                    <span className="flex h-7 w-7 flex-none items-center justify-center">
-                      {isCorrect && (
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--primary)] text-white">
-                          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M5 13l4 4L19 7" />
-                          </svg>
-                        </span>
-                      )}
-                    </span>
-
                     <span
                       className={`inline-flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-sm font-black ${theme.badge}`}
                     >
                       {index + 1}
                     </span>
+
+                    {/* native radio = the accessible, single-select answer control */}
                     <input
+                      type="radio"
+                      name={answerRadioName}
+                      checked={isCorrect}
+                      onChange={() => setCorrectIndex(index)}
+                      aria-label={
+                        choice.trim()
+                          ? `"${choice.trim()}"을(를) 정답으로 선택`
+                          : `${index + 1}번 선택지를 정답으로 선택`
+                      }
+                      className="h-5 w-5 flex-none cursor-pointer accent-[var(--primary)]"
+                    />
+
+                    <input
+                      type="text"
                       value={choice}
                       onChange={(e) => updateChoice(index, e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
                       placeholder={`선택지 ${index + 1}`}
                       className={`h-14 flex-1 ${
                         isDark
@@ -269,10 +265,7 @@ export default function QuestionEditorForm({
                     {choiceTexts.length > MIN_CHOICES && (
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeChoice(index);
-                        }}
+                        onClick={() => removeChoice(index)}
                         aria-label={`선택지 ${index + 1} 삭제`}
                         className={`inline-flex h-11 w-11 flex-none items-center justify-center rounded-full ${
                           isDark
