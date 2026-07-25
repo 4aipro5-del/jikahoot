@@ -69,17 +69,29 @@ export default function PlayingGame({
     });
   }, [authorUid, gameCode, onForcedOut, wasRegistered]);
 
-  const gameStatus = game?.status;
+  // 로비/진행 중에만 가드를 켠다(종료 후엔 뒤로가기 정상 동작). dep가 boolean이라
+  // 로비→진행 상태 전환으로 이펙트가 다시 돌지 않아 히스토리 항목이 누적되지 않는다.
+  const leaveGuardActive = !!game && game.status !== "finished";
 
-  // 게임 진행 중(로비/진행)에만 브라우저 뒤로가기를 가로채 확인 모달을 띄운다.
-  // 새로고침/탭 닫기는 브라우저 기본 beforeunload 경고로 처리. 게임 종료 후에는
-  // 리스너를 해제해 정상 동작한다. (제출/타이머/점수 로직은 건드리지 않음)
+  // 게임 진행 중 브라우저 뒤로가기를 가로채 확인 모달을 띄운다. 새로고침/탭 닫기는
+  // beforeunload 기본 경고로 처리. 가드가 켜질 때 마킹된 히스토리 항목을 딱 하나
+  // 심고, 가드가 꺼질 때(종료/이탈) 그 항목을 소비(뒤로가기)해 잔여물이 히스토리에
+  // 쌓이지 않게 한다. (제출/타이머/점수 로직은 건드리지 않음)
   useEffect(() => {
-    if (!gameStatus || gameStatus === "finished") return;
+    if (!leaveGuardActive) return;
+
+    // Next 라우터 state는 보존하고 우리 마커만 얹는다.
+    const armGuardEntry = () => {
+      window.history.pushState(
+        { ...window.history.state, __leaveGuard: true },
+        "",
+        window.location.href,
+      );
+    };
 
     const onPopState = () => {
-      // 트랩을 다시 심어 현재 화면에 머무르게 하고 확인 모달을 띄운다
-      window.history.pushState(null, "", window.location.href);
+      // 뒤로가기 소비됨 → 가드 항목을 다시 심어 화면에 머무르게 하고 모달 표시
+      armGuardEntry();
       setShowLeaveModal(true);
     };
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -87,14 +99,22 @@ export default function PlayingGame({
       event.returnValue = "";
     };
 
-    window.history.pushState(null, "", window.location.href);
+    // 아직 가드 항목이 없을 때만 하나 심는다(중복 방지).
+    if (!window.history.state?.__leaveGuard) {
+      armGuardEntry();
+    }
     window.addEventListener("popstate", onPopState);
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => {
       window.removeEventListener("popstate", onPopState);
       window.removeEventListener("beforeunload", onBeforeUnload);
+      // 가드 항목이 아직 맨 위면 소비해 히스토리에 남기지 않는다(리스너 제거 후라
+      // 이 back은 모달을 다시 띄우지 않는다).
+      if (window.history.state?.__leaveGuard) {
+        window.history.back();
+      }
     };
-  }, [gameStatus]);
+  }, [leaveGuardActive]);
 
   function cancelLeave() {
     setShowLeaveModal(false);
