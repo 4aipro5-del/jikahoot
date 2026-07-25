@@ -38,6 +38,11 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   const [correctChoiceMap, setCorrectChoiceMap] = useState<Record<string, string>>({});
   const [advancing, setAdvancing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Synchronous re-entrancy lock: the `advancing` state flips a render later, so
+  // a second click (or auto-advance firing at the same instant) can slip in
+  // before the button disables. This ref blocks that window so advance/end run
+  // at most once at a time.
+  const busyRef = useRef(false);
 
   useEffect(() => subscribeToAuthState(setUser), []);
   useEffect(() => subscribeToGame(gameCode, setGame), [gameCode]);
@@ -76,23 +81,29 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     }
   }
 
+  // Grade the current question (scores + streaks) before leaving it. Must run
+  // on every path that exits an active question — advancing AND ending early —
+  // or those answers stay ungraded and their points never reach the leaderboard.
+  async function finalizeCurrentQuestion() {
+    if (!game || game.status !== "active") return;
+    const question = game.questions[game.currentQuestionIndex];
+    const correctChoiceId = correctChoiceMap[question.id];
+    if (!correctChoiceId) return;
+    await finalizeQuestion(
+      gameCode,
+      players.map((p) => p.id),
+      game.currentQuestionIndex,
+      correctChoiceId,
+    );
+  }
+
   async function handleAdvance() {
-    if (!game) return;
+    if (!game || busyRef.current) return;
+    busyRef.current = true;
     setError(null);
     setAdvancing(true);
     try {
-      if (game.status === "active") {
-        const question = game.questions[game.currentQuestionIndex];
-        const correctChoiceId = correctChoiceMap[question.id];
-        if (correctChoiceId) {
-          await finalizeQuestion(
-            gameCode,
-            players.map((p) => p.id),
-            game.currentQuestionIndex,
-            correctChoiceId,
-          );
-        }
-      }
+      await finalizeCurrentQuestion();
 
       const nextIndex = game.currentQuestionIndex + 1;
       if (nextIndex >= game.questions.length) {
@@ -103,6 +114,7 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "진행하지 못했습니다. 다시 시도해 주세요.");
     } finally {
+      busyRef.current = false;
       setAdvancing(false);
     }
   }
@@ -122,11 +134,19 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   }
 
   async function handleEndNow() {
+    if (!game || busyRef.current) return;
+    busyRef.current = true;
     setError(null);
+    setAdvancing(true);
     try {
+      // 종료 전에 현재 문제를 채점해야 점수/연속정답이 리더보드에 반영된다
+      await finalizeCurrentQuestion();
       await finishGame(gameCode);
     } catch (err) {
       setError(err instanceof Error ? err.message : "게임을 종료하지 못했습니다.");
+    } finally {
+      busyRef.current = false;
+      setAdvancing(false);
     }
   }
 
@@ -515,7 +535,8 @@ function ActiveView({
           <button
             type="button"
             onClick={onPauseToggle}
-            className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border border-white/10 bg-[var(--surface)] py-6 text-lg font-black text-white transition-colors duration-150 hover:bg-white/[0.06]"
+            disabled={advancing}
+            className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border border-white/10 bg-[var(--surface)] py-6 text-lg font-black text-white transition-colors duration-150 enabled:hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {paused ? (
               <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--warning)" }} aria-hidden="true">
@@ -533,7 +554,8 @@ function ActiveView({
           <button
             type="button"
             onClick={() => (endConfirm ? onEndNow() : setEndConfirm(true))}
-            className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border py-6 text-lg font-black transition-colors duration-150"
+            disabled={advancing}
+            className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border py-6 text-lg font-black transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50"
             style={
               endConfirm
                 ? { background: "var(--error-soft)", borderColor: "var(--error)", color: "var(--error)" }
