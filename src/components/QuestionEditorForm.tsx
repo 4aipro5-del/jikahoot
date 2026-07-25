@@ -99,7 +99,7 @@ export default function QuestionEditorForm({
       return;
     }
     if (correctIndex === null) {
-      const message = isDark ? "O(답)을 표시하세요." : "정답을 선택해 주세요.";
+      const message = "정답이 될 선택지를 선택해 주세요.";
       setError(message);
       if (isDark && typeof window !== "undefined") {
         window.alert(message);
@@ -178,6 +178,9 @@ export default function QuestionEditorForm({
             >
               Choices
             </span>
+            <p className={`mt-1 text-xs font-semibold ${isDark ? "text-white/55" : "text-[rgba(38,18,87,0.55)]"}`}>
+              정답이 될 선택지를 눌러주세요.
+            </p>
           </div>
 
           {choiceTexts.length < MAX_CHOICES && (
@@ -203,14 +206,41 @@ export default function QuestionEditorForm({
             return (
               <div
                 key={index}
-                className={`rounded-[24px] border p-4 ${
-                  isDark
-                    ? "border-white/10 bg-white/4"
-                    : `border-[rgba(38,18,87,0.1)] ${theme.panel}`
+                role="button"
+                tabIndex={0}
+                aria-pressed={isCorrect}
+                aria-label={`선택지 ${index + 1}${isCorrect ? " (정답으로 선택됨)" : "을 정답으로 선택"}`}
+                onClick={() => setCorrectIndex(index)}
+                onKeyDown={(e) => {
+                  // only when the card itself is focused — never swallow typing
+                  // inside the input or clicks on the trash button
+                  if (e.target !== e.currentTarget) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setCorrectIndex(index);
+                  }
+                }}
+                className={`cursor-pointer rounded-[24px] border p-4 outline-none transition-all duration-150 focus-visible:ring-2 focus-visible:ring-[var(--primary)] ${
+                  isCorrect
+                    ? "border-[var(--primary)] bg-[rgba(50,0,224,0.07)] shadow-[0_0_0_2px_var(--primary)]"
+                    : isDark
+                      ? "border-white/10 bg-white/4 hover:border-white/25"
+                      : `border-[rgba(38,18,87,0.1)] ${theme.panel} hover:border-[rgba(50,0,224,0.4)]`
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
+                    {/* selection check — reserved slot so nothing shifts on toggle */}
+                    <span className="flex h-7 w-7 flex-none items-center justify-center">
+                      {isCorrect && (
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--primary)] text-white">
+                          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M5 13l4 4L19 7" />
+                          </svg>
+                        </span>
+                      )}
+                    </span>
+
                     <span
                       className={`inline-flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-sm font-black ${theme.badge}`}
                     >
@@ -219,6 +249,7 @@ export default function QuestionEditorForm({
                     <input
                       value={choice}
                       onChange={(e) => updateChoice(index, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
                       placeholder={`선택지 ${index + 1}`}
                       className={`h-14 flex-1 ${
                         isDark
@@ -229,27 +260,21 @@ export default function QuestionEditorForm({
                   </div>
 
                   <div className="flex items-center justify-end gap-2 sm:shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setCorrectIndex(index)}
-                      aria-label={`선택지 ${index + 1} ${isCorrect ? "정답 선택됨" : "정답으로 선택"}`}
-                      className={`inline-flex h-11 w-11 items-center justify-center rounded-full text-lg font-black ${
-                        isCorrect
-                          ? "bg-[var(--kahoot-green)] text-white"
-                          : isDark
-                            ? "bg-white/10 text-white"
-                            : "bg-white text-[var(--kahoot-purple)]"
-                      }`}
-                    >
-                      {isCorrect ? "O" : "X"}
-                    </button>
+                    {isCorrect && (
+                      <span className="inline-flex flex-none items-center rounded-full bg-[var(--primary)] px-2.5 py-1 text-xs font-black text-white">
+                        정답
+                      </span>
+                    )}
 
                     {choiceTexts.length > MIN_CHOICES && (
                       <button
                         type="button"
-                        onClick={() => removeChoice(index)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeChoice(index);
+                        }}
                         aria-label={`선택지 ${index + 1} 삭제`}
-                        className={`inline-flex h-11 w-11 items-center justify-center rounded-full ${
+                        className={`inline-flex h-11 w-11 flex-none items-center justify-center rounded-full ${
                           isDark
                             ? "bg-white/10 text-white/72 hover:bg-white/16 hover:text-white"
                             : "bg-white/70 text-[rgba(38,18,87,0.6)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38)] hover:bg-white hover:text-[var(--panel-text)]"
