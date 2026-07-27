@@ -155,7 +155,7 @@ function HomePortal() {
                   setTeacherError(null);
                   setTeacherModalOpen(true);
                 }}
-                className="secondary-button secondary-button-compact inline-flex items-center gap-2"
+                className="secondary-button inline-flex items-center gap-2"
               >
                 <svg
                   width="14"

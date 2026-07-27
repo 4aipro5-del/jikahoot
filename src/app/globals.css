@@ -554,6 +554,21 @@ button:disabled {
   box-shadow: 0 7px 0 var(--primary-dark);
 }
 
+/* primary-button과 크기·글자·입체 음영은 동일하되 색만 중립(surface)으로.
+   '다시 로그인'처럼 primary 옆에 오는 보조 CTA에 사용. */
+.primary-button.primary-button-neutral {
+  background: var(--surface);
+  box-shadow: 0 10px 0 #000000;
+}
+
+.primary-button.primary-button-neutral:hover:not(:disabled) {
+  box-shadow: 0 12px 0 #000000;
+}
+
+.primary-button.primary-button-neutral:active:not(:disabled) {
+  box-shadow: 0 7px 0 #000000;
+}
+
 .secondary-button {
   display: inline-flex;
   min-height: 3.4rem;
