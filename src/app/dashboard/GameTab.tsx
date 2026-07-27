@@ -13,6 +13,9 @@ function gameWindowUrl(code: string) {
   return `/dashboard/game/${code}`;
 }
 
+// 다크 배경에서 잘 보이도록 브랜드 primary를 밝게 보정한 강조 퍼플(토큰 유지).
+const ACCENT_PURPLE = "color-mix(in srgb, var(--primary) 55%, #ffffff)";
+
 // The Game tab (main window) is a thin status surface only. Starting a game
 // pops the full host console out into a dedicated window (GameHostClient at
 // /dashboard/game/[code]) where ALL operation happens — lobby/QR/code/roster/
@@ -86,24 +89,27 @@ function StartGameScreen({
   }
 
   return (
-    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-8 rounded-[28px] border border-white/10 bg-[var(--surface)] px-8 py-16 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-2xl">🎮</span>
-      <div className="space-y-3">
+    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-9 py-12 text-center">
+      <div className="space-y-4">
         <p className="hero-chip">Game</p>
-        <h1 className="display-font text-4xl text-white sm:text-5xl">새로운 게임 시작</h1>
-        <p className="max-w-md text-base leading-7 text-[color:var(--foreground-muted)]">
-          오늘 사용할 문제를 선택하고
-          <br />
-          학생들과 실시간 퀴즈를 시작하세요.
-        </p>
+        <h1 className="display-font text-5xl leading-none text-white sm:text-6xl">새로운 게임 시작</h1>
       </div>
 
-      <div className="flex gap-10">
-        <div className="text-center">
+      <p className="max-w-md text-lg leading-8 text-[color:var(--foreground-muted)]">
+        오늘 사용할 문제를 선택하고
+        <br />
+        학생들과 <span className="font-bold text-[var(--success)]">실시간 퀴즈</span>를
+        시작하세요.
+      </p>
+
+      {/* 통계: 사용 가능한 문제 / 예상 플레이 시간 */}
+      <div className="flex items-center gap-8">
+        <div>
           <p className="text-xs font-black uppercase tracking-[0.2em] text-white/50">사용 가능한 문제</p>
           <p className="display-font mt-2 text-4xl text-white">{approved.length}개</p>
         </div>
-        <div className="text-center">
+        <span className="h-12 w-px flex-none bg-white/12" />
+        <div>
           <p className="text-xs font-black uppercase tracking-[0.2em] text-white/50">예상 플레이 시간</p>
           <p className="display-font mt-2 text-4xl text-white">
             {estimatedMinutes > 0 ? `약 ${estimatedMinutes}분` : "-"}
@@ -114,15 +120,16 @@ function StartGameScreen({
       <button
         onClick={handleStart}
         disabled={approved.length === 0 || starting}
-        className="primary-button primary-button-stage w-full max-w-md"
+        className="inline-flex min-h-[4.75rem] w-full max-w-md items-center justify-center rounded-2xl border-2 border-white/15 bg-[var(--error)] px-8 text-4xl font-black text-white shadow-[0_8px_0_var(--error-dark)] transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-1 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {starting ? "게임 준비 중..." : "새 게임 시작"}
       </button>
+
       {approved.length === 0 && (
         <p className="text-sm text-white/50">승인된 문제가 있어야 게임을 시작할 수 있어요.</p>
       )}
       {error && (
-        <p className="status-banner text-sm" data-tone="error">
+        <p className="status-banner max-w-md text-sm" data-tone="error">
           {error}
         </p>
       )}
@@ -140,26 +147,55 @@ function GameInProgressScreen({ gameCode }: { gameCode: string }) {
   }
 
   return (
-    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-8 rounded-[28px] border border-white/10 bg-[var(--surface)] px-8 py-16 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-2xl">🖥️</span>
-      <div className="space-y-3">
-        <p className="hero-chip">Game In Progress</p>
-        <h1 className="display-font text-4xl text-white sm:text-5xl">게임 진행 중</h1>
-        <p className="max-w-md text-base leading-7 text-[color:var(--foreground-muted)]">
-          참가자 관리·게임 시작·진행은 <span className="font-bold text-white">게임 창</span>에서
-          이루어집니다.
-          <br />
-          창이 닫혔다면 아래 버튼으로 다시 열 수 있어요.
-        </p>
+    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-9 py-12 text-center">
+      <div className="space-y-4">
+        <p className="hero-chip">Game Status</p>
+        <h1 className="display-font text-5xl leading-none text-white sm:text-6xl">게임 진행 중</h1>
       </div>
+
+      <p className="max-w-md text-lg leading-8 text-[color:var(--foreground-muted)]">
+        참가자 관리와 게임 진행은
+        <br />
+        별도의 <span className="font-bold" style={{ color: ACCENT_PURPLE }}>게임 창</span>에서
+        이루어집니다.
+      </p>
 
       <button
         type="button"
         onClick={openGameWindow}
-        className="inline-flex min-h-[5.25rem] w-full max-w-md items-center justify-center gap-3 rounded-2xl border-2 border-white/15 bg-[var(--primary)] px-8 text-4xl font-black text-white shadow-[0_8px_0_var(--primary-dark)] transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-1"
+        className="inline-flex min-h-[4.75rem] w-full max-w-md items-center justify-center gap-3 rounded-2xl border border-white/12 bg-[var(--primary)] px-8 text-2xl font-black text-white shadow-[0_12px_44px_rgba(50,0,224,0.5)] transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-0.5"
       >
-        게임 창 열기
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+        </svg>
+        게임 창 다시 열기
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M5 12h14M13 6l6 6-6 6" />
+        </svg>
       </button>
+
+      {/* 구분선 + 가운데 점 */}
+      <div className="flex w-full max-w-md items-center gap-3">
+        <span className="h-px flex-1 bg-white/12" />
+        <span className="h-1 w-1 flex-none rounded-full bg-white/25" />
+        <span className="h-px flex-1 bg-white/12" />
+      </div>
+
+      {/* 하단 안내 */}
+      <div className="flex max-w-md items-start gap-3 text-left">
+        <span className="mt-0.5 flex-none text-white/40" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 11v5M12 7.5h.01" />
+          </svg>
+        </span>
+        <div>
+          <p className="font-bold text-white">창을 닫았거나 차단된 경우</p>
+          <p className="mt-1 text-sm leading-6 text-white/50">
+            언제든지 다시 열어 게임을 계속 진행할 수 있어요.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
