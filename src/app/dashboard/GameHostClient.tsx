@@ -164,7 +164,7 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     setError(null);
     try {
       await finishGame(gameCode);
-      await clearCurrentGame(game.teacherUid);
+      await clearCurrentGame(game.teacherUid, gameCode);
       // 팝업으로 열린 게임 창이면 정리 후 스스로 닫아 원래 창(새 게임 시작 화면)으로
       // 돌아가게 한다. 직접 접근한 경우 opener가 없어 무시된다.
       if (typeof window !== "undefined" && window.opener && !window.opener.closed) {
@@ -185,7 +185,7 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     setEnding(true);
     setError(null);
     try {
-      await clearCurrentGame(game.teacherUid);
+      await clearCurrentGame(game.teacherUid, gameCode);
       // 팝업으로 열린 게임 창이면 닫아 원래 창(새 게임 시작)으로 돌려보내고,
       // 직접 접근한 경우엔 대시보드로 이동한다.
       if (typeof window !== "undefined" && window.opener && !window.opener.closed) {
