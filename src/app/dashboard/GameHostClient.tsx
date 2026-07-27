@@ -16,6 +16,7 @@ import {
   type PlayerWithId,
 } from "@/lib/firestore/games";
 import { getCorrectChoiceMap } from "@/lib/firestore/questions";
+import { clearCurrentGame } from "@/lib/firestore/rooms";
 import type { Game } from "@/types/firestore";
 import Leaderboard from "@/components/Leaderboard";
 import GameQRCode from "@/components/GameQRCode";
@@ -43,6 +44,8 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   // before the button disables. This ref blocks that window so advance/end run
   // at most once at a time.
   const busyRef = useRef(false);
+  const [showNewGameModal, setShowNewGameModal] = useState(false);
+  const [abandoning, setAbandoning] = useState(false);
 
   useEffect(() => subscribeToAuthState(setUser), []);
   useEffect(() => subscribeToGame(gameCode, setGame), [gameCode]);
@@ -150,6 +153,26 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     }
   }
 
+  // 기존 게임방을 버리고 새 퀴즈로 시작. 게임을 종료해 참가자 화면을 정리하고,
+  // 방의 게임 연결(currentGameId)을 해제한다. 그러면 GameTab이 이를 감지해
+  // '새 게임 시작' 첫 화면으로 전환하고 이 컴포넌트를 언마운트한다(재로그인/Game
+  // 재진입 시에도 첫 화면이 나오도록 Firestore 상태까지 정리). 진행 중 게임 복구는
+  // currentGameId를 그대로 두는 정상 경로에서 유지되고, 여기서만 명시적으로 정리한다.
+  async function handleConfirmNewGame() {
+    if (!game || abandoning) return;
+    setAbandoning(true);
+    setError(null);
+    try {
+      await finishGame(gameCode);
+      await clearCurrentGame(game.teacherUid);
+      // 성공 시 GameTab이 화면을 전환하며 이 컴포넌트를 언마운트한다.
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "새 게임을 준비하지 못했습니다.");
+      setShowNewGameModal(false);
+      setAbandoning(false);
+    }
+  }
+
   // Auto-advance once a question's timer runs out, without waiting for the
   // teacher to click "다음 문제" — mirrors clicking it manually, just
   // triggered by the clock instead of a click. Guarded by
@@ -225,6 +248,7 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
             canStart={players.length > 0}
             onStart={handleAdvance}
             onKick={handleKick}
+            onNewGame={() => setShowNewGameModal(true)}
             starting={advancing}
           />
         )}
@@ -262,6 +286,15 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
           </p>
         )}
       </div>
+
+      <NewGameConfirmModal
+        open={showNewGameModal}
+        busy={abandoning}
+        onCancel={() => {
+          if (!abandoning) setShowNewGameModal(false);
+        }}
+        onConfirm={handleConfirmNewGame}
+      />
     </div>
   );
 }
@@ -277,6 +310,7 @@ function LobbyView({
   canStart,
   onStart,
   onKick,
+  onNewGame,
   starting,
 }: {
   gameCode: string;
@@ -284,6 +318,7 @@ function LobbyView({
   canStart: boolean;
   onStart: () => void;
   onKick: (player: PlayerWithId) => void;
+  onNewGame: () => void;
   starting: boolean;
 }) {
   const joinHost = typeof window !== "undefined" ? window.location.host : "";
@@ -317,7 +352,12 @@ function LobbyView({
         <div className="flex flex-none flex-col gap-2.5">
           <button
             type="button"
-            onClick={() => window.open(`/display/${gameCode}`, "_blank")}
+            onClick={() => {
+              // 고정된 창 이름을 써서 다시 눌러도 새 창을 만들지 않고 기존
+              // 디스플레이 창을 재사용(해당 code로 이동)하고 포커스한다.
+              const displayWindow = window.open(`/display/${gameCode}`, "jikahoot-display");
+              displayWindow?.focus();
+            }}
             className="inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-4 text-sm font-bold text-white transition-colors duration-150 hover:bg-white/12"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -332,6 +372,16 @@ function LobbyView({
           >
             <span aria-hidden="true">▶</span>
             {starting ? "시작하는 중..." : "게임 시작하기"}
+          </button>
+          <button
+            type="button"
+            onClick={onNewGame}
+            className="inline-flex min-h-[2.5rem] items-center justify-center gap-1.5 rounded-xl px-4 text-sm font-bold text-white/50 transition-colors duration-150 hover:bg-white/[0.05] hover:text-white/80"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            새 게임 만들기
           </button>
         </div>
       </div>
@@ -578,5 +628,72 @@ function ActiveView({
         )}
       </div>
     </section>
+  );
+}
+
+// 새 게임 만들기 확인 모달. 오버레이 클릭·ESC는 '아니오'와 동일(처리 중엔 무시).
+function NewGameConfirmModal({
+  open,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !busy) onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, busy, onCancel]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="new-game-modal-title"
+      onClick={() => !busy && onCancel()}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl border border-white/10 bg-[var(--surface)] p-6 shadow-[var(--shadow-soft)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 id="new-game-modal-title" className="display-font text-xl text-white">
+          새 게임을 시작하시겠습니까?
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-white/60">
+          현재 게임방과 참가자 정보가 종료됩니다.
+        </p>
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            autoFocus
+            className="flex-1 rounded-xl px-4 py-3 text-base font-black text-white transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:opacity-60"
+            style={{ background: "var(--primary)", boxShadow: "0 5px 0 var(--primary-dark)" }}
+          >
+            아니오
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className="flex-1 rounded-xl px-4 py-3 text-base font-black text-white transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:opacity-60"
+            style={{ background: "var(--error)", boxShadow: "0 5px 0 var(--error-dark)" }}
+          >
+            {busy ? "처리 중..." : "예"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
