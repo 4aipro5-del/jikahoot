@@ -36,6 +36,11 @@ const DownloadIcon = (
     <path d="M5 21h14" />
   </svg>
 );
+const CheckIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
 const PeopleIcon = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -74,7 +79,8 @@ export default function StudentSubmissionPanel({
   teacherUid: string;
   roomCode: string;
   questions: QuestionWithId[];
-  onBack: () => void;
+  // 새 창(전용 라우트)에서는 '돌아가기'가 필요 없어 생략한다. 있을 때만 버튼 노출.
+  onBack?: () => void;
 }) {
   // submissionOpen is the source of truth students read before submitting; keep
   // it live so 제출 종료/열기 reflects immediately and survives a reload.
@@ -133,18 +139,23 @@ export default function StudentSubmissionPanel({
     }
   }
 
+  // 학생이 QR 없이 직접 접속하는 문제 제출 사이트 주소(운영 도메인 고정)
+  const submitHost = "https://jikahoot.vercel.app/submit";
+
   return (
     <section className="flex flex-col gap-6">
-      {/* 상단: 뒤로가기 */}
-      <div className="flex items-center">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#B3B3B3] transition-colors duration-150 hover:text-white"
-        >
-          ← 문제 관리로 돌아가기
-        </button>
-      </div>
+      {/* 상단: 뒤로가기 (메인 창에 임베드될 때만) */}
+      {onBack && (
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#B3B3B3] transition-colors duration-150 hover:text-white"
+          >
+            ← 문제 관리로 돌아가기
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-col items-center gap-2 text-center">
         <p className="hero-chip">Student Submission</p>
@@ -159,42 +170,39 @@ export default function StudentSubmissionPanel({
       {/* 본문: 제출 코드 / QR / 제출 현황 */}
       <div className="grid gap-5 lg:grid-cols-3">
         {/* 제출 코드 */}
-        <div className="flex flex-col rounded-2xl border border-white/10 bg-[var(--surface)] p-6 text-center sm:p-7">
+        <div className="relative flex flex-col rounded-2xl border border-white/10 bg-[var(--surface)] p-6 text-center sm:p-7">
+          <button
+            type="button"
+            onClick={handleCopy}
+            title={copied ? "복사됨" : "복사하기"}
+            aria-label={copied ? "제출 코드 복사됨" : "제출 코드 복사하기"}
+            className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/12 bg-white/[0.06] text-white transition-colors duration-150 hover:bg-white/12"
+          >
+            {copied ? CheckIcon : CopyIcon}
+          </button>
           <div className="flex flex-1 flex-col items-center justify-center gap-4">
             <p className="text-sm font-semibold text-white/60">제출 코드</p>
             <p className="display-font text-5xl tracking-[0.12em] text-white sm:text-6xl">
               {roomCode}
             </p>
-            <p className="text-sm text-white/55">이 코드를 학생들에게 안내해 주세요.</p>
-          </div>
-          <div className="mt-6 border-t border-white/[0.08] pt-5">
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="mx-auto inline-flex items-center gap-2 rounded-xl border border-white/12 bg-white/[0.06] px-5 py-2.5 text-sm font-bold text-white transition-colors duration-150 hover:bg-white/12"
-            >
-              {CopyIcon}
-              {copied ? "복사됨" : "복사하기"}
-            </button>
+            <p className="text-sm font-bold text-[var(--accent)]">{submitHost}</p>
           </div>
         </div>
 
         {/* 제출 QR 코드 */}
-        <div className="flex flex-col rounded-2xl border border-white/10 bg-[var(--surface)] p-6 text-center sm:p-7">
+        <div className="relative flex flex-col rounded-2xl border border-white/10 bg-[var(--surface)] p-6 text-center sm:p-7">
+          <button
+            type="button"
+            onClick={handleDownloadQR}
+            title="이미지 다운로드"
+            aria-label="QR 코드 이미지 다운로드"
+            className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/12 bg-white/[0.06] text-white transition-colors duration-150 hover:bg-white/12"
+          >
+            {DownloadIcon}
+          </button>
           <div className="flex flex-1 flex-col items-center justify-center gap-4">
             <p className="text-sm font-semibold text-white/60">제출 QR 코드</p>
             <SubmissionQRCode roomCode={roomCode} size={168} />
-            <p className="text-sm text-white/55">QR 코드를 학생들에게 보여주세요.</p>
-          </div>
-          <div className="mt-6 pt-5">
-            <button
-              type="button"
-              onClick={handleDownloadQR}
-              className="mx-auto inline-flex items-center gap-2 rounded-xl border border-white/12 bg-white/[0.06] px-5 py-2.5 text-sm font-bold text-white transition-colors duration-150 hover:bg-white/12"
-            >
-              {DownloadIcon}
-              이미지 다운로드
-            </button>
           </div>
         </div>
 
@@ -202,33 +210,36 @@ export default function StudentSubmissionPanel({
         <div className="flex flex-col gap-5 rounded-2xl border border-white/10 bg-[var(--surface)] p-6 sm:p-7">
           <p className="text-sm font-semibold text-white/60">제출 현황</p>
 
-          <div className="flex items-center gap-4">
-            <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-[var(--primary)] text-white">
-              {PeopleIcon}
-            </span>
-            <div>
-              <p className="text-sm text-white/60">제출 학생</p>
-              <p className="display-font text-3xl text-white">
-                {submitters.length}명
-              </p>
+          {/* 통계를 카드 세로 중앙에 배치 */}
+          <div className="flex flex-1 flex-col justify-center gap-5">
+            <div className="flex items-center gap-4">
+              <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-[var(--primary)] text-white">
+                {PeopleIcon}
+              </span>
+              <div>
+                <p className="text-sm text-white/60">제출 학생</p>
+                <p className="display-font text-3xl text-white">
+                  {submitters.length}명
+                </p>
+              </div>
+            </div>
+
+            <div className="border-t border-white/[0.08]" />
+
+            <div className="flex items-center gap-4">
+              <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-[var(--warning)] text-[#4a2c00]">
+                {DocIcon}
+              </span>
+              <div>
+                <p className="text-sm text-white/60">총 제출 문제</p>
+                <p className="display-font text-3xl text-white">
+                  {submissionCount}개
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="border-t border-white/[0.08]" />
-
-          <div className="flex items-center gap-4">
-            <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-[var(--warning)] text-[#4a2c00]">
-              {DocIcon}
-            </span>
-            <div>
-              <p className="text-sm text-white/60">총 제출 문제</p>
-              <p className="display-font text-3xl text-white">
-                {submissionCount}개
-              </p>
-            </div>
-          </div>
-
-          <p className="mt-auto flex items-center gap-2 text-sm text-white/55">
+          <p className="flex items-center gap-2 text-sm text-white/55">
             <span className="h-2 w-2 flex-none rounded-full bg-[var(--success)]" />
             실시간으로 업데이트 중입니다.
           </p>
