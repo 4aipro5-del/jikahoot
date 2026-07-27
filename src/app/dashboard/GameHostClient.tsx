@@ -16,6 +16,7 @@ import {
   type PlayerWithId,
 } from "@/lib/firestore/games";
 import { getCorrectChoiceMap } from "@/lib/firestore/questions";
+import { clearCurrentGame } from "@/lib/firestore/rooms";
 import type { Game } from "@/types/firestore";
 import Leaderboard from "@/components/Leaderboard";
 import GameQRCode from "@/components/GameQRCode";
@@ -43,6 +44,8 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   // before the button disables. This ref blocks that window so advance/end run
   // at most once at a time.
   const busyRef = useRef(false);
+  const [showEndGameModal, setShowEndGameModal] = useState(false);
+  const [ending, setEnding] = useState(false);
 
   useEffect(() => subscribeToAuthState(setUser), []);
   useEffect(() => subscribeToGame(gameCode, setGame), [gameCode]);
@@ -150,6 +153,30 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     }
   }
 
+  // 게임을 종료하고 게임 창을 닫는다. 게임을 finished 처리해 참가자 화면을
+  // 정리하고, 방의 게임 연결(currentGameId)을 해제한다. 그러면 원래 창(GameTab)이
+  // 이를 감지해 '새 게임 시작' 첫 화면으로 돌아간다(재로그인/재진입 시에도 첫 화면).
+  // 팝업으로 열린 게임 창이면 정리 후 스스로 닫는다. 진행 중 게임 복구는
+  // currentGameId를 그대로 두는 정상 경로에서 유지되고, 여기서만 명시적으로 정리한다.
+  async function handleConfirmEndGame() {
+    if (!game || ending) return;
+    setEnding(true);
+    setError(null);
+    try {
+      await finishGame(gameCode);
+      await clearCurrentGame(game.teacherUid);
+      // 팝업으로 열린 게임 창이면 정리 후 스스로 닫아 원래 창(새 게임 시작 화면)으로
+      // 돌아가게 한다. 직접 접근한 경우 opener가 없어 무시된다.
+      if (typeof window !== "undefined" && window.opener && !window.opener.closed) {
+        window.close();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "게임을 종료하지 못했습니다.");
+      setShowEndGameModal(false);
+      setEnding(false);
+    }
+  }
+
   // Auto-advance once a question's timer runs out, without waiting for the
   // teacher to click "다음 문제" — mirrors clicking it manually, just
   // triggered by the clock instead of a click. Guarded by
@@ -225,6 +252,7 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
             canStart={players.length > 0}
             onStart={handleAdvance}
             onKick={handleKick}
+            onEndGame={() => setShowEndGameModal(true)}
             starting={advancing}
           />
         )}
@@ -262,14 +290,22 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
           </p>
         )}
       </div>
+
+      <EndGameConfirmModal
+        open={showEndGameModal}
+        busy={ending}
+        onCancel={() => {
+          if (!ending) setShowEndGameModal(false);
+        }}
+        onConfirm={handleConfirmEndGame}
+      />
     </div>
   );
 }
 
-// Numeric index color: the brand primary is too dark to read on the dark
-// surface, so lighten it toward white for legibility — still derived from the
-// brand token, not a hand-picked hue.
-const LOBBY_NUMBER_COLOR = "color-mix(in srgb, var(--primary) 55%, #ffffff)";
+// 참가자 번호 색은 핵심 4색을 index 기준으로 순환 배정한다. 순환이라 바로 옆
+// 참가자와는 절대 같은 색이 되지 않는다(연속 중복 방지).
+const LOBBY_NUMBER_COLORS = ["var(--primary)", "var(--warning)", "var(--error)", "var(--success)"];
 
 function LobbyView({
   gameCode,
@@ -277,6 +313,7 @@ function LobbyView({
   canStart,
   onStart,
   onKick,
+  onEndGame,
   starting,
 }: {
   gameCode: string;
@@ -284,17 +321,19 @@ function LobbyView({
   canStart: boolean;
   onStart: () => void;
   onKick: (player: PlayerWithId) => void;
+  onEndGame: () => void;
   starting: boolean;
 }) {
   const joinHost = typeof window !== "undefined" ? window.location.host : "";
 
   return (
     <section className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-      {/* top bar — QR / join instructions / game code / start */}
-      <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-6 rounded-[24px] border border-white/10 bg-[var(--surface)] px-6 py-6 sm:px-8">
+      {/* top bar — 3열 고정(QR+안내 / 게임 코드 / 시작·종료). 데스크톱·전체화면에서는
+          grid로 절대 줄바꿈되지 않고, lg 미만(태블릿 이하)에서만 세로로 스택된다. */}
+      <div className="grid grid-cols-1 items-center gap-6 rounded-[24px] border border-white/10 bg-[var(--surface)] px-6 py-6 sm:px-8 lg:grid-cols-[auto_1fr_auto] lg:gap-8">
         <div className="flex min-w-0 items-center gap-4">
           <div className="flex-none rounded-xl bg-white p-2">
-            <GameQRCode gameCode={gameCode} size={104} />
+            <GameQRCode gameCode={gameCode} size={132} />
           </div>
           <p className="text-sm font-bold leading-relaxed text-white/90 sm:text-base">
             웹 브라우저에서
@@ -305,32 +344,33 @@ function LobbyView({
           </p>
         </div>
 
-        {/* label + value stay together as one block, and wrap as a unit */}
-        <div className="min-w-0">
+        {/* 게임 코드 — 카드 중앙 영역, 시각적으로 가장 크게 */}
+        <div className="min-w-0 lg:text-center">
           <p className="text-sm font-bold text-white/50">게임 코드</p>
-          <p className="display-font mt-1 break-all text-[clamp(2rem,4vw,3.5rem)] leading-none text-white">
+          <p className="display-font mt-1 break-all text-[clamp(3.5rem,7vw,6.5rem)] leading-none text-white">
             {gameCode}
           </p>
         </div>
 
-        <div className="flex flex-none flex-col gap-2 sm:flex-row">
-          <button
-            type="button"
-            onClick={() => window.open(`/display/${gameCode}`, "_blank")}
-            className="inline-flex min-h-[3.4rem] items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.06] px-5 text-sm font-bold text-white transition-colors duration-150 hover:bg-white/12"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            </svg>
-            디스플레이 열기
-          </button>
+        {/* 우측 열: 게임 시작하기(Primary CTA) 위, 게임 종료(작은 보조) 아래 — 세로 유지 */}
+        <div className="flex flex-col gap-2.5">
           <button
             onClick={onStart}
             disabled={!canStart || starting}
-            className="inline-flex min-h-[3.4rem] items-center justify-center gap-2 rounded-2xl border-2 border-white/15 bg-[var(--error)] px-7 text-lg font-black text-white shadow-[0_7px_0_var(--error-dark)] transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-1 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-[5.25rem] items-center justify-center gap-3 rounded-2xl border-2 border-white/15 bg-[var(--error)] px-8 text-4xl font-black text-white shadow-[0_8px_0_var(--error-dark)] transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-1 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span aria-hidden="true">▶</span>
             {starting ? "시작하는 중..." : "게임 시작하기"}
+          </button>
+          <button
+            type="button"
+            onClick={onEndGame}
+            className="inline-flex min-h-[3rem] items-center justify-center gap-2 rounded-xl px-4 text-lg font-bold text-white/55 transition-colors duration-150 hover:bg-[var(--error-soft)] hover:text-[var(--error)]"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <rect x="6" y="6" width="12" height="12" rx="2" />
+            </svg>
+            게임 종료
           </button>
         </div>
       </div>
@@ -359,7 +399,7 @@ function LobbyView({
 
         {players.length > 0 && (
           <div className="w-full">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
               {players.map((player, index) => (
                 <button
                   key={player.id}
@@ -367,19 +407,19 @@ function LobbyView({
                   onClick={() => onKick(player)}
                   title={`${player.nickname} 내보내기`}
                   aria-label={`${player.nickname} 내보내기`}
-                  className="group tile-enter flex min-h-[64px] items-center gap-4 rounded-2xl border border-white/10 bg-[var(--surface)] px-5 py-4 text-left transition hover:border-[color:var(--error)] hover:bg-[var(--error-soft)]"
+                  className="group tile-enter relative flex min-h-[104px] items-center justify-center rounded-2xl border border-white/10 bg-[var(--surface)] px-6 py-6 text-center transition hover:border-[color:var(--error)] hover:bg-[var(--error-soft)]"
                 >
                   <span
-                    className="flex-none text-lg font-black tabular-nums"
-                    style={{ color: LOBBY_NUMBER_COLOR }}
+                    className="absolute left-4 top-3 text-xl font-black tabular-nums"
+                    style={{ color: LOBBY_NUMBER_COLORS[index % LOBBY_NUMBER_COLORS.length] }}
                   >
                     {index + 1}
                   </span>
-                  <span className="flex-1 truncate text-base font-black text-white transition-colors group-hover:text-[var(--error)] group-hover:line-through sm:text-lg">
+                  <span className="max-w-full truncate text-2xl font-black text-white transition-colors group-hover:text-[var(--error)] group-hover:line-through sm:text-3xl">
                     {player.nickname}
                   </span>
-                  <span className="flex-none text-[var(--error)] opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <span className="absolute right-3 top-3 text-[var(--error)] opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M18 6 6 18M6 6l12 12" />
                     </svg>
                   </span>
@@ -577,5 +617,72 @@ function ActiveView({
         )}
       </div>
     </section>
+  );
+}
+
+// 게임 종료 확인 모달. 오버레이 클릭·ESC는 '아니오'와 동일(처리 중엔 무시).
+function EndGameConfirmModal({
+  open,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !busy) onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, busy, onCancel]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="end-game-modal-title"
+      onClick={() => !busy && onCancel()}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl border border-white/10 bg-[var(--surface)] p-6 shadow-[var(--shadow-soft)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 id="end-game-modal-title" className="display-font text-xl text-white">
+          게임을 종료하시겠습니까?
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-white/60">
+          현재 게임방과 참가자 정보가 종료되고 게임 창이 닫힙니다.
+        </p>
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            autoFocus
+            className="flex-1 rounded-xl px-4 py-3 text-base font-black text-white transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:opacity-60"
+            style={{ background: "var(--primary)", boxShadow: "0 5px 0 var(--primary-dark)" }}
+          >
+            아니오
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className="flex-1 rounded-xl px-4 py-3 text-base font-black text-white transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:opacity-60"
+            style={{ background: "var(--error)", boxShadow: "0 5px 0 var(--error-dark)" }}
+          >
+            {busy ? "처리 중..." : "예"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
