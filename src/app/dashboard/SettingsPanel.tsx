@@ -51,7 +51,13 @@ export default function SettingsPanel({
       if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
         setUpgradeError(null);
       } else if (code === "auth/credential-already-in-use" || code === "auth/email-already-in-use") {
-        setUpgradeError("이미 가입된 구글 계정이에요. 로그아웃 후 그 계정으로 로그인해 주세요.");
+        // 이 구글 계정은 이미 다른 UID의 소유. 여기서 로그아웃/재로그인하면 게스트
+        // UID에 묶인 방·문제·게임에 더는 접근할 수 없어 데이터가 유실된다. 그러니
+        // 유실을 유발하는 '로그아웃 후 로그인' 안내는 하지 않고, 게스트 세션을 그대로
+        // 유지시킨 채(데이터 보존) 안전한 방법만 안내한다.
+        setUpgradeError(
+          "이 구글 계정은 이미 다른 방에 사용 중이에요. 지금 만든 내용을 그대로 옮기려면 아직 사용하지 않은 다른 구글 계정으로 저장해 주세요. (이 계정으로 로그인하면 지금 게스트 내용은 함께 옮겨지지 않아요.)",
+        );
       } else {
         setUpgradeError(err instanceof Error ? err.message : "구글 계정 연결에 실패했어요.");
       }
