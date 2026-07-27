@@ -129,7 +129,7 @@ function HomePortal() {
             <div className="flex flex-col items-end gap-2">
               <button
                 onClick={handleTeacherSignIn}
-                className="secondary-button secondary-button-compact inline-flex items-center gap-2"
+                className="secondary-button inline-flex items-center gap-2"
               >
                 <svg
                   width="14"
