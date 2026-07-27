@@ -184,7 +184,7 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => signOutUser()}
-                    className="secondary-button w-full"
+                    className="primary-button primary-button-neutral w-full"
                   >
                     다시 로그인
                   </button>
