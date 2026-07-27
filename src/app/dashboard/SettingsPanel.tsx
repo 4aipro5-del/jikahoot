@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import type { User } from "firebase/auth";
+import { clearGuestTeacher, linkTeacherWithGoogle } from "@/lib/firebase/auth";
+import { syncRoomProfile } from "@/lib/firestore/rooms";
 import type { Room } from "@/types/firestore";
 
 // Teacher-side settings are wired: display name / answer time / auto-advance /
@@ -11,25 +14,50 @@ const ANSWER_TIMES = [10, 20, 30, 40];
 
 export default function SettingsPanel({
   room,
+  user,
   onUpdateSettings,
   onUpdateDisplayName,
 }: {
   room: Room;
+  user: User;
   onUpdateSettings: (patch: Partial<Room>) => Promise<void>;
   onUpdateDisplayName: (name: string) => Promise<void>;
 }) {
   const [nameInput, setNameInput] = useState(room.displayName);
   const [savingName, setSavingName] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
-  // controlled from the room, so an optimistic parent update re-syncs these
-  const useGooglePhoto = room.useGooglePhoto !== false;
+  const isGuest = user.isAnonymous;
   const answerTime = room.defaultQuestionDurationSec ?? 20;
   const autoAdvance = room.autoAdvance ?? true;
 
   const nameChanged = nameInput.trim() !== room.displayName && nameInput.trim().length > 0;
-  const showPhoto = useGooglePhoto && room.photoUrl;
-  const initial = room.displayName.trim().slice(0, 1) || "T";
+
+  // 게스트(익명) → 영구 구글 계정. linkWithPopup은 uid를 유지해 방/문제/게임이
+  // 그대로 승계된다. 구글 프로필을 방에 동기화하고 게스트 마커를 지운 뒤 새로고침.
+  async function handleUpgrade() {
+    if (upgrading) return;
+    setUpgradeError(null);
+    setUpgrading(true);
+    try {
+      const cred = await linkTeacherWithGoogle(user);
+      await syncRoomProfile(cred.user);
+      clearGuestTeacher();
+      window.location.reload();
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+        setUpgradeError(null);
+      } else if (code === "auth/credential-already-in-use" || code === "auth/email-already-in-use") {
+        setUpgradeError("이미 가입된 구글 계정이에요. 로그아웃 후 그 계정으로 로그인해 주세요.");
+      } else {
+        setUpgradeError(err instanceof Error ? err.message : "구글 계정 연결에 실패했어요.");
+      }
+      setUpgrading(false);
+    }
+  }
 
   async function save(patch: Partial<Room>) {
     setError(null);
@@ -81,56 +109,52 @@ export default function SettingsPanel({
         title="프로필"
         description="계정 정보를 확인하고 프로필을 관리합니다."
       >
-        <div className="flex flex-wrap items-end gap-x-8 gap-y-4">
-          {/* 표시 이름 + 저장 (하나의 입력 그룹) */}
-          <div className="flex min-w-[240px] flex-1 flex-col gap-1.5">
-            <span className="text-xs font-bold text-white/70">표시 이름</span>
-            <div className="flex">
-              <input
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                maxLength={24}
-                className="h-11 min-w-0 flex-1 rounded-l-xl border border-r-0 border-white/12 bg-white/5 px-4 text-sm font-semibold text-white outline-none focus:border-white/30"
-              />
-              <button
-                type="button"
-                onClick={saveName}
-                disabled={!nameChanged || savingName}
-                className="h-11 flex-none rounded-r-xl bg-[var(--primary)] px-4 text-sm font-bold text-white transition-transform duration-150 enabled:hover:scale-[1.02] disabled:opacity-40"
-              >
-                {savingName ? "저장 중" : "저장"}
-              </button>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
+            {/* 표시 이름 + 저장 (좌측) */}
+            <div className="flex min-w-[240px] max-w-md flex-1 flex-col gap-1.5">
+              <span className="text-xs font-bold text-white/70">표시 이름</span>
+              <div className="flex">
+                <input
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  maxLength={24}
+                  className="h-11 min-w-0 flex-1 rounded-l-xl border border-r-0 border-white/12 bg-white/5 px-4 text-sm font-semibold text-white outline-none focus:border-white/30"
+                />
+                <button
+                  type="button"
+                  onClick={saveName}
+                  disabled={!nameChanged || savingName}
+                  className="h-11 flex-none rounded-r-xl bg-[var(--primary)] px-4 text-sm font-bold text-white transition-transform duration-150 enabled:hover:scale-[1.02] disabled:opacity-40"
+                >
+                  {savingName ? "저장 중" : "저장"}
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* 프로필 이미지 + Google 프로필 사진 사용 */}
-          <div className="flex items-center gap-3">
-            {showPhoto ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={room.photoUrl!} alt="" className="h-11 w-11 flex-none rounded-xl object-cover" />
-            ) : (
-              <span className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-[var(--primary)] text-lg font-black text-white">
-                {initial}
-              </span>
+            {/* 게스트: 구글 저장 버튼(우측, 입력창과 상단 정렬) + 그 밑 설명 */}
+            {isGuest && (
+              <div className="flex flex-col gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleUpgrade}
+                  disabled={upgrading}
+                  className="inline-flex h-11 flex-none items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-4 text-sm font-black text-white shadow-[0_6px_0_var(--primary-dark)] transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-1 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <GoogleMark />
+                  {upgrading ? "연결 중..." : "구글 계정으로 저장하기"}
+                </button>
+                <p className="max-w-xs text-xs leading-5 text-[color:var(--foreground-muted)]">
+                  지금은 이 브라우저에서만 유지돼요. 구글 계정으로 저장하면 다른 기기에서도
+                  이어서 관리할 수 있고, 방·문제·게임이 그대로 옮겨져요.
+                </p>
+              </div>
             )}
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                checked={useGooglePhoto}
-                onChange={(e) => save({ useGooglePhoto: e.target.checked })}
-                className="h-4 w-4 flex-none accent-[var(--primary)]"
-              />
-              <span className="text-sm font-semibold text-white">Google 프로필 사진 사용</span>
-            </label>
           </div>
 
-          {/* Google 계정 이메일 */}
-          <div className="flex items-center gap-2 text-sm">
-            <GoogleMark />
-            <span className="font-semibold text-[color:var(--foreground-muted)]">
-              {room.email || "연결된 Google 계정"}
-            </span>
-          </div>
+          {isGuest && upgradeError && (
+            <p className="text-xs leading-5 text-[var(--error)]">{upgradeError}</p>
+          )}
         </div>
       </Section>
 
