@@ -98,7 +98,9 @@ export default function DashboardPage() {
 
   async function handleDisplayNameSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!user || user.isAnonymous) return;
+    // guest (anonymous) teachers must be able to set their name too — the room
+    // is created off their uid just like a Google teacher's
+    if (!user) return;
 
     const trimmedName = displayNameInput.trim();
     if (!trimmedName) {
@@ -222,7 +224,7 @@ export default function DashboardPage() {
 
       <main className="min-w-0 flex-1 px-5 py-6 sm:px-8 sm:py-8 lg:px-10">
         <div className="mb-6 flex justify-end">
-          <AccountMenu room={room} />
+          <AccountMenu room={room} user={user} />
         </div>
 
         {tab === "dashboard" && (
@@ -246,6 +248,7 @@ export default function DashboardPage() {
         {tab === "settings" && (
           <SettingsPanel
             room={room}
+            user={user}
             onUpdateSettings={handleUpdateSettings}
             onUpdateDisplayName={handleUpdateDisplayName}
           />

@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import type { User } from "firebase/auth";
 import { signOutUser } from "@/lib/firebase/auth";
 import type { Room } from "@/types/firestore";
 
-export default function AccountMenu({ room }: { room: Room }) {
+export default function AccountMenu({ room, user }: { room: Room; user: User }) {
   const [open, setOpen] = useState(false);
+  const isGuest = user.isAnonymous;
   const initial = room.displayName.trim().slice(0, 1) || "T";
-  // honor the "Google 프로필 사진 사용" setting — when off, fall back to the
-  // initial-letter avatar even if a Google photo URL exists
-  const showPhoto = room.useGooglePhoto !== false && room.photoUrl;
+  const showPhoto = Boolean(room.photoUrl);
 
   return (
     <div className="relative">
@@ -27,6 +27,11 @@ export default function AccountMenu({ room }: { room: Room }) {
           </span>
         )}
         <span className="text-sm font-bold">{room.displayName} 선생님</span>
+        {isGuest && (
+          <span className="rounded-full bg-[var(--warning)] px-2 py-0.5 text-[0.7rem] font-black text-[#4a2c00]">
+            게스트
+          </span>
+        )}
         <svg
           width="14"
           height="14"
