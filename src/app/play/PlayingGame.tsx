@@ -378,12 +378,13 @@ function ActiveView({
     }
   }
 
-  const timeColor =
+  // 진행 바 색 = 남은 시간에 따라 기본 파랑 → 노랑 → 빨강
+  const barColor =
     timeUp || remainingSec <= 5
       ? "var(--error)"
       : remainingSec <= 10
         ? "var(--warning)"
-        : "#ffffff";
+        : "var(--primary)";
   // 진행 바 = 남은 시간 비율 (시간이 줄수록 바가 줄어듦)
   const timeRatio = deadline
     ? Math.max(0, Math.min(1, (deadline - nowMs) / (game.questionDurationSec * 1000)))
@@ -393,21 +394,13 @@ function ActiveView({
     <div className="stage-shell">
       <div className="stage-content flex min-h-screen flex-col justify-center gap-5 py-6">
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
-          {/* 상단: 진행 바 + 남은 시간 타이머, 그 아래 문제 번호 */}
+          {/* 상단: 진행 바(남은 시간에 따라 색 변화), 그 아래 문제 번호 */}
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-4">
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/12">
-                <div
-                  className="h-full rounded-full bg-[var(--primary)] transition-[width] duration-300"
-                  style={{ width: `${timeRatio * 100}%` }}
-                />
-              </div>
-              <span
-                className="flex h-14 w-14 flex-none items-center justify-center rounded-full border-[3px] text-xl font-black"
-                style={{ borderColor: timeColor, color: timeColor }}
-              >
-                {timeUp ? "0" : remainingSec}
-              </span>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-white/12">
+              <div
+                className="h-full rounded-full transition-[width,background-color] duration-300"
+                style={{ width: `${timeRatio * 100}%`, backgroundColor: barColor }}
+              />
             </div>
             <p className="text-sm font-black">
               <span style={{ color: "var(--primary)" }}>{questionIndex + 1}</span>
