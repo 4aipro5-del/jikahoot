@@ -83,10 +83,20 @@ export function updateRoomSettings(
 
 // explicit "다시 시작": dismisses the finished game so the next startGame call
 // doesn't try to reuse it, and other sessions viewing this room see it as idle
-export function clearCurrentGame(teacherUid: string) {
-  return updateDoc(doc(db, 'rooms', teacherUid), {
-    currentGameId: null,
-    currentGameStatus: null,
+// 방의 현재 게임 연결을 해제한다. 단, 방이 "여전히 이 게임(gameCode)"을 가리킬
+// 때만 지운다. 오래된 결과 탭을 열어두거나 그새 새 게임이 시작된 상황에서
+// 호출되어도, 새로 진행 중인 게임 링크를 실수로 덮어쓰지 않도록 트랜잭션으로
+// 현재 값을 확인한다.
+export function clearCurrentGame(teacherUid: string, gameCode: string) {
+  const roomRef = doc(db, 'rooms', teacherUid)
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(roomRef)
+    if (!snap.exists()) return
+    if ((snap.data() as Room).currentGameId !== gameCode) return
+    tx.update(roomRef, {
+      currentGameId: null,
+      currentGameStatus: null,
+    })
   })
 }
 

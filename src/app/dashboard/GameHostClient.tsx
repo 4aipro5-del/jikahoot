@@ -164,7 +164,7 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     setError(null);
     try {
       await finishGame(gameCode);
-      await clearCurrentGame(game.teacherUid);
+      await clearCurrentGame(game.teacherUid, gameCode);
       // 팝업으로 열린 게임 창이면 정리 후 스스로 닫아 원래 창(새 게임 시작 화면)으로
       // 돌아가게 한다. 직접 접근한 경우 opener가 없어 무시된다.
       if (typeof window !== "undefined" && window.opener && !window.opener.closed) {
@@ -173,6 +173,28 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "게임을 종료하지 못했습니다.");
       setShowEndGameModal(false);
+      setEnding(false);
+    }
+  }
+
+  // 결과 확인 후 방의 게임 연결(currentGameId)을 해제해 '새 게임 시작' 첫 화면으로
+  // 돌아간다. 게임이 자연 종료되면 clearCurrentGame이 호출되지 않아 방이 finished
+  // 게임에 계속 묶이는데, finished 화면의 이 버튼이 그 유일한 정리 경로다.
+  async function handleResetGame() {
+    if (!game || ending) return;
+    setEnding(true);
+    setError(null);
+    try {
+      await clearCurrentGame(game.teacherUid, gameCode);
+      // 팝업으로 열린 게임 창이면 닫아 원래 창(새 게임 시작)으로 돌려보내고,
+      // 직접 접근한 경우엔 대시보드로 이동한다.
+      if (typeof window !== "undefined" && window.opener && !window.opener.closed) {
+        window.close();
+      } else {
+        router.replace("/dashboard");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "게임을 정리하지 못했습니다.");
       setEnding(false);
     }
   }
@@ -281,6 +303,14 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
               </p>
             </div>
             <Leaderboard players={players} />
+            <button
+              type="button"
+              onClick={handleResetGame}
+              disabled={ending}
+              className="primary-button primary-button-stage mx-auto w-full max-w-md disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {ending ? "정리 중..." : "새 게임 준비하기"}
+            </button>
           </div>
         )}
 
@@ -330,7 +360,7 @@ function LobbyView({
     <section className="mx-auto flex w-full max-w-6xl flex-col gap-8">
       {/* top bar — 3열 고정(QR+안내 / 게임 코드 / 시작·종료). 데스크톱·전체화면에서는
           grid로 절대 줄바꿈되지 않고, lg 미만(태블릿 이하)에서만 세로로 스택된다. */}
-      <div className="grid grid-cols-1 items-center gap-6 rounded-[24px] border border-white/10 bg-[var(--surface)] px-6 py-6 sm:px-8 lg:grid-cols-[auto_1fr_auto] lg:gap-8">
+      <div className="grid grid-cols-1 items-center gap-6 rounded-[24px] border border-white/10 bg-[var(--surface)] px-6 py-6 sm:px-8 lg:grid-cols-[auto_1fr_auto] lg:gap-10">
         <div className="flex min-w-0 items-center gap-4">
           <div className="flex-none rounded-xl bg-white p-2">
             <GameQRCode gameCode={gameCode} size={132} />
@@ -347,7 +377,7 @@ function LobbyView({
         {/* 게임 코드 — 카드 중앙 영역, 시각적으로 가장 크게 */}
         <div className="min-w-0 lg:text-center">
           <p className="text-sm font-bold text-white/50">게임 코드</p>
-          <p className="display-font mt-1 break-all text-[clamp(3.5rem,7vw,6.5rem)] leading-none text-white">
+          <p className="display-font mt-1 break-all text-[clamp(2.5rem,5vw,4.5rem)] leading-none text-white">
             {gameCode}
           </p>
         </div>
@@ -357,7 +387,7 @@ function LobbyView({
           <button
             onClick={onStart}
             disabled={!canStart || starting}
-            className="inline-flex min-h-[5.25rem] items-center justify-center gap-3 rounded-2xl border-2 border-white/15 bg-[var(--error)] px-8 text-4xl font-black text-white shadow-[0_8px_0_var(--error-dark)] transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-1 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-[4.5rem] items-center justify-center gap-3 whitespace-nowrap rounded-2xl border-2 border-white/15 bg-[var(--error)] px-6 text-3xl font-black text-white shadow-[0_8px_0_var(--error-dark)] transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-1 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span aria-hidden="true">▶</span>
             {starting ? "시작하는 중..." : "게임 시작하기"}
