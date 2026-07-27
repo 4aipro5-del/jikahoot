@@ -4,7 +4,10 @@ import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { User } from "firebase/auth";
 import {
+  isGuestTeacher,
+  markGuestTeacher,
   signInStudentAnonymously,
+  signInTeacherAsGuest,
   signInTeacherWithGoogle,
   subscribeToAuthState,
 } from "@/lib/firebase/auth";
@@ -30,17 +33,23 @@ function HomePortal() {
   const [joining, setJoining] = useState(false);
   const [studentError, setStudentError] = useState<string | null>(null);
   const [teacherError, setTeacherError] = useState<string | null>(null);
+  const [teacherModalOpen, setTeacherModalOpen] = useState(false);
+  const [guestStarting, setGuestStarting] = useState(false);
 
   useEffect(() => subscribeToAuthState(setUser), []);
 
   useEffect(() => {
-    if (user && !user.isAnonymous) router.replace("/dashboard");
+    // Google teachers (non-anonymous) always go to the dashboard. A guest
+    // teacher is anonymous but flagged locally; a plain anonymous student is not
+    // flagged and stays on the landing.
+    if (user && (!user.isAnonymous || isGuestTeacher())) router.replace("/dashboard");
   }, [user, router]);
 
-  async function handleTeacherSignIn() {
+  async function handleGoogleSignIn() {
     setTeacherError(null);
     try {
       await signInTeacherWithGoogle();
+      // auth state change → redirect effect handles navigation
     } catch (err) {
       const authError = err as { code?: string; message?: string };
       if (authError.code === "auth/unauthorized-domain") {
@@ -50,6 +59,19 @@ function HomePortal() {
         return;
       }
       setTeacherError(err instanceof Error ? err.message : "로그인에 실패했습니다.");
+    }
+  }
+
+  async function handleGuestStart() {
+    setTeacherError(null);
+    setGuestStarting(true);
+    try {
+      await signInTeacherAsGuest();
+      markGuestTeacher();
+      router.push("/dashboard");
+    } catch (err) {
+      setGuestStarting(false);
+      setTeacherError(err instanceof Error ? err.message : "게스트로 시작하지 못했습니다.");
     }
   }
 
@@ -96,9 +118,10 @@ function HomePortal() {
     }
   }
 
-  // the effect above redirects signed-in teachers to /dashboard; show the
-  // neutral loading shell (not a blank screen) while that navigation happens
-  if (user && !user.isAnonymous) {
+  // the effect above redirects signed-in teachers (Google or flagged guest) to
+  // /dashboard; show the neutral loading shell (not a blank screen) while that
+  // navigation happens
+  if (user && (!user.isAnonymous || isGuestTeacher())) {
     return <StageSkeleton />;
   }
 
@@ -128,7 +151,10 @@ function HomePortal() {
 
             <div className="flex flex-col items-end gap-2">
               <button
-                onClick={handleTeacherSignIn}
+                onClick={() => {
+                  setTeacherError(null);
+                  setTeacherModalOpen(true);
+                }}
                 className="secondary-button inline-flex items-center gap-2"
               >
                 <svg
@@ -300,6 +326,61 @@ function HomePortal() {
           </div>
         </div>
       </div>
+
+      {teacherModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="교사 로그인 방식 선택"
+        >
+          <button
+            type="button"
+            aria-label="닫기"
+            onClick={() => {
+              if (!guestStarting) setTeacherModalOpen(false);
+            }}
+            className="absolute inset-0 cursor-default bg-black/70"
+          />
+          <div className="relative w-full max-w-sm rounded-[28px] border border-white/10 bg-[var(--surface)] p-7 text-center shadow-2xl">
+            <h2 className="display-font text-2xl text-white">교사로 시작하기</h2>
+            <p className="mt-2 text-sm leading-6 text-[color:var(--foreground-muted)]">
+              로그인 방식을 선택하세요.
+            </p>
+
+            <div className="mt-6 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={guestStarting}
+                className="primary-button w-full items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                구글 계정으로 로그인
+              </button>
+              <button
+                type="button"
+                onClick={handleGuestStart}
+                disabled={guestStarting}
+                className="secondary-button w-full items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {guestStarting ? "시작하는 중..." : "게스트로 시작"}
+              </button>
+            </div>
+
+            <p className="mt-4 text-xs leading-5 text-white/45">
+              게스트는 로그인 없이 바로 시작할 수 있어요. 다만{" "}
+              <span className="font-bold text-white/70">이 브라우저에서만</span> 유지되며,
+              나중에 대시보드에서 구글 계정으로 저장할 수 있어요.
+            </p>
+
+            {teacherError && (
+              <p className="status-banner mt-4 text-left text-xs" data-tone="error">
+                {teacherError}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
