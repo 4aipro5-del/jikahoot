@@ -18,7 +18,6 @@ import GameTab from "./GameTab";
 import SettingsPanel from "./SettingsPanel";
 import QuestionForm from "./QuestionForm";
 import QuestionList from "./QuestionList";
-import StudentSubmissionPanel from "./StudentSubmissionPanel";
 import Sidebar, { type DashboardTab } from "./Sidebar";
 import StageSkeleton from "@/components/StageSkeleton";
 
@@ -34,12 +33,17 @@ export default function DashboardPage() {
   const [questions, setQuestions] = useState<QuestionWithId[]>([]);
   const [tab, setTab] = useState<DashboardTab>("dashboard");
   const [isNewQuestionOpen, setIsNewQuestionOpen] = useState(false);
-  // within the Question tab, toggles the 학생 문제 제출 관리 sub-view
-  const [showSubmissions, setShowSubmissions] = useState(false);
 
   function selectTab(next: DashboardTab) {
-    setShowSubmissions(false);
     setTab(next);
+  }
+
+  // 학생 문제 받기: 전용 화면을 새 창으로 연다(고정 window name으로 재사용/포커스).
+  // 교사는 원래 문제 관리 창을 그대로 유지하고, 새 창은 학생용 QR·제출 코드·현황
+  // 표시(프로젝션) 용도로 쓴다.
+  function openSubmissionsWindow() {
+    const submissionsWindow = window.open("/dashboard/submissions", "jikahoot-submissions");
+    submissionsWindow?.focus();
   }
 
   useEffect(() => subscribeToAuthState(setUser), []);
@@ -229,22 +233,14 @@ export default function DashboardPage() {
           />
         )}
 
-        {tab === "approval" &&
-          (showSubmissions ? (
-            <StudentSubmissionPanel
-              teacherUid={room.teacherUid}
-              roomCode={room.roomCode}
-              questions={questions}
-              onBack={() => setShowSubmissions(false)}
-            />
-          ) : (
-            <QuestionList
-              teacherUid={room.teacherUid}
-              questions={questions}
-              onNewQuestion={() => setIsNewQuestionOpen(true)}
-              onReceiveStudentQuestions={() => setShowSubmissions(true)}
-            />
-          ))}
+        {tab === "approval" && (
+          <QuestionList
+            teacherUid={room.teacherUid}
+            questions={questions}
+            onNewQuestion={() => setIsNewQuestionOpen(true)}
+            onReceiveStudentQuestions={openSubmissionsWindow}
+          />
+        )}
 
         {tab === "game" && <GameTab teacherUid={room.teacherUid} questions={questions} />}
         {tab === "settings" && (
