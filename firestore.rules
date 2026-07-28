@@ -48,7 +48,11 @@ service cloud.firestore {
       // match the filter, so this never leaks another teacher's rooms.
       allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
       allow update: if isSignedIn()
-        && resource.data.get('ownerUid', roomId) == request.auth.uid;
+        && resource.data.get('ownerUid', roomId) == request.auth.uid
+        // ownership is immutable: block re-pointing a room at another teacher
+        // (which would inject it into their room list). The default handles the
+        // legacy backfill where ownerUid goes absent(→roomId) → roomId.
+        && request.resource.data.get('ownerUid', roomId) == resource.data.get('ownerUid', roomId);
       allow create: if isSignedIn()
         && request.resource.data.ownerUid == request.auth.uid;
       // owner may delete their room (the client removes questionBank + roomCode
