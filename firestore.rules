@@ -37,10 +37,15 @@ service cloud.firestore {
 
     // ---- Teacher rooms (1 teacher : N rooms) + per-room question bank ----
     match /rooms/{roomId} {
-      // single-doc read: a legacy room may lack ownerUid, so default to the doc
-      // id (which equals the owner uid for a primary room).
-      allow get: if isSignedIn()
-        && resource.data.get('ownerUid', roomId) == request.auth.uid;
+      // single-doc read. The primary room slot (rooms/{uid}) is allowed by doc
+      // id so a fresh teacher can read-before-create it while it doesn't exist
+      // yet (a rule touching resource.data would error on the null resource).
+      // Additional (random-id) rooms are readable only when they exist and the
+      // caller owns them.
+      allow get: if isSignedIn() && (
+        roomId == request.auth.uid
+        || (resource != null && resource.data.ownerUid == request.auth.uid)
+      );
       // list/query: MUST use a direct field reference. The room list runs
       // where('ownerUid','==',uid); Firestore statically checks that the query
       // is safe against the rule, and a .get() with a default is opaque to that
