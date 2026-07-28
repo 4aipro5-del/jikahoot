@@ -120,9 +120,9 @@ function StartGameScreen({
       <button
         onClick={handleStart}
         disabled={approved.length === 0 || starting}
-        className="inline-flex min-h-[4.75rem] w-full max-w-md items-center justify-center rounded-2xl border-2 border-white/15 bg-[var(--error)] px-8 text-4xl font-black text-white shadow-[0_8px_0_var(--error-dark)] transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-1 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex min-h-[4.75rem] w-full max-w-md items-center justify-center rounded-2xl border-2 border-white/15 bg-[var(--error)] px-8 text-3xl font-black text-white shadow-[0_8px_0_var(--error-dark)] transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-1 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {starting ? "게임 준비 중..." : "새 게임 시작"}
+        {starting ? "STARTING..." : "START"}
       </button>
 
       {approved.length === 0 && (
