@@ -81,8 +81,12 @@ export default function DisplayClient({ gameCode }: { gameCode: string }) {
   }
 
   if (game.status === "active") {
-    // Ⓑ 진행 중: 게임 코드 + 진행 상황 + 실시간 순위 보드
-    return <DisplayBoard gameCode={gameCode} game={game} players={players} />;
+    // Ⓑ 진행 중: 게임 코드 + 진행 상황 + 실시간 순위 보드.
+    // 진행 중 전체 명단은 Firestore Rules상 방장(owner)만 읽을 수 있다. 익명으로
+    // (직접 URL·별도 프로젝터 브라우저) 연 경우 players 구독이 거부돼 로비 스냅샷
+    // (0점·입장순)이 남으므로, 소유자가 아니면 순위를 숨긴다.
+    const isOwner = !!user && user.uid === game.teacherUid;
+    return <DisplayBoard gameCode={gameCode} game={game} players={players} isOwner={isOwner} />;
   }
 
   // Ⓐ 시작 전·입장 중: 원래 쓰던 로비 형식(QR/안내/코드 + 참가자) 그대로,
@@ -203,10 +207,12 @@ function DisplayBoard({
   gameCode,
   game,
   players,
+  isOwner,
 }: {
   gameCode: string;
   game: Game;
   players: PlayerWithId[];
+  isOwner: boolean;
 }) {
   const isActive = game.status === "active";
   const total = game.questions.length;
@@ -323,7 +329,16 @@ function DisplayBoard({
             </span>
             실시간 순위
           </p>
-          <Leaderboard players={players} />
+          {isOwner ? (
+            <Leaderboard players={players} />
+          ) : (
+            <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-white/12 px-6 py-16 text-center">
+              <p className="text-base leading-7 text-white/45">
+                실시간 순위는 선생님(호스트) 화면에서
+                <br />이 화면을 열 때 표시돼요.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
