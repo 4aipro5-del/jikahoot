@@ -16,19 +16,19 @@ export default function AccountMenu({ user }: { user: User }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full bg-white/5 py-1.5 pl-1.5 pr-3 text-white hover:bg-white/10"
+        className="flex max-w-full items-center gap-2 rounded-full bg-white/5 py-1.5 pl-1.5 pr-3 text-white hover:bg-white/10"
       >
         {showPhoto ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.photoURL!} alt="" className="h-7 w-7 rounded-full object-cover" />
+          <img src={user.photoURL!} alt="" className="h-7 w-7 flex-none rounded-full object-cover" />
         ) : (
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--primary)] text-sm font-black">
+          <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[var(--primary)] text-sm font-black">
             {initial}
           </span>
         )}
-        <span className="text-sm font-bold">{displayName} 선생님</span>
+        <span className="min-w-0 truncate text-sm font-bold">{displayName} 선생님</span>
         {isGuest && (
-          <span className="rounded-full bg-[var(--warning)] px-2 py-0.5 text-[0.7rem] font-black text-[#4a2c00]">
+          <span className="flex-none rounded-full bg-[var(--warning)] px-2 py-0.5 text-[0.7rem] font-black text-[#4a2c00]">
             게스트
           </span>
         )}
@@ -41,7 +41,7 @@ export default function AccountMenu({ user }: { user: User }) {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={`transition-transform ${open ? "rotate-180" : ""}`}
+          className={`flex-none transition-transform ${open ? "rotate-180" : ""}`}
         >
           <path d="m6 9 6 6 6-6" />
         </svg>
