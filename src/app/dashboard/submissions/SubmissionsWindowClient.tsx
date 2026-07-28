@@ -60,7 +60,7 @@ export default function SubmissionsWindowClient() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--background)] px-5 py-8 sm:px-8 lg:px-10">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-[var(--background)] px-5 py-8 sm:px-8 lg:px-10">
       <div className="mx-auto w-full max-w-5xl">
         <StudentSubmissionPanel
           roomId={room.roomId}

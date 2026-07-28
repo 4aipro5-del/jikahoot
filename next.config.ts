@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { NextConfig } from "next";
 
-// Next.js configuration for the Jikahoot app.
+// Next.js configuration for the JIHOOT app.
 
 const nextConfig: NextConfig = {
   turbopack: {

@@ -107,7 +107,7 @@ function LobbyDisplay({ gameCode, players }: { gameCode: string; players: Player
                 Join the Game
               </p>
               <p className="mt-3 max-w-sm text-base leading-6 text-[color:var(--foreground-muted)] sm:text-lg">
-                휴대폰으로 QR코드를 스캔하거나, jikahoot 사이트에서 아래 코드를 입력하세요.
+                휴대폰으로 QR코드를 스캔하거나, JIHOOT 사이트에서 아래 코드를 입력하세요.
               </p>
             </div>
           </div>

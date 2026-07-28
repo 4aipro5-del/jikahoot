@@ -162,8 +162,9 @@ export default function StudentSubmissionPanel({
         <h1 className="display-font text-[2.2rem] leading-none text-white sm:text-[2.75rem]">
           학생 문제 제출
         </h1>
-        <p className="text-sm leading-6 text-[color:var(--foreground-muted)] sm:text-base">
-          학생들에게 아래 제출 코드 또는 QR 코드를 안내해 주세요.
+        {/* 안내 문구를 제거하되, 헤더 아래 여백은 그대로 유지한다(한 줄 높이). */}
+        <p className="text-sm leading-6 sm:text-base" aria-hidden="true">
+          &nbsp;
         </p>
       </div>
 

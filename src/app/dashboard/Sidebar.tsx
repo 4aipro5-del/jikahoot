@@ -1,5 +1,7 @@
 "use client";
 
+import BrandMark from "@/components/BrandMark";
+
 export type DashboardTab = "dashboard" | "approval" | "game" | "settings";
 
 const NAV_ITEMS: {
@@ -63,12 +65,8 @@ export default function Sidebar({
   return (
     <aside className="flex w-full flex-col gap-1 border-white/10 bg-[var(--surface)] p-4 lg:h-screen lg:w-64 lg:flex-none lg:border-r lg:p-5">
       <div className="mb-4 flex items-center gap-2 px-2 lg:mb-8">
-        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--primary)] to-[#7b5cff] text-white">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 2c.7 3.9 2.4 6.4 6 8-3.6 1.6-5.3 4.1-6 8-.7-3.9-2.4-6.4-6-8 3.6-1.6 5.3-4.1 6-8Z" />
-          </svg>
-        </span>
-        <span className="display-font text-lg text-white">Jikahoot</span>
+        <BrandMark className="h-8 w-8 flex-none" />
+        <span className="brand-wordmark text-lg text-white">JIHOOT</span>
       </div>
 
       <nav className="flex flex-row gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">

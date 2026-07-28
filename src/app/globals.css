@@ -164,6 +164,13 @@ button:disabled {
   text-wrap: balance;
 }
 
+/* JIHOOT 워드마크 전용: Sora ExtraBold(800) + 약간의 자간으로 로고 느낌. */
+.brand-wordmark {
+  font-family: var(--font-sora), var(--font-pretendard), sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
 .balance-wrap {
   word-break: keep-all;
   text-wrap: balance;

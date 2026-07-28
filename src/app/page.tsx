@@ -14,6 +14,7 @@ import {
 import { gameExists } from "@/lib/firestore/games";
 import { resolveRoomCode } from "@/lib/firestore/roomCodes";
 import StageSkeleton from "@/components/StageSkeleton";
+import BrandMark from "@/components/BrandMark";
 
 export default function Home() {
   return (
@@ -141,12 +142,8 @@ function HomePortal() {
         <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-10">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--primary)] to-[#7b5cff] text-white">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M12 2c.7 3.9 2.4 6.4 6 8-3.6 1.6-5.3 4.1-6 8-.7-3.9-2.4-6.4-6-8 3.6-1.6 5.3-4.1 6-8Z" />
-                </svg>
-              </span>
-              <span className="display-font text-2xl text-white">Jikahoot</span>
+              <BrandMark className="h-9 w-9 flex-none" />
+              <span className="brand-wordmark text-2xl text-white">JIHOOT</span>
             </div>
 
             <div className="flex flex-col items-end gap-2">
