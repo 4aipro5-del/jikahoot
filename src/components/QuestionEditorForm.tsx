@@ -34,6 +34,7 @@ export default function QuestionEditorForm({
   variant = "light",
   className = "",
   hideTitle = false,
+  twoColumnChoices = false,
 }: {
   title: string;
   submitLabel: string;
@@ -42,6 +43,8 @@ export default function QuestionEditorForm({
   variant?: "light" | "dark";
   className?: string;
   hideTitle?: boolean;
+  // 넓은 화면에서 선택지를 2×2로 배치(학생 제출 화면용). 좁은 화면에선 세로 스택.
+  twoColumnChoices?: boolean;
 }) {
   const isDark = variant === "dark";
   // one radio group per form instance so the "정답" radios single-select
@@ -182,7 +185,7 @@ export default function QuestionEditorForm({
               Choices
             </span>
             <p className={`mt-1 text-xs font-semibold ${isDark ? "text-white/55" : "text-[rgba(38,18,87,0.55)]"}`}>
-              정답이 될 선택지를 눌러주세요.
+              정답이 될 선택지를 눌러주세요. 휴지통 버튼을 누르면 선택지를 삭제할 수 있어요.
             </p>
           </div>
 
@@ -201,7 +204,7 @@ export default function QuestionEditorForm({
           )}
         </div>
 
-        <div className="grid gap-3">
+        <div className={`grid gap-3 ${twoColumnChoices ? "sm:grid-cols-2" : ""}`}>
           {choiceTexts.map((choice, index) => {
             const theme = CHOICE_THEMES[index % CHOICE_THEMES.length];
             const isCorrect = correctIndex === index;
@@ -316,7 +319,7 @@ export default function QuestionEditorForm({
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <button type="submit" disabled={submitting} className="primary-button">
           {submitting ? "저장 중..." : submitLabel}
         </button>
