@@ -7,35 +7,8 @@ import { signInStudentAnonymously } from "@/lib/firebase/auth";
 import { getRoomCodeInfo, subscribeToRoomCode } from "@/lib/firestore/roomCodes";
 import { submitStudentQuestion } from "@/lib/firestore/questions";
 import StageSkeleton from "@/components/StageSkeleton";
-
-// Small line/solid icons used only by the submission entry screen below.
-function IconSparkle({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 2l1.9 6.6a2 2 0 0 0 1.5 1.5L22 12l-6.6 1.9a2 2 0 0 0-1.5 1.5L12 22l-1.9-6.6a2 2 0 0 0-1.5-1.5L2 12l6.6-1.9a2 2 0 0 0 1.5-1.5z" />
-    </svg>
-  );
-}
-
-function IconHash() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-      <line x1="4.5" y1="9" x2="19.5" y2="9" />
-      <line x1="4" y1="15" x2="19" y2="15" />
-      <line x1="10.5" y1="3.5" x2="8" y2="20.5" />
-      <line x1="16" y1="3.5" x2="13.5" y2="20.5" />
-    </svg>
-  );
-}
-
-function IconPerson() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 21v-1.5a5 5 0 0 0-5-5H9a5 5 0 0 0-5 5V21" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
+import StudentJoinScreen from "@/components/StudentJoinScreen";
+import { IconShield } from "@/components/student-ui";
 
 type Step =
   | { kind: "join" }
@@ -220,99 +193,32 @@ function SubmitPageContent() {
   }
 
   return (
-    <div className="stage-shell">
-      {/* playful floating shapes — purely decorative, never intercept clicks */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 select-none overflow-hidden">
-        <span className="absolute right-[8%] top-[12%] text-[var(--accent)]">
-          <IconSparkle size={26} />
-        </span>
-        <span className="absolute right-[19%] top-[17%] hidden h-5 w-5 rotate-45 rounded-[6px] bg-[var(--primary)] sm:block" />
-        <span className="absolute bottom-[26%] left-[9%] hidden h-6 w-6 rotate-12 rounded-[8px] bg-[var(--warning)] sm:block" />
-        <span className="absolute bottom-[13%] left-[27%] text-[var(--primary)]">
-          <IconSparkle size={20} />
-        </span>
-        <span className="absolute bottom-[11%] right-[10%] hidden h-5 w-5 -rotate-12 rounded-[6px] bg-[var(--error)] sm:block" />
-      </div>
-
-      <div className="stage-content flex min-h-screen items-center justify-center py-8">
-        <div className="grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-16">
-          {/* left: concise intro only */}
-          <div className="flex flex-col justify-center gap-5">
-            <span className="hero-chip inline-flex items-center gap-2 self-start">
-              <IconSparkle size={16} />
-              Student Submission
-            </span>
-            <h1 className="display-font text-5xl leading-[1.05] text-white sm:text-6xl lg:text-7xl">
-              우리 반 퀴즈
-              <br />
-              직접 <span className="text-[var(--accent)]">출제하기</span>
-            </h1>
-            <p className="max-w-md text-base leading-7 text-[color:var(--foreground-muted)] sm:text-lg">
-              선생님이 알려준 방 코드를 입력하고
-              <br className="hidden sm:block" /> 문제를 제출해보세요.
-            </p>
-          </div>
-
-          {/* right: input card only */}
-          <div className="w-full">
-            <section className="rounded-[28px] border border-white/10 bg-[var(--surface)] p-7 shadow-[var(--shadow-soft)] sm:p-9">
-              <form onSubmit={handleJoin} className="flex flex-col gap-6">
-                <label className="flex flex-col gap-2.5">
-                  <span className="text-[0.95rem] font-bold text-white/90">방 코드</span>
-                  <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 transition focus-within:border-[rgba(244,186,71,0.55)] focus-within:ring-4 focus-within:ring-[rgba(244,186,71,0.16)]">
-                    <span className="shrink-0 text-white/35">
-                      <IconHash />
-                    </span>
-                    <input
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
-                      placeholder="예) ABC123"
-                      maxLength={6}
-                      className="min-h-[3.6rem] w-full bg-transparent text-base font-bold uppercase tracking-wide text-white placeholder:font-medium placeholder:normal-case placeholder:tracking-normal placeholder:text-white/35 focus:outline-none"
-                    />
-                  </div>
-                </label>
-
-                <label className="flex flex-col gap-2.5">
-                  <span className="text-[0.95rem] font-bold text-white/90">이름</span>
-                  <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 transition focus-within:border-[rgba(244,186,71,0.55)] focus-within:ring-4 focus-within:ring-[rgba(244,186,71,0.16)]">
-                    <span className="shrink-0 text-white/35">
-                      <IconPerson />
-                    </span>
-                    <input
-                      value={nickname}
-                      onChange={(e) => setNickname(e.target.value)}
-                      placeholder="이름을 입력하세요"
-                      className="min-h-[3.6rem] w-full bg-transparent text-base font-bold text-white placeholder:font-medium placeholder:text-white/35 focus:outline-none"
-                    />
-                  </div>
-                </label>
-
-                {error && (
-                  <p className="status-banner" data-tone="error">
-                    {error}
-                  </p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={joining}
-                  className="mt-1 inline-flex min-h-[3.9rem] w-full items-center justify-center gap-3 rounded-2xl bg-[var(--warning)] px-6 text-xl font-black text-[var(--panel-text)] shadow-[0_8px_0_var(--warning-dark)] transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-1 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {joining ? (
-                    "입장 중..."
-                  ) : (
-                    <>
-                      시작하기
-                      <span aria-hidden="true">→</span>
-                    </>
-                  )}
-                </button>
-              </form>
-            </section>
-          </div>
-        </div>
-      </div>
-    </div>
+    <StudentJoinScreen
+      accent="create"
+      eyebrow="Create"
+      eyebrowIcon={
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 20h9" />
+          <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+        </svg>
+      }
+      titleTop="우리 반 퀴즈"
+      titleAccent="만들기"
+      description="방 코드를 입력하고 우리 반 퀴즈를 만들어보세요."
+      codeLabel="방 코드"
+      codePlaceholder="선생님이 알려주신 방 코드 6자리를 입력하세요."
+      code={code}
+      onCodeChange={setCode}
+      nickname={nickname}
+      onNicknameChange={setNickname}
+      onSubmit={handleJoin}
+      submitting={joining}
+      submitLabel="GO"
+      submitTextClassName="text-4xl"
+      error={error}
+      noteIcon={<IconShield />}
+      noteTitle="제출한 퀴즈는 선생님 확인 후 사용됩니다."
+      noteMuted
+    />
   );
 }
