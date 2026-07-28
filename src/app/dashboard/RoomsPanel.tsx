@@ -157,8 +157,7 @@ export default function RoomsPanel({
                   </button>
                 )}
 
-                {!isGuest && (
-                  <div className="relative">
+                <div className="relative">
                     <button
                       type="button"
                       aria-label="방 메뉴"
@@ -200,7 +199,6 @@ export default function RoomsPanel({
                       </>
                     )}
                   </div>
-                )}
               </div>
             </div>
           );
