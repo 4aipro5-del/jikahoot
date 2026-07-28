@@ -1,12 +1,20 @@
-import { doc, getDoc, onSnapshot, runTransaction, serverTimestamp, setDoc, updateDoc, type Timestamp } from 'firebase/firestore'
-import type { User } from 'firebase/auth'
+import {
+  doc,
+  getDoc,
+  onSnapshot,
+  runTransaction,
+  serverTimestamp,
+  updateDoc,
+  type Timestamp,
+} from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
-import type { Room } from '@/types/firestore'
+import type { Room, RoomWithId } from '@/types/firestore'
 
 // no 0/O/1/I/L — easy to read aloud and type on a Chromebook
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const ROOM_CODE_LENGTH = 6
 const MAX_ATTEMPTS = 5
+const DEFAULT_ROOM_NAME = '기본 방'
 
 function generateRoomCode(): string {
   let code = ''
@@ -16,39 +24,66 @@ function generateRoomCode(): string {
   return code
 }
 
-// Creates rooms/{teacherUid} + a matching roomCodes/{code} reservation on first
-// login; returns the existing room untouched on every login after that.
-export async function ensureRoom(user: User): Promise<Room> {
-  const roomRef = doc(db, 'rooms', user.uid)
-  const existing = await getDoc(roomRef)
-  if (existing.exists()) {
-    return existing.data() as Room
+function attachId(roomId: string, data: Room): RoomWithId {
+  return { roomId, ...data }
+}
+
+// A teacher's PRIMARY room lives at rooms/{ownerUid} (doc id == uid). This keeps
+// guests (anon uid) and pre-multi-room rooms working, and makes migration a
+// no-op move — additional rooms (a later phase) use random ids with the same
+// ownerUid field. Rooms are queried by ownerUid, never by doc id.
+
+// Pre-multi-room rooms predate ownerUid/name (and stored the teacher profile,
+// which now lives in Firebase Auth). Backfill the room-scoped fields lazily so
+// multi-room queries/labels work; the leftover profile fields are simply
+// ignored from here on. Runs at most once per room (no-op after backfill).
+async function migrateLegacyRoom(roomId: string, data: Record<string, unknown>): Promise<Room> {
+  const patch: Record<string, unknown> = {}
+  if (data.ownerUid == null) patch.ownerUid = roomId
+  if (data.name == null) patch.name = DEFAULT_ROOM_NAME
+  if (Object.keys(patch).length > 0) {
+    await updateDoc(doc(db, 'rooms', roomId), patch)
   }
+  return { ...data, ...patch } as unknown as Room
+}
+
+export async function getPrimaryRoom(ownerUid: string): Promise<RoomWithId | null> {
+  const snap = await getDoc(doc(db, 'rooms', ownerUid))
+  if (!snap.exists()) return null
+  const data = await migrateLegacyRoom(ownerUid, snap.data() as Record<string, unknown>)
+  return attachId(ownerUid, data)
+}
+
+// Ensures the teacher's primary room (+ a matching roomCodes reservation) exists
+// on first login; returns the existing room untouched afterwards.
+export async function ensurePrimaryRoom(ownerUid: string): Promise<RoomWithId> {
+  const existing = await getPrimaryRoom(ownerUid)
+  if (existing) return existing
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const code = generateRoomCode()
     const codeRef = doc(db, 'roomCodes', code)
 
     try {
-      return await runTransaction(db, async (tx) => {
+      const room = await runTransaction(db, async (tx) => {
         const codeSnap = await tx.get(codeRef)
         if (codeSnap.exists()) {
           throw new Error('ROOM_CODE_TAKEN')
         }
 
-        const room: Room = {
-          teacherUid: user.uid,
-          displayName: user.displayName ?? '',
-          email: user.email ?? '',
-          photoUrl: user.photoURL ?? null,
+        const newRoom: Room = {
+          ownerUid,
+          name: DEFAULT_ROOM_NAME,
           roomCode: code,
           createdAt: serverTimestamp() as unknown as Timestamp,
         }
-
-        tx.set(roomRef, room)
-        tx.set(codeRef, { teacherUid: user.uid })
-        return room
+        tx.set(doc(db, 'rooms', ownerUid), newRoom)
+        // teacherUid (owner) keeps the roomCodes rules uid-based; roomId is the
+        // room the code points at (equals ownerUid for a primary room).
+        tx.set(codeRef, { teacherUid: ownerUid, roomId: ownerUid })
+        return newRoom
       })
+      return attachId(ownerUid, room)
     } catch (err) {
       if (err instanceof Error && err.message === 'ROOM_CODE_TAKEN') continue
       throw err
@@ -58,37 +93,27 @@ export async function ensureRoom(user: User): Promise<Room> {
   throw new Error('방 코드를 생성하지 못했습니다. 다시 시도해 주세요.')
 }
 
-export async function getRoomByTeacherUid(teacherUid: string): Promise<Room | null> {
-  const roomSnap = await getDoc(doc(db, 'rooms', teacherUid))
-  return roomSnap.exists() ? (roomSnap.data() as Room) : null
-}
-
-export function subscribeToRoom(teacherUid: string, callback: (room: Room | null) => void) {
-  return onSnapshot(doc(db, 'rooms', teacherUid), (snap) => {
-    callback(snap.exists() ? (snap.data() as Room) : null)
+export function subscribeToRoom(roomId: string, callback: (room: RoomWithId | null) => void) {
+  return onSnapshot(doc(db, 'rooms', roomId), (snap) => {
+    callback(snap.exists() ? attachId(roomId, snap.data() as Room) : null)
   })
 }
 
-// Settings tab writes: persist any subset of the teacher-configurable Room
-// fields (display name, game defaults, avatar pref). 학생 제출 여부는 여기가
-// 아니라 roomCodes.submissionOpen 으로 제어한다.
+// Settings tab writes: persist any subset of the room-configurable fields (name,
+// game defaults). 학생 제출 여부는 여기가 아니라 roomCodes.submissionOpen 으로 제어한다.
 export function updateRoomSettings(
-  teacherUid: string,
-  patch: Partial<
-    Pick<Room, 'displayName' | 'useGooglePhoto' | 'defaultQuestionDurationSec' | 'autoAdvance'>
-  >,
+  roomId: string,
+  patch: Partial<Pick<Room, 'name' | 'defaultQuestionDurationSec' | 'autoAdvance'>>,
 ) {
-  return updateDoc(doc(db, 'rooms', teacherUid), patch)
+  return updateDoc(doc(db, 'rooms', roomId), patch)
 }
 
 // explicit "다시 시작": dismisses the finished game so the next startGame call
-// doesn't try to reuse it, and other sessions viewing this room see it as idle
-// 방의 현재 게임 연결을 해제한다. 단, 방이 "여전히 이 게임(gameCode)"을 가리킬
-// 때만 지운다. 오래된 결과 탭을 열어두거나 그새 새 게임이 시작된 상황에서
-// 호출되어도, 새로 진행 중인 게임 링크를 실수로 덮어쓰지 않도록 트랜잭션으로
-// 현재 값을 확인한다.
-export function clearCurrentGame(teacherUid: string, gameCode: string) {
-  const roomRef = doc(db, 'rooms', teacherUid)
+// doesn't try to reuse it. Only clears the pointer when the room STILL points at
+// this game — so an old results tab (or one opened after a newer game started)
+// can't wipe the live session's link.
+export function clearCurrentGame(roomId: string, gameCode: string) {
+  const roomRef = doc(db, 'rooms', roomId)
   return runTransaction(db, async (tx) => {
     const snap = await tx.get(roomRef)
     if (!snap.exists()) return
@@ -98,36 +123,4 @@ export function clearCurrentGame(teacherUid: string, gameCode: string) {
       currentGameStatus: null,
     })
   })
-}
-
-export async function syncRoomProfile(user: User): Promise<Room> {
-  const existing = await getRoomByTeacherUid(user.uid)
-  if (!existing) {
-    return ensureRoom(user)
-  }
-
-  const nextProfile = {
-    displayName: user.displayName ?? '',
-    email: user.email ?? '',
-    photoUrl: user.photoURL ?? null,
-  }
-
-  if (
-    existing.displayName === nextProfile.displayName &&
-    existing.email === nextProfile.email &&
-    existing.photoUrl === nextProfile.photoUrl
-  ) {
-    return existing
-  }
-
-  await setDoc(
-    doc(db, 'rooms', user.uid),
-    nextProfile,
-    { merge: true },
-  )
-
-  return {
-    ...existing,
-    ...nextProfile,
-  }
 }

@@ -15,8 +15,8 @@ import type { Choice, Question } from '@/types/firestore'
 
 export type QuestionWithId = Question & { id: string }
 
-function questionBankRef(teacherUid: string) {
-  return collection(db, 'rooms', teacherUid, 'questionBank')
+function questionBankRef(roomId: string) {
+  return collection(db, 'rooms', roomId, 'questionBank')
 }
 
 export function buildChoices(texts: string[]): Choice[] {
@@ -24,20 +24,20 @@ export function buildChoices(texts: string[]): Choice[] {
 }
 
 export function subscribeToQuestionBank(
-  teacherUid: string,
+  roomId: string,
   callback: (questions: QuestionWithId[]) => void,
 ) {
-  const q = query(questionBankRef(teacherUid), orderBy('createdAt', 'desc'))
+  const q = query(questionBankRef(roomId), orderBy('createdAt', 'desc'))
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Question) })))
   })
 }
 
 export function createTeacherQuestion(
-  teacherUid: string,
+  roomId: string,
   input: { text: string; choices: Choice[]; correctChoiceId: string },
 ) {
-  return addDoc(questionBankRef(teacherUid), {
+  return addDoc(questionBankRef(roomId), {
     text: input.text,
     choices: input.choices,
     correctChoiceId: input.correctChoiceId,
@@ -51,7 +51,7 @@ export function createTeacherQuestion(
 }
 
 export function submitStudentQuestion(
-  teacherUid: string,
+  roomId: string,
   input: {
     text: string
     choices: Choice[]
@@ -60,7 +60,7 @@ export function submitStudentQuestion(
     authorNickname: string
   },
 ) {
-  return addDoc(questionBankRef(teacherUid), {
+  return addDoc(questionBankRef(roomId), {
     text: input.text,
     choices: input.choices,
     correctChoiceId: input.correctChoiceId,
@@ -74,26 +74,26 @@ export function submitStudentQuestion(
 }
 
 export function updateQuestion(
-  teacherUid: string,
+  roomId: string,
   questionId: string,
   patch: Partial<Pick<Question, 'text' | 'choices' | 'correctChoiceId'>>,
 ) {
-  return updateDoc(doc(db, 'rooms', teacherUid, 'questionBank', questionId), patch)
+  return updateDoc(doc(db, 'rooms', roomId, 'questionBank', questionId), patch)
 }
 
-export function deleteQuestion(teacherUid: string, questionId: string) {
-  return deleteDoc(doc(db, 'rooms', teacherUid, 'questionBank', questionId))
+export function deleteQuestion(roomId: string, questionId: string) {
+  return deleteDoc(doc(db, 'rooms', roomId, 'questionBank', questionId))
 }
 
-export function approveQuestion(teacherUid: string, questionId: string) {
-  return updateDoc(doc(db, 'rooms', teacherUid, 'questionBank', questionId), {
+export function approveQuestion(roomId: string, questionId: string) {
+  return updateDoc(doc(db, 'rooms', roomId, 'questionBank', questionId), {
     status: 'approved',
     reviewedAt: serverTimestamp(),
   })
 }
 
-export function rejectQuestion(teacherUid: string, questionId: string) {
-  return updateDoc(doc(db, 'rooms', teacherUid, 'questionBank', questionId), {
+export function rejectQuestion(roomId: string, questionId: string) {
+  return updateDoc(doc(db, 'rooms', roomId, 'questionBank', questionId), {
     status: 'rejected',
     reviewedAt: serverTimestamp(),
   })
@@ -102,12 +102,12 @@ export function rejectQuestion(teacherUid: string, questionId: string) {
 // only the room owner can read questionBank, so this only ever runs on the
 // host client to know what counts as correct while grading a live game
 export async function getCorrectChoiceMap(
-  teacherUid: string,
+  roomId: string,
   questionIds: string[],
 ): Promise<Record<string, string>> {
   const entries = await Promise.all(
     questionIds.map(async (id) => {
-      const snap = await getDoc(doc(db, 'rooms', teacherUid, 'questionBank', id))
+      const snap = await getDoc(doc(db, 'rooms', roomId, 'questionBank', id))
       return [id, (snap.data() as Question).correctChoiceId] as const
     }),
   )

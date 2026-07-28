@@ -3,8 +3,7 @@
 import { useState } from "react";
 import type { User } from "firebase/auth";
 import { clearGuestTeacher, linkTeacherWithGoogle } from "@/lib/firebase/auth";
-import { syncRoomProfile } from "@/lib/firestore/rooms";
-import type { Room } from "@/types/firestore";
+import type { RoomWithId } from "@/types/firestore";
 
 // Teacher-side settings are wired: display name / answer time / auto-advance /
 // Google-photo toggle all persist to the Room doc (via the handlers passed from
@@ -18,12 +17,13 @@ export default function SettingsPanel({
   onUpdateSettings,
   onUpdateDisplayName,
 }: {
-  room: Room;
+  room: RoomWithId;
   user: User;
-  onUpdateSettings: (patch: Partial<Room>) => Promise<void>;
+  onUpdateSettings: (patch: Partial<RoomWithId>) => Promise<void>;
   onUpdateDisplayName: (name: string) => Promise<void>;
 }) {
-  const [nameInput, setNameInput] = useState(room.displayName);
+  const currentName = user.displayName?.trim() ?? "";
+  const [nameInput, setNameInput] = useState(currentName);
   const [savingName, setSavingName] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [upgrading, setUpgrading] = useState(false);
@@ -33,7 +33,7 @@ export default function SettingsPanel({
   const answerTime = room.defaultQuestionDurationSec ?? 20;
   const autoAdvance = room.autoAdvance ?? true;
 
-  const nameChanged = nameInput.trim() !== room.displayName && nameInput.trim().length > 0;
+  const nameChanged = nameInput.trim() !== currentName && nameInput.trim().length > 0;
 
   // 게스트(익명) → 영구 구글 계정. linkWithPopup은 uid를 유지해 방/문제/게임이
   // 그대로 승계된다. 구글 프로필을 방에 동기화하고 게스트 마커를 지운 뒤 새로고침.
@@ -42,8 +42,10 @@ export default function SettingsPanel({
     setUpgradeError(null);
     setUpgrading(true);
     try {
-      const cred = await linkTeacherWithGoogle(user);
-      await syncRoomProfile(cred.user);
+      await linkTeacherWithGoogle(user);
+      // profile now comes straight from Firebase Auth (the linked Google
+      // account), so there's nothing to sync into Firestore — just drop the
+      // guest marker and reload to reflect the upgraded account.
       clearGuestTeacher();
       window.location.reload();
     } catch (err) {
@@ -65,7 +67,7 @@ export default function SettingsPanel({
     }
   }
 
-  async function save(patch: Partial<Room>) {
+  async function save(patch: Partial<RoomWithId>) {
     setError(null);
     try {
       await onUpdateSettings(patch);

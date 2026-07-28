@@ -8,9 +8,9 @@ import {
   subscribeToAuthState,
   updateTeacherDisplayName,
 } from "@/lib/firebase/auth";
-import { getRoomByTeacherUid, syncRoomProfile, updateRoomSettings } from "@/lib/firestore/rooms";
+import { ensurePrimaryRoom, updateRoomSettings } from "@/lib/firestore/rooms";
 import { subscribeToQuestionBank, type QuestionWithId } from "@/lib/firestore/questions";
-import type { Room } from "@/types/firestore";
+import type { RoomWithId } from "@/types/firestore";
 import AccountMenu from "./AccountMenu";
 import DashboardHome from "./DashboardHome";
 import Drawer from "./Drawer";
@@ -24,7 +24,10 @@ import StageSkeleton from "@/components/StageSkeleton";
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null | undefined>(undefined);
-  const [room, setRoom] = useState<Room | null>(null);
+  const [room, setRoom] = useState<RoomWithId | null>(null);
+  // bumped after a display-name change to re-render children that read the
+  // (mutated-in-place) Firebase Auth user.displayName
+  const [, bumpProfile] = useState(0);
   const [checkedProfile, setCheckedProfile] = useState(false);
   const [needsDisplayName, setNeedsDisplayName] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState("");
@@ -50,7 +53,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!room) return;
-    return subscribeToQuestionBank(room.teacherUid, setQuestions);
+    return subscribeToQuestionBank(room.roomId, setQuestions);
   }, [room]);
 
   useEffect(() => {
@@ -71,16 +74,17 @@ export default function DashboardPage() {
       setRoom(null);
 
       try {
-        const existingRoom = await getRoomByTeacherUid(currentUser.uid);
-        if (!active) return;
-
-        if (existingRoom?.displayName.trim()) {
-          setRoom(existingRoom);
+        // profile (name) now lives in Firebase Auth — a teacher without a
+        // display name (fresh guest) sets it first, then we ensure their room.
+        if (!currentUser.displayName?.trim()) {
+          setDisplayNameInput("");
+          setNeedsDisplayName(true);
           return;
         }
 
-        setDisplayNameInput("");
-        setNeedsDisplayName(true);
+        const room = await ensurePrimaryRoom(currentUser.uid);
+        if (!active) return;
+        setRoom(room);
       } catch (err) {
         if (!active) return;
         setError(err instanceof Error ? err.message : "방 정보를 불러오지 못했습니다.");
@@ -113,7 +117,7 @@ export default function DashboardPage() {
 
     try {
       await updateTeacherDisplayName(user, trimmedName);
-      const nextRoom = await syncRoomProfile(user);
+      const nextRoom = await ensurePrimaryRoom(user.uid);
       setRoom(nextRoom);
       setNeedsDisplayName(false);
     } catch (err) {
@@ -126,17 +130,18 @@ export default function DashboardPage() {
   // Settings tab writes: persist to the Room doc, then optimistically fold the
   // change into local state so the greeting/account-menu/game defaults reflect
   // it immediately (the room is loaded once, not subscribed).
-  async function handleUpdateSettings(patch: Partial<Room>) {
+  async function handleUpdateSettings(patch: Partial<RoomWithId>) {
     if (!room) return;
-    await updateRoomSettings(room.teacherUid, patch);
+    await updateRoomSettings(room.roomId, patch);
     setRoom({ ...room, ...patch });
   }
 
   async function handleUpdateDisplayName(name: string) {
-    if (!user || !room) return;
+    if (!user) return;
+    // display name lives in Firebase Auth now; updateProfile mutates the current
+    // user in place, so bump a tick to re-render children that read it.
     await updateTeacherDisplayName(user, name);
-    await updateRoomSettings(room.teacherUid, { displayName: name });
-    setRoom({ ...room, displayName: name });
+    bumpProfile((v) => v + 1);
   }
 
   if (user && needsDisplayName) {
@@ -224,12 +229,12 @@ export default function DashboardPage() {
 
       <main className="min-w-0 flex-1 px-5 py-6 sm:px-8 sm:py-8 lg:px-10">
         <div className="mb-6 flex justify-end">
-          <AccountMenu room={room} user={user} />
+          <AccountMenu user={user} />
         </div>
 
         {tab === "dashboard" && (
           <DashboardHome
-            room={room}
+            displayName={user.displayName?.trim() || "선생님"}
             questions={questions}
             onViewApprovals={() => setTab("approval")}
           />
@@ -237,14 +242,16 @@ export default function DashboardPage() {
 
         {tab === "approval" && (
           <QuestionList
-            teacherUid={room.teacherUid}
+            roomId={room.roomId}
             questions={questions}
             onNewQuestion={() => setIsNewQuestionOpen(true)}
             onReceiveStudentQuestions={openSubmissionsWindow}
           />
         )}
 
-        {tab === "game" && <GameTab teacherUid={room.teacherUid} questions={questions} />}
+        {tab === "game" && (
+          <GameTab roomId={room.roomId} ownerUid={room.ownerUid} questions={questions} />
+        )}
         {tab === "settings" && (
           <SettingsPanel
             room={room}
@@ -256,7 +263,7 @@ export default function DashboardPage() {
       </main>
 
       <Drawer open={isNewQuestionOpen} onClose={() => setIsNewQuestionOpen(false)} title="새 문제 만들기">
-        <QuestionForm teacherUid={room.teacherUid} />
+        <QuestionForm roomId={room.roomId} />
       </Drawer>
     </div>
   );

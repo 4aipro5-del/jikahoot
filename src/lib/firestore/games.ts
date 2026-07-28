@@ -58,12 +58,13 @@ function shuffleChoicesForGame(questions: PublicQuestion[]): PublicQuestion[] {
 // returned instead of creating a duplicate — this is what makes a reload, a
 // double-click, or a second tab all converge on the same live session.
 export async function createGame(
-  teacherUid: string,
+  roomId: string,
+  ownerUid: string,
   questions: PublicQuestion[],
   questionDurationSec: number,
   autoAdvance: boolean,
 ): Promise<string> {
-  const roomRef = doc(db, 'rooms', teacherUid)
+  const roomRef = doc(db, 'rooms', roomId)
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const code = generateGameCode()
@@ -88,7 +89,8 @@ export async function createGame(
 
         const shuffledQuestions = shuffleChoicesForGame(questions)
         const game: Game = {
-          teacherUid,
+          teacherUid: ownerUid,
+          roomId,
           status: 'lobby',
           questions: shuffledQuestions,
           currentQuestionIndex: -1,
@@ -270,11 +272,15 @@ export async function finishGame(gameCode: string) {
     if (!snap.exists()) return
     const game = snap.data() as Game
 
+    // the current-game pointer lives on the room (roomId); legacy games predate
+    // the roomId field, where roomId == teacherUid for the primary room.
+    const roomId = game.roomId ?? game.teacherUid
+
     tx.update(gameRef, {
       status: 'finished',
       endedAt: serverTimestamp(),
     })
-    tx.update(doc(db, 'rooms', game.teacherUid), {
+    tx.update(doc(db, 'rooms', roomId), {
       currentGameStatus: 'finished',
     })
   })

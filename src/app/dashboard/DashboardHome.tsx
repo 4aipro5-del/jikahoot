@@ -1,7 +1,6 @@
 "use client";
 
 import type { QuestionWithId } from "@/lib/firestore/questions";
-import type { Room } from "@/types/firestore";
 import RecentQuestionsPreview from "./RecentQuestionsPreview";
 
 // Inline SVGs keep the dashboard self-contained (no icon dependency) while
@@ -50,11 +49,11 @@ const ExternalIcon = (
 );
 
 export default function DashboardHome({
-  room,
+  displayName,
   questions,
   onViewApprovals,
 }: {
-  room: Room;
+  displayName: string;
   questions: QuestionWithId[];
   onViewApprovals: () => void;
 }) {
@@ -68,7 +67,7 @@ export default function DashboardHome({
           <p className="hero-chip">Dashboard</p>
           <h1 className="display-font text-4xl text-white sm:text-[2.75rem]">
             안녕하세요,
-            <br className="sm:hidden" /> {room.displayName} 선생님 👋
+            <br className="sm:hidden" /> {displayName} 선생님 👋
           </h1>
           <p className="text-base text-[color:var(--foreground-muted)]">
             오늘도 멋진 퀴즈를 만들어보세요.
