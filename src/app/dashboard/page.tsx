@@ -304,9 +304,10 @@ export default function DashboardPage() {
     <div className="flex min-h-screen w-full flex-col bg-[var(--background)] lg:flex-row">
       <Sidebar active={tab} onSelect={selectTab} pendingCount={pendingCount} />
 
-      <main className="relative min-w-0 flex-1 px-5 pb-6 pt-14 sm:px-8 sm:pb-8 sm:pt-16 lg:px-10">
-        {/* 프로필: 레이아웃을 밀지 않도록 우측 상단에 absolute로 띄운다 */}
-        <div className="absolute right-5 top-6 z-20 sm:right-8 sm:top-8 lg:right-10">
+      <main className="min-w-0 flex-1 px-5 pb-6 pt-6 sm:px-8 sm:pb-8 sm:pt-8 lg:px-10">
+        {/* 프로필: 전용 행으로 세로 공간을 예약해 헤더와 겹치지 않게 한다
+            (absolute로 띄우면 좁은 화면에서 hero-chip/제목을 덮음) */}
+        <div className="mb-4 flex min-w-0 justify-end">
           <AccountMenu user={user} />
         </div>
 
