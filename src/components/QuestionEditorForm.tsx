@@ -204,7 +204,7 @@ export default function QuestionEditorForm({
           )}
         </div>
 
-        <div className={`grid gap-3 ${twoColumnChoices ? "sm:grid-cols-2" : ""}`}>
+        <div className={`grid gap-3 ${twoColumnChoices ? "lg:grid-cols-2" : ""}`}>
           {choiceTexts.map((choice, index) => {
             const theme = CHOICE_THEMES[index % CHOICE_THEMES.length];
             const isCorrect = correctIndex === index;
