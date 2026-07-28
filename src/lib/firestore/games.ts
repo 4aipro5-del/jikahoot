@@ -275,14 +275,21 @@ export async function finishGame(gameCode: string) {
     // the current-game pointer lives on the room (roomId); legacy games predate
     // the roomId field, where roomId == teacherUid for the primary room.
     const roomId = game.roomId ?? game.teacherUid
+    const roomRef = doc(db, 'rooms', roomId)
+    // the room may have been deleted while this game was still open — read it
+    // first (all tx reads precede writes) and only touch it if it still exists,
+    // so finishing the game never fails on a tx.update against a missing room.
+    const roomSnap = await tx.get(roomRef)
 
     tx.update(gameRef, {
       status: 'finished',
       endedAt: serverTimestamp(),
     })
-    tx.update(doc(db, 'rooms', roomId), {
-      currentGameStatus: 'finished',
-    })
+    if (roomSnap.exists()) {
+      tx.update(roomRef, {
+        currentGameStatus: 'finished',
+      })
+    }
   })
 }
 

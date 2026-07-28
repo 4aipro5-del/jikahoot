@@ -116,6 +116,10 @@ export default function RoomsPanel({
           const stats = statsByRoom[room.roomId];
           const status = roomStatus(stats);
           const dotColor = isSelected ? "var(--primary)" : status.color;
+          // a lobby/active game still points at this room — deleting it would
+          // strand that game (finishGame later can't update a missing room)
+          const hasLiveGame = Boolean(room.currentGameId) && room.currentGameStatus !== "finished";
+          const deleteDisabled = rooms.length <= 1 || hasLiveGame;
           return (
             <div
               key={room.roomId}
@@ -189,8 +193,14 @@ export default function RoomsPanel({
                           <button
                             type="button"
                             onClick={() => openDelete(room)}
-                            disabled={rooms.length <= 1}
-                            title={rooms.length <= 1 ? "마지막 방은 삭제할 수 없어요." : undefined}
+                            disabled={deleteDisabled}
+                            title={
+                              rooms.length <= 1
+                                ? "마지막 방은 삭제할 수 없어요."
+                                : hasLiveGame
+                                  ? "진행 중인 게임이 있는 방은 삭제할 수 없어요."
+                                  : undefined
+                            }
                             className="block w-full px-4 py-2.5 text-left text-sm font-bold text-[var(--error)] hover:bg-[var(--error-soft)] disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             삭제
