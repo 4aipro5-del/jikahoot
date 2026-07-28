@@ -177,13 +177,13 @@ export function StudentMascots() {
   return (
     <div className="flex items-end justify-center gap-3 sm:gap-5">
       {/* blue circle */}
-      <svg width="60" height="72" viewBox="0 0 28 34" aria-hidden="true">
+      <svg width="60" height="72" viewBox="0 0 28 34" aria-hidden="true" className="mascot-bob" style={{ animationDelay: "0ms" }}>
         <path d="M6 30 L6 26 M22 30 L22 26" stroke="var(--primary)" strokeWidth="2.4" strokeLinecap="round" />
         <circle cx="14" cy="14" r="13" fill="var(--primary)" />
         <MascotFace />
       </svg>
       {/* yellow triangle */}
-      <svg width="60" height="72" viewBox="0 0 28 34" aria-hidden="true">
+      <svg width="60" height="72" viewBox="0 0 28 34" aria-hidden="true" className="mascot-bob" style={{ animationDelay: "140ms" }}>
         <path d="M8 31 L8 27 M20 31 L20 27" stroke="var(--warning)" strokeWidth="2.4" strokeLinecap="round" />
         <path d="M14 1 L27 26 L1 26 Z" fill="var(--warning)" />
         <circle cx="10.5" cy="17" r="1.5" fill="#3a2a00" />
@@ -191,7 +191,7 @@ export function StudentMascots() {
         <path d="M11 20.5c1.4 1.4 4.6 1.4 6 0" stroke="#3a2a00" strokeWidth="1.7" fill="none" strokeLinecap="round" />
       </svg>
       {/* green square */}
-      <svg width="60" height="72" viewBox="0 0 28 34" aria-hidden="true">
+      <svg width="60" height="72" viewBox="0 0 28 34" aria-hidden="true" className="mascot-bob" style={{ animationDelay: "280ms" }}>
         <path d="M8 31 L8 27 M20 31 L20 27" stroke="var(--success)" strokeWidth="2.4" strokeLinecap="round" />
         <rect x="2" y="3" width="24" height="24" rx="6" fill="var(--success)" />
         <circle cx="10" cy="13" r="1.6" fill="#0c2c14" />
@@ -199,7 +199,7 @@ export function StudentMascots() {
         <path d="M10.5 17c1.6 1.8 5.4 1.8 7 0" stroke="#0c2c14" strokeWidth="1.8" fill="none" strokeLinecap="round" />
       </svg>
       {/* red diamond */}
-      <svg width="60" height="72" viewBox="0 0 28 34" aria-hidden="true">
+      <svg width="60" height="72" viewBox="0 0 28 34" aria-hidden="true" className="mascot-bob" style={{ animationDelay: "420ms" }}>
         <path d="M9 31 L9 28 M19 31 L19 28" stroke="var(--error)" strokeWidth="2.4" strokeLinecap="round" />
         <rect x="5" y="5" width="18" height="18" rx="4" transform="rotate(45 14 14)" fill="var(--error)" />
         <circle cx="10.5" cy="13" r="1.5" fill="#3a0d0a" />
