@@ -32,6 +32,9 @@ export default function SettingsPanel({
   const isGuest = user.isAnonymous;
   const answerTime = room.defaultQuestionDurationSec ?? 20;
   const autoAdvance = room.autoAdvance ?? true;
+  const useGooglePhoto = room.useGooglePhoto !== false;
+  const showPhoto = useGooglePhoto && Boolean(room.photoUrl);
+  const initial = (room.displayName.trim()[0] ?? "?").toUpperCase();
 
   const nameChanged = nameInput.trim() !== room.displayName && nameInput.trim().length > 0;
 
@@ -107,7 +110,7 @@ export default function SettingsPanel({
       <Section
         number={1}
         icon={
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 21a8 8 0 0 0-16 0" />
             <circle cx="12" cy="7" r="4" />
           </svg>
@@ -116,41 +119,92 @@ export default function SettingsPanel({
         description="계정 정보를 확인하고 프로필을 관리합니다."
       >
         <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
             {/* 표시 이름 + 저장 (좌측) */}
-            <div className="flex min-w-[240px] max-w-md flex-1 flex-col gap-1.5">
-              <span className="text-xs font-bold text-white/70">표시 이름</span>
-              <div className="flex">
+            <div className="flex min-w-[240px] max-w-md flex-1 flex-col gap-2">
+              <span className="text-base font-bold text-white/70">표시 이름</span>
+              <p className="text-sm text-[color:var(--foreground-muted)]">
+                학생 화면과 대시보드에 이 이름으로 표시됩니다.
+              </p>
+              <div className="mt-1 flex">
                 <input
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
                   maxLength={24}
-                  className="h-11 min-w-0 flex-1 rounded-l-xl border border-r-0 border-white/12 bg-white/5 px-4 text-sm font-semibold text-white outline-none focus:border-white/30"
+                  className="h-14 min-w-0 flex-1 rounded-l-xl border border-r-0 border-white/12 bg-white/5 px-5 text-lg font-semibold text-white outline-none focus:border-white/30"
                 />
                 <button
                   type="button"
                   onClick={saveName}
                   disabled={!nameChanged || savingName}
-                  className="h-11 flex-none rounded-r-xl bg-[var(--primary)] px-4 text-sm font-bold text-white transition-transform duration-150 enabled:hover:scale-[1.02] disabled:opacity-40"
+                  className="h-14 flex-none rounded-r-xl bg-[var(--primary)] px-6 text-lg font-bold text-white transition-transform duration-150 enabled:hover:scale-[1.02] disabled:opacity-40"
                 >
                   {savingName ? "저장 중" : "저장"}
                 </button>
               </div>
             </div>
 
+            {/* 프로필 이미지 (구글 로그인) */}
+            {!isGuest && (
+              <div className="flex flex-col gap-2">
+                <span className="text-base font-bold text-white/70">프로필 이미지</span>
+                <p className="text-sm text-[color:var(--foreground-muted)]">
+                  Google 계정의 프로필 사진을 사용합니다.
+                </p>
+                <div className="mt-1 flex items-center gap-3">
+                  {showPhoto ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={room.photoUrl!}
+                      alt=""
+                      className="h-14 w-14 flex-none rounded-xl object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-14 w-14 flex-none items-center justify-center rounded-xl bg-[var(--primary)] text-xl font-black text-white">
+                      {initial}
+                    </span>
+                  )}
+                  <label className="flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={useGooglePhoto}
+                      onChange={(e) => save({ useGooglePhoto: e.target.checked })}
+                      className="h-5 w-5 flex-none accent-[var(--primary)]"
+                    />
+                    <span className="text-base font-semibold text-white">Google 프로필 사진 사용</span>
+                  </label>
+                </div>
+                <p className="text-sm text-[color:var(--foreground-muted)]">
+                  체크 해제 시 기본 이미지가 사용됩니다.
+                </p>
+              </div>
+            )}
+
+            {/* Google 계정 (구글 로그인) */}
+            {!isGuest && (
+              <div className="flex flex-col gap-2">
+                <span className="text-base font-bold text-white/70">Google 계정</span>
+                <p className="text-base text-white/80">{room.email || "연결된 Google 계정"}</p>
+                <span className="mt-1 inline-flex w-fit items-center gap-2 rounded-xl border border-white/12 bg-white/[0.06] px-4 py-2.5 text-base font-bold text-white">
+                  <GoogleMark />
+                  연결된 계정
+                </span>
+              </div>
+            )}
+
             {/* 게스트: 구글 저장 버튼(우측, 입력창과 상단 정렬) + 그 밑 설명 */}
             {isGuest && (
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2">
                 <button
                   type="button"
                   onClick={handleUpgrade}
                   disabled={upgrading}
-                  className="inline-flex h-11 flex-none items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-4 text-sm font-black text-white shadow-[0_6px_0_var(--primary-dark)] transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-1 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-14 flex-none items-center justify-center gap-2.5 rounded-xl bg-[var(--primary)] px-6 text-lg font-black text-white shadow-[0_6px_0_var(--primary-dark)] transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-1 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <GoogleMark />
                   {upgrading ? "연결 중..." : "구글 계정으로 저장하기"}
                 </button>
-                <p className="max-w-xs text-xs leading-5 text-[color:var(--foreground-muted)]">
+                <p className="max-w-md text-base leading-7 text-[color:var(--foreground-muted)]">
                   지금은 이 브라우저에서만 유지돼요. 구글 계정으로 저장하면 다른 기기에서도
                   이어서 관리할 수 있고, 방·문제·게임이 그대로 옮겨져요.
                 </p>
@@ -159,7 +213,7 @@ export default function SettingsPanel({
           </div>
 
           {isGuest && upgradeError && (
-            <p className="text-xs leading-5 text-[var(--error)]">{upgradeError}</p>
+            <p className="text-base leading-7 text-[var(--error)]">{upgradeError}</p>
           )}
         </div>
       </Section>
@@ -168,7 +222,7 @@ export default function SettingsPanel({
       <Section
         number={2}
         icon={
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 12h4M8 10v4M15 11h.01M18 13h.01" />
             <rect x="2" y="6" width="20" height="12" rx="4" />
           </svg>
@@ -177,16 +231,19 @@ export default function SettingsPanel({
         description="게임 진행 방식과 기본값을 설정합니다."
       >
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-bold text-white">답변 시간</p>
+          <div className="flex flex-col gap-2.5">
+            <p className="text-lg font-bold text-white">답변 시간</p>
             <div className="flex gap-2">
               {ANSWER_TIMES.map((sec) => (
                 <button
                   key={sec}
                   type="button"
                   onClick={() => save({ defaultQuestionDurationSec: sec })}
-                  className="tab-button flex-1"
-                  data-active={answerTime === sec}
+                  className={`flex-1 rounded-full px-4 py-3.5 text-lg font-black transition-colors duration-150 ${
+                    answerTime === sec
+                      ? "bg-[var(--primary)] text-white shadow-[0_8px_20px_rgba(50,0,224,0.35)]"
+                      : "bg-white/[0.08] text-white/[0.66] hover:text-white"
+                  }`}
                 >
                   {sec}초
                 </button>
@@ -217,22 +274,22 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-5">
-      <header className="flex items-center gap-3">
-        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-white/5 text-[var(--accent)]">
+    <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-7">
+      <header className="flex items-center gap-4">
+        <span className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-white/5 text-[var(--accent)]">
           {icon}
         </span>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)] text-[11px] font-black text-black">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--accent)] text-sm font-black text-black">
               {number}
             </span>
-            <h2 className="text-base font-black text-white">{title}</h2>
+            <h2 className="text-xl font-black text-white">{title}</h2>
           </div>
-          <p className="mt-0.5 truncate text-xs text-[color:var(--foreground-muted)]">{description}</p>
+          <p className="mt-1 truncate text-base text-[color:var(--foreground-muted)]">{description}</p>
         </div>
       </header>
-      <div className="mt-4">{children}</div>
+      <div className="mt-6">{children}</div>
     </section>
   );
 }
@@ -250,8 +307,8 @@ function Row({
   return (
     <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
       <div className="min-w-0">
-        <p className="text-sm font-bold text-white">{title}</p>
-        <p className="mt-0.5 truncate text-xs text-[color:var(--foreground-muted)]">{description}</p>
+        <p className="text-lg font-bold text-white">{title}</p>
+        <p className="mt-1 truncate text-base text-[color:var(--foreground-muted)]">{description}</p>
       </div>
       <div className="flex-none">{children}</div>
     </div>
@@ -289,7 +346,7 @@ function Toggle({
 
 function GoogleMark() {
   return (
-    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+    <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true">
       <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17Z" />
       <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7A21.99 21.99 0 0 0 24 46Z" />
       <path fill="#FBBC05" d="M11.69 28.18c-.44-1.32-.69-2.73-.69-4.18s.25-2.86.69-4.18v-5.7H4.34A21.99 21.99 0 0 0 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7Z" />

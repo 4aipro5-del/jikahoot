@@ -9,7 +9,9 @@ export default function AccountMenu({ room, user }: { room: Room; user: User }) 
   const [open, setOpen] = useState(false);
   const isGuest = user.isAnonymous;
   const initial = room.displayName.trim().slice(0, 1) || "T";
-  const showPhoto = Boolean(room.photoUrl);
+  // 'Google 프로필 사진 사용' 설정(기본 켜짐)을 존중 — 해제 시 기본 이니셜 아바타.
+  // 설정 변경은 room 상태를 즉시 갱신하므로 재로그인 없이 바로 반영된다.
+  const showPhoto = room.useGooglePhoto !== false && Boolean(room.photoUrl);
 
   return (
     <div className="relative">
