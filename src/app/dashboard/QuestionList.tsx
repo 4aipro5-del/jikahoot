@@ -250,7 +250,7 @@ export default function QuestionList({
                 key={key}
                 type="button"
                 onClick={() => selectTab(key)}
-                className="flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-bold transition-colors duration-150 sm:gap-2.5"
+                className="flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-base font-bold transition-colors duration-150 sm:gap-2.5"
                 style={{
                   borderColor: active ? color : "rgba(255,255,255,0.10)",
                   color: active ? color : "rgba(255,255,255,0.62)",
@@ -283,7 +283,7 @@ export default function QuestionList({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="문제 내용이나 제출자로 검색"
-              className="w-full rounded-xl border border-white/10 bg-[var(--surface)] py-2.5 pl-10 pr-4 text-sm font-medium text-white placeholder:text-white/35 focus-visible:border-[var(--primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(50,0,224,0.16)]"
+              className="w-full rounded-xl border border-white/10 bg-[var(--surface)] py-2.5 pl-10 pr-4 text-base font-medium text-white placeholder:text-white/35 focus-visible:border-[var(--primary)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(50,0,224,0.16)]"
             />
           </div>
 
@@ -293,7 +293,7 @@ export default function QuestionList({
                 key={key}
                 type="button"
                 onClick={() => setCreatorFilter(key)}
-                className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors duration-150 sm:flex-none ${
+                className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors duration-150 sm:flex-none ${
                   creatorFilter === key
                     ? "bg-[var(--primary)] text-white"
                     : "text-white/55 hover:text-white"
@@ -335,31 +335,31 @@ export default function QuestionList({
                       className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors duration-150 hover:bg-white/[0.04] sm:gap-4 sm:px-5"
                     >
                       <span
-                        className="flex h-10 w-10 flex-none items-center justify-center rounded-full text-sm font-black text-white"
+                        className="flex h-10 w-10 flex-none items-center justify-center rounded-full text-base font-black text-white"
                         style={{ background: AVATAR_COLORS[index % AVATAR_COLORS.length] }}
                       >
                         {avatarChar}
                       </span>
 
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-base font-bold text-white">{question.text}</p>
+                        <p className="truncate text-lg font-bold text-white">{question.text}</p>
                         <div className="mt-0.5 flex items-center gap-2">
                           {isStudent && (
-                            <span className="truncate text-xs text-white/45">
+                            <span className="truncate text-sm text-white/45">
                               {question.authorNickname ?? "익명"} 학생
                             </span>
                           )}
-                          <span className="flex-none rounded-md bg-white/[0.08] px-2 py-0.5 text-[11px] font-semibold text-white/55">
+                          <span className="flex-none rounded-md bg-white/[0.08] px-2 py-0.5 text-xs font-semibold text-white/55">
                             {isStudent ? "학생 제출" : "교사 작성"}
                           </span>
                         </div>
                       </div>
 
-                      <span className="hidden flex-none text-xs font-semibold text-white/40 sm:inline">
+                      <span className="hidden flex-none text-sm font-semibold text-white/40 sm:inline">
                         {formatRelativeTime(question.createdAt)}
                       </span>
                       <span
-                        className={`flex-none rounded-full px-2.5 py-1 text-[11px] font-black ${meta.badge}`}
+                        className={`flex-none rounded-full px-2.5 py-1 text-xs font-black ${meta.badge}`}
                       >
                         {meta.label}
                       </span>
@@ -414,16 +414,16 @@ export default function QuestionList({
                                           ),
                                         )
                                       }
-                                      className="min-w-0 flex-1 rounded-full border border-white/12 bg-white/90 px-4 py-2 text-sm font-black text-[var(--panel-text)] outline-none"
+                                      className="min-w-0 flex-1 rounded-full border border-white/12 bg-white/90 px-4 py-2 text-base font-black text-[var(--panel-text)] outline-none"
                                     />
                                   ) : (
-                                    <span className="text-sm font-black">{choiceText}</span>
+                                    <span className="text-base font-black">{choiceText}</span>
                                   )}
                                   {isEditing ? (
                                     <button
                                       type="button"
                                       onClick={() => setDraftCorrectIndex(choiceIndex)}
-                                      className={`ml-auto flex-none rounded-full px-3 py-1.5 text-xs font-black ${
+                                      className={`ml-auto flex-none rounded-full px-3 py-1.5 text-sm font-black ${
                                         isCorrect
                                           ? "bg-[var(--kahoot-green)] text-white"
                                           : "bg-white text-[var(--kahoot-purple)]"
@@ -432,7 +432,7 @@ export default function QuestionList({
                                       {isCorrect ? "정답" : "정답 지정"}
                                     </button>
                                   ) : (
-                                    isCorrect && <span className="ml-auto flex-none text-xs font-black">정답</span>
+                                    isCorrect && <span className="ml-auto flex-none text-sm font-black">정답</span>
                                   )}
                                 </li>
                               );
@@ -447,14 +447,14 @@ export default function QuestionList({
                                 <button
                                   onClick={() => handleApproveWithEdit(question)}
                                   disabled={pendingActionId === question.id}
-                                  className="rounded-full bg-[var(--kahoot-green)] px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+                                  className="rounded-full bg-[var(--kahoot-green)] px-4 py-2 text-base font-black text-white disabled:opacity-60"
                                 >
                                   {pendingActionId === question.id ? "승인 중..." : "수정 후 승인"}
                                 </button>
                                 <button
                                   onClick={cancelEditing}
                                   disabled={pendingActionId === question.id}
-                                  className="rounded-full border border-white/12 bg-white/10 px-4 py-2 text-sm font-black text-white/80 hover:bg-white/16 disabled:opacity-60"
+                                  className="rounded-full border border-white/12 bg-white/10 px-4 py-2 text-base font-black text-white/80 hover:bg-white/16 disabled:opacity-60"
                                 >
                                   취소
                                 </button>
@@ -463,21 +463,21 @@ export default function QuestionList({
                               <>
                                 <button
                                   onClick={() => approveQuestion(teacherUid, question.id)}
-                                  className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-black text-white transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
+                                  className="rounded-full bg-[var(--primary)] px-4 py-2 text-base font-black text-white transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
                                 >
                                   승인
                                 </button>
                                 {isStudent && (
                                   <button
                                     onClick={() => startEditing(question)}
-                                    className="rounded-full bg-[var(--warning)] px-4 py-2 text-sm font-black text-[#4a2c00] transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
+                                    className="rounded-full bg-[var(--warning)] px-4 py-2 text-base font-black text-[#4a2c00] transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
                                   >
                                     수정 후 승인
                                   </button>
                                 )}
                                 <button
                                   onClick={() => rejectQuestion(teacherUid, question.id)}
-                                  className="rounded-full bg-[var(--error)] px-4 py-2 text-sm font-black text-white transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
+                                  className="rounded-full bg-[var(--error)] px-4 py-2 text-base font-black text-white transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
                                 >
                                   반려
                                 </button>
@@ -485,7 +485,7 @@ export default function QuestionList({
                             ))}
                           <button
                             onClick={() => deleteQuestion(teacherUid, question.id)}
-                            className="ml-auto rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-sm font-black text-white/60 hover:bg-white/12 hover:text-white"
+                            className="ml-auto rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-base font-black text-white/60 hover:bg-white/12 hover:text-white"
                           >
                             삭제
                           </button>
@@ -513,8 +513,8 @@ function EmptyState({ title, sub }: { title: string; sub: string }) {
   return (
     <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
       <span className="text-white/25">{EmptyBoxArt}</span>
-      <p className="text-base font-bold text-white/80">{title}</p>
-      <p className="text-sm text-white/45">{sub}</p>
+      <p className="text-lg font-bold text-white/80">{title}</p>
+      <p className="text-base text-white/45">{sub}</p>
     </div>
   );
 }
@@ -550,8 +550,8 @@ function ActionCard({
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-lg font-black text-white">{title}</span>
-        <span className={`mt-0.5 block text-sm leading-5 ${highlighted ? "text-white/75" : "text-white/60"}`}>
+        <span className="block text-xl font-black text-white">{title}</span>
+        <span className={`mt-0.5 block text-base leading-5 ${highlighted ? "text-white/75" : "text-white/60"}`}>
           {description}
         </span>
       </span>
