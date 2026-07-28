@@ -3,12 +3,14 @@ import {
   collection,
   deleteDoc,
   doc,
+  getCountFromServer,
   getDoc,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   updateDoc,
+  where,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
 import type { Choice, Question } from '@/types/firestore'
@@ -112,4 +114,23 @@ export async function getCorrectChoiceMap(
     }),
   )
   return Object.fromEntries(entries)
+}
+
+export type RoomQuestionStats = { total: number; pending: number; rejected: number }
+
+// Aggregate counts for a room card (문제 수 / 승인 대기 / 검토 필요). Uses server
+// count aggregation so it's cheap even across many rooms — a one-shot snapshot,
+// not a live subscription.
+export async function getRoomQuestionStats(roomId: string): Promise<RoomQuestionStats> {
+  const base = questionBankRef(roomId)
+  const [total, pending, rejected] = await Promise.all([
+    getCountFromServer(base),
+    getCountFromServer(query(base, where('status', '==', 'pending'))),
+    getCountFromServer(query(base, where('status', '==', 'rejected'))),
+  ])
+  return {
+    total: total.data().count,
+    pending: pending.data().count,
+    rejected: rejected.data().count,
+  }
 }

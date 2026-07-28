@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { User } from "firebase/auth";
 import { subscribeToAuthState } from "@/lib/firebase/auth";
-import { getPrimaryRoom } from "@/lib/firestore/rooms";
+import { getPrimaryRoom, subscribeToRoom } from "@/lib/firestore/rooms";
 import { subscribeToQuestionBank, type QuestionWithId } from "@/lib/firestore/questions";
 import type { RoomWithId } from "@/types/firestore";
 import StageSkeleton from "@/components/StageSkeleton";
@@ -28,6 +28,15 @@ export default function SubmissionsWindowClient() {
       return;
     }
     if (!user) return;
+
+    // the opener passes ?room=<roomId> for the room being managed; subscribe to
+    // it live (code / submission-open reflect changes). Fall back to the primary
+    // room when opened directly without a param.
+    const roomIdParam = new URLSearchParams(window.location.search).get("room");
+    if (roomIdParam) {
+      return subscribeToRoom(roomIdParam, (nextRoom) => setRoom(nextRoom));
+    }
+
     let active = true;
     getPrimaryRoom(user.uid)
       .then((nextRoom) => {

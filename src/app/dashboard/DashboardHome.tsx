@@ -1,7 +1,16 @@
 "use client";
 
-import type { QuestionWithId } from "@/lib/firestore/questions";
+import type { QuestionWithId, RoomQuestionStats } from "@/lib/firestore/questions";
+import { formatRelativeTime } from "@/lib/formatRelativeTime";
+import type { RoomWithId } from "@/types/firestore";
 import RecentQuestionsPreview from "./RecentQuestionsPreview";
+
+function roomStatus(stats: RoomQuestionStats | undefined) {
+  if (!stats) return { color: "var(--success)", label: "—" };
+  if (stats.pending > 0) return { color: "var(--warning)", label: `승인 대기 ${stats.pending}개` };
+  if (stats.rejected > 0) return { color: "var(--error)", label: `검토 필요 ${stats.rejected}개` };
+  return { color: "var(--success)", label: "모두 승인" };
+}
 
 // Inline SVGs keep the dashboard self-contained (no icon dependency) while
 // giving each summary card a distinct illustration, per the reference design.
@@ -51,10 +60,22 @@ const ExternalIcon = (
 export default function DashboardHome({
   displayName,
   questions,
+  rooms,
+  selectedRoomId,
+  statsByRoom,
+  isGuest,
+  onSelectRoom,
+  onManageRooms,
   onViewApprovals,
 }: {
   displayName: string;
   questions: QuestionWithId[];
+  rooms: RoomWithId[];
+  selectedRoomId: string | null;
+  statsByRoom: Record<string, RoomQuestionStats>;
+  isGuest: boolean;
+  onSelectRoom: (roomId: string) => void;
+  onManageRooms: () => void;
   onViewApprovals: () => void;
 }) {
   const pendingCount = questions.filter((q) => q.status === "pending").length;
@@ -74,6 +95,70 @@ export default function DashboardHome({
           </p>
         </div>
       </header>
+
+      {/* 내 방 — 빠른 전환 스트립 */}
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-black text-white">내 방</h2>
+          <button
+            type="button"
+            onClick={onManageRooms}
+            className="inline-flex items-center gap-1 text-sm font-bold text-white/60 transition-colors hover:text-white"
+          >
+            방 관리로 이동 <span aria-hidden="true">→</span>
+          </button>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-1">
+          {rooms.map((r) => {
+            const selected = r.roomId === selectedRoomId;
+            const stats = statsByRoom[r.roomId];
+            const status = roomStatus(stats);
+            return (
+              <button
+                key={r.roomId}
+                type="button"
+                onClick={() => onSelectRoom(r.roomId)}
+                className={`flex min-w-[168px] flex-none flex-col gap-2 rounded-2xl border p-4 text-left transition-colors ${
+                  selected
+                    ? "border-[var(--primary)] bg-[color:rgba(50,0,224,0.1)]"
+                    : "border-white/10 bg-[var(--surface)] hover:border-white/25"
+                }`}
+              >
+                {selected ? (
+                  <span className="self-start rounded-full bg-[var(--primary)] px-2 py-0.5 text-[0.65rem] font-black text-white">
+                    현재 사용 중
+                  </span>
+                ) : (
+                  <span className="h-[1.15rem]" aria-hidden="true" />
+                )}
+                <p className="truncate text-sm font-black text-white">{r.name}</p>
+                <p className="text-xs text-white/50">
+                  문제 {stats?.total ?? 0}개 · {formatRelativeTime(r.createdAt)}
+                </p>
+                <p className="flex items-center gap-1.5 text-xs text-white/60">
+                  <span
+                    className="h-2 w-2 flex-none rounded-full"
+                    style={{ background: selected ? "var(--primary)" : status.color }}
+                  />
+                  {status.label}
+                </p>
+              </button>
+            );
+          })}
+          {!isGuest && (
+            <button
+              type="button"
+              onClick={onManageRooms}
+              className="flex min-w-[128px] flex-none flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/20 p-4 text-white/60 transition-colors hover:border-white/40 hover:text-white"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary)] text-lg font-black text-white">
+                +
+              </span>
+              <span className="text-xs font-bold">새 방 만들기</span>
+            </button>
+          )}
+        </div>
+      </section>
 
       <div className="grid gap-5 lg:grid-cols-2">
         {/* 승인 대기 — 앰버 강조, 클릭 시 승인 화면으로 이동 */}

@@ -1,10 +1,15 @@
 import {
+  collection,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
+  query,
   runTransaction,
   serverTimestamp,
   updateDoc,
+  where,
+  writeBatch,
   type Timestamp,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
@@ -15,6 +20,8 @@ const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const ROOM_CODE_LENGTH = 6
 const MAX_ATTEMPTS = 5
 const DEFAULT_ROOM_NAME = '기본 방'
+// generous cap so a normal teacher is never blocked, but runaway creation is
+export const MAX_ROOMS_PER_TEACHER = 20
 
 function generateRoomCode(): string {
   let code = ''
@@ -97,6 +104,82 @@ export function subscribeToRoom(roomId: string, callback: (room: RoomWithId | nu
   return onSnapshot(doc(db, 'rooms', roomId), (snap) => {
     callback(snap.exists() ? attachId(roomId, snap.data() as Room) : null)
   })
+}
+
+// Live list of every room this teacher owns (newest first). Single-field filter
+// so no composite index is needed; ordering is done client-side.
+export function subscribeToRooms(
+  ownerUid: string,
+  callback: (rooms: RoomWithId[]) => void,
+) {
+  const q = query(collection(db, 'rooms'), where('ownerUid', '==', ownerUid))
+  return onSnapshot(q, (snapshot) => {
+    const rooms = snapshot.docs
+      .map((d) => attachId(d.id, d.data() as Room))
+      .sort((a, b) => (a.createdAt?.toMillis?.() ?? 0) - (b.createdAt?.toMillis?.() ?? 0))
+    callback(rooms)
+  })
+}
+
+// Creates an ADDITIONAL room (random id) for a teacher who already has one. The
+// very first room is created at rooms/{uid} by ensurePrimaryRoom instead.
+export async function createRoom(ownerUid: string, name: string): Promise<RoomWithId> {
+  const roomRef = doc(collection(db, 'rooms')) // random id
+  const roomId = roomRef.id
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const code = generateRoomCode()
+    const codeRef = doc(db, 'roomCodes', code)
+    try {
+      const room = await runTransaction(db, async (tx) => {
+        const codeSnap = await tx.get(codeRef)
+        if (codeSnap.exists()) throw new Error('ROOM_CODE_TAKEN')
+        const newRoom: Room = {
+          ownerUid,
+          name: name.trim() || DEFAULT_ROOM_NAME,
+          roomCode: code,
+          createdAt: serverTimestamp() as unknown as Timestamp,
+        }
+        tx.set(roomRef, newRoom)
+        tx.set(codeRef, { teacherUid: ownerUid, roomId })
+        return newRoom
+      })
+      return attachId(roomId, room)
+    } catch (err) {
+      if (err instanceof Error && err.message === 'ROOM_CODE_TAKEN') continue
+      throw err
+    }
+  }
+  throw new Error('방 코드를 생성하지 못했습니다. 다시 시도해 주세요.')
+}
+
+export function renameRoom(roomId: string, name: string) {
+  return updateDoc(doc(db, 'rooms', roomId), { name: name.trim() || DEFAULT_ROOM_NAME })
+}
+
+// Deletes a room and its question bank + code reservation. Question docs are
+// removed first (while the room still exists, so the owner rule can resolve
+// ownership), then the room and its roomCode. Any past game docs are ephemeral
+// and left as-is (a future cleanup job / TTL handles those).
+export async function deleteRoom(roomId: string, roomCode: string): Promise<void> {
+  const bankSnap = await getDocs(collection(db, 'rooms', roomId, 'questionBank'))
+  let batch = writeBatch(db)
+  let pending = 0
+  for (const d of bankSnap.docs) {
+    batch.delete(d.ref)
+    pending += 1
+    if (pending >= 400) {
+      await batch.commit()
+      batch = writeBatch(db)
+      pending = 0
+    }
+  }
+  if (pending > 0) await batch.commit()
+
+  const finalBatch = writeBatch(db)
+  finalBatch.delete(doc(db, 'roomCodes', roomCode))
+  finalBatch.delete(doc(db, 'rooms', roomId))
+  await finalBatch.commit()
 }
 
 // Settings tab writes: persist any subset of the room-configurable fields (name,

@@ -42,7 +42,10 @@ service cloud.firestore {
         && resource.data.get('ownerUid', roomId) == request.auth.uid;
       allow create: if isSignedIn()
         && request.resource.data.ownerUid == request.auth.uid;
-      allow delete: if false;
+      // owner may delete their room (the client removes questionBank + roomCode
+      // first, then the room doc)
+      allow delete: if isSignedIn()
+        && resource.data.get('ownerUid', roomId) == request.auth.uid;
 
       // correctChoiceId lives here, so only the room owner may ever read it
       match /questionBank/{questionId} {
@@ -88,7 +91,8 @@ service cloud.firestore {
       allow update: if isSignedIn()
         && request.auth.uid == resource.data.teacherUid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submissionOpen']);
-      allow delete: if false;
+      // owner may delete the code when deleting its room
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.teacherUid;
     }
 
     // ---- Ephemeral game sessions, looked up directly by game code ----
