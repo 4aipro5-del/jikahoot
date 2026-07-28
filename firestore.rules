@@ -37,8 +37,17 @@ service cloud.firestore {
 
     // ---- Teacher rooms (1 teacher : N rooms) + per-room question bank ----
     match /rooms/{roomId} {
-      // owner-only. resource.ownerUid defaults to the doc id for legacy rooms.
-      allow read, update: if isSignedIn()
+      // single-doc read: a legacy room may lack ownerUid, so default to the doc
+      // id (which equals the owner uid for a primary room).
+      allow get: if isSignedIn()
+        && resource.data.get('ownerUid', roomId) == request.auth.uid;
+      // list/query: MUST use a direct field reference. The room list runs
+      // where('ownerUid','==',uid); Firestore statically checks that the query
+      // is safe against the rule, and a .get() with a default is opaque to that
+      // check (it rejects the whole query). Rooms without ownerUid simply don't
+      // match the filter, so this never leaks another teacher's rooms.
+      allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+      allow update: if isSignedIn()
         && resource.data.get('ownerUid', roomId) == request.auth.uid;
       allow create: if isSignedIn()
         && request.resource.data.ownerUid == request.auth.uid;
