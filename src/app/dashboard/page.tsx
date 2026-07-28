@@ -285,6 +285,21 @@ export default function DashboardPage() {
 
   const pendingCount = questions.filter((q) => q.status === "pending").length;
 
+  // The one-shot aggregate stats only refetch when the room LIST changes, so
+  // they'd go stale as questions are submitted/approved/rejected/deleted. The
+  // selected room's questionBank IS live-subscribed here, so derive its card
+  // stats from that so its card always reflects the latest counts.
+  const statsForCards: Record<string, RoomQuestionStats> = selectedRoomId
+    ? {
+        ...statsByRoom,
+        [selectedRoomId]: {
+          total: questions.length,
+          pending: pendingCount,
+          rejected: questions.filter((q) => q.status === "rejected").length,
+        },
+      }
+    : statsByRoom;
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-[var(--background)] lg:flex-row">
       <Sidebar active={tab} onSelect={selectTab} pendingCount={pendingCount} />
@@ -298,7 +313,7 @@ export default function DashboardPage() {
           <RoomsPanel
             rooms={rooms}
             selectedRoomId={selectedRoomId}
-            statsByRoom={statsByRoom}
+            statsByRoom={statsForCards}
             isGuest={isGuest}
             onSelect={handleSelectRoom}
             onCreate={handleCreateRoom}
@@ -313,7 +328,7 @@ export default function DashboardPage() {
                 questions={questions}
                 rooms={rooms}
                 selectedRoomId={selectedRoomId}
-                statsByRoom={statsByRoom}
+                statsByRoom={statsForCards}
                 isGuest={isGuest}
                 onSelectRoom={handleSelectRoom}
                 onManageRooms={() => setShowRooms(true)}
