@@ -39,7 +39,7 @@ function IconPerson() {
 
 type Step =
   | { kind: "join" }
-  | { kind: "submit"; teacherUid: string; code: string; authorUid: string; nickname: string };
+  | { kind: "submit"; roomId: string; code: string; authorUid: string; nickname: string };
 
 export default function SubmitPage() {
   return (
@@ -89,7 +89,7 @@ function SubmitPageContent() {
       setSubmissionClosed(false);
       setStep({
         kind: "submit",
-        teacherUid: info.teacherUid,
+        roomId: info.roomId,
         code: trimmedCode,
         authorUid: cred.user.uid,
         nickname: trimmedNickname,
@@ -200,7 +200,7 @@ function SubmitPageContent() {
                 // the pre-check and the write, the create is rejected server-side
                 // — translate that permission error into the same friendly text.
                 try {
-                  await submitStudentQuestion(step.teacherUid, {
+                  await submitStudentQuestion(step.roomId, {
                     ...input,
                     authorUid: step.authorUid,
                     authorNickname: step.nickname,

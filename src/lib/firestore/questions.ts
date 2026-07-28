@@ -3,20 +3,22 @@ import {
   collection,
   deleteDoc,
   doc,
+  getCountFromServer,
   getDoc,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   updateDoc,
+  where,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
 import type { Choice, Question } from '@/types/firestore'
 
 export type QuestionWithId = Question & { id: string }
 
-function questionBankRef(teacherUid: string) {
-  return collection(db, 'rooms', teacherUid, 'questionBank')
+function questionBankRef(roomId: string) {
+  return collection(db, 'rooms', roomId, 'questionBank')
 }
 
 export function buildChoices(texts: string[]): Choice[] {
@@ -24,20 +26,20 @@ export function buildChoices(texts: string[]): Choice[] {
 }
 
 export function subscribeToQuestionBank(
-  teacherUid: string,
+  roomId: string,
   callback: (questions: QuestionWithId[]) => void,
 ) {
-  const q = query(questionBankRef(teacherUid), orderBy('createdAt', 'desc'))
+  const q = query(questionBankRef(roomId), orderBy('createdAt', 'desc'))
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Question) })))
   })
 }
 
 export function createTeacherQuestion(
-  teacherUid: string,
+  roomId: string,
   input: { text: string; choices: Choice[]; correctChoiceId: string },
 ) {
-  return addDoc(questionBankRef(teacherUid), {
+  return addDoc(questionBankRef(roomId), {
     text: input.text,
     choices: input.choices,
     correctChoiceId: input.correctChoiceId,
@@ -51,7 +53,7 @@ export function createTeacherQuestion(
 }
 
 export function submitStudentQuestion(
-  teacherUid: string,
+  roomId: string,
   input: {
     text: string
     choices: Choice[]
@@ -60,7 +62,7 @@ export function submitStudentQuestion(
     authorNickname: string
   },
 ) {
-  return addDoc(questionBankRef(teacherUid), {
+  return addDoc(questionBankRef(roomId), {
     text: input.text,
     choices: input.choices,
     correctChoiceId: input.correctChoiceId,
@@ -74,26 +76,26 @@ export function submitStudentQuestion(
 }
 
 export function updateQuestion(
-  teacherUid: string,
+  roomId: string,
   questionId: string,
   patch: Partial<Pick<Question, 'text' | 'choices' | 'correctChoiceId'>>,
 ) {
-  return updateDoc(doc(db, 'rooms', teacherUid, 'questionBank', questionId), patch)
+  return updateDoc(doc(db, 'rooms', roomId, 'questionBank', questionId), patch)
 }
 
-export function deleteQuestion(teacherUid: string, questionId: string) {
-  return deleteDoc(doc(db, 'rooms', teacherUid, 'questionBank', questionId))
+export function deleteQuestion(roomId: string, questionId: string) {
+  return deleteDoc(doc(db, 'rooms', roomId, 'questionBank', questionId))
 }
 
-export function approveQuestion(teacherUid: string, questionId: string) {
-  return updateDoc(doc(db, 'rooms', teacherUid, 'questionBank', questionId), {
+export function approveQuestion(roomId: string, questionId: string) {
+  return updateDoc(doc(db, 'rooms', roomId, 'questionBank', questionId), {
     status: 'approved',
     reviewedAt: serverTimestamp(),
   })
 }
 
-export function rejectQuestion(teacherUid: string, questionId: string) {
-  return updateDoc(doc(db, 'rooms', teacherUid, 'questionBank', questionId), {
+export function rejectQuestion(roomId: string, questionId: string) {
+  return updateDoc(doc(db, 'rooms', roomId, 'questionBank', questionId), {
     status: 'rejected',
     reviewedAt: serverTimestamp(),
   })
@@ -102,14 +104,33 @@ export function rejectQuestion(teacherUid: string, questionId: string) {
 // only the room owner can read questionBank, so this only ever runs on the
 // host client to know what counts as correct while grading a live game
 export async function getCorrectChoiceMap(
-  teacherUid: string,
+  roomId: string,
   questionIds: string[],
 ): Promise<Record<string, string>> {
   const entries = await Promise.all(
     questionIds.map(async (id) => {
-      const snap = await getDoc(doc(db, 'rooms', teacherUid, 'questionBank', id))
+      const snap = await getDoc(doc(db, 'rooms', roomId, 'questionBank', id))
       return [id, (snap.data() as Question).correctChoiceId] as const
     }),
   )
   return Object.fromEntries(entries)
+}
+
+export type RoomQuestionStats = { total: number; pending: number; rejected: number }
+
+// Aggregate counts for a room card (문제 수 / 승인 대기 / 검토 필요). Uses server
+// count aggregation so it's cheap even across many rooms — a one-shot snapshot,
+// not a live subscription.
+export async function getRoomQuestionStats(roomId: string): Promise<RoomQuestionStats> {
+  const base = questionBankRef(roomId)
+  const [total, pending, rejected] = await Promise.all([
+    getCountFromServer(base),
+    getCountFromServer(query(base, where('status', '==', 'pending'))),
+    getCountFromServer(query(base, where('status', '==', 'rejected'))),
+  ])
+  return {
+    total: total.data().count,
+    pending: pending.data().count,
+    rejected: rejected.data().count,
+  }
 }

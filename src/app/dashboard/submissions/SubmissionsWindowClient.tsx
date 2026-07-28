@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { User } from "firebase/auth";
 import { subscribeToAuthState } from "@/lib/firebase/auth";
-import { getRoomByTeacherUid } from "@/lib/firestore/rooms";
+import { getPrimaryRoom, subscribeToRoom } from "@/lib/firestore/rooms";
 import { subscribeToQuestionBank, type QuestionWithId } from "@/lib/firestore/questions";
-import type { Room } from "@/types/firestore";
+import type { RoomWithId } from "@/types/firestore";
 import StageSkeleton from "@/components/StageSkeleton";
 import StudentSubmissionPanel from "../StudentSubmissionPanel";
 
@@ -17,7 +17,7 @@ import StudentSubmissionPanel from "../StudentSubmissionPanel";
 export default function SubmissionsWindowClient() {
   const router = useRouter();
   const [user, setUser] = useState<User | null | undefined>(undefined);
-  const [room, setRoom] = useState<Room | null>(null);
+  const [room, setRoom] = useState<RoomWithId | null>(null);
   const [questions, setQuestions] = useState<QuestionWithId[]>([]);
 
   useEffect(() => subscribeToAuthState(setUser), []);
@@ -28,8 +28,17 @@ export default function SubmissionsWindowClient() {
       return;
     }
     if (!user) return;
+
+    // the opener passes ?room=<roomId> for the room being managed; subscribe to
+    // it live (code / submission-open reflect changes). Fall back to the primary
+    // room when opened directly without a param.
+    const roomIdParam = new URLSearchParams(window.location.search).get("room");
+    if (roomIdParam) {
+      return subscribeToRoom(roomIdParam, (nextRoom) => setRoom(nextRoom));
+    }
+
     let active = true;
-    getRoomByTeacherUid(user.uid)
+    getPrimaryRoom(user.uid)
       .then((nextRoom) => {
         if (active) setRoom(nextRoom);
       })
@@ -43,7 +52,7 @@ export default function SubmissionsWindowClient() {
 
   useEffect(() => {
     if (!room) return;
-    return subscribeToQuestionBank(room.teacherUid, setQuestions);
+    return subscribeToQuestionBank(room.roomId, setQuestions);
   }, [room]);
 
   if (!user || !room) {
@@ -54,7 +63,7 @@ export default function SubmissionsWindowClient() {
     <main className="min-h-screen bg-[var(--background)] px-5 py-8 sm:px-8 lg:px-10">
       <div className="mx-auto w-full max-w-5xl">
         <StudentSubmissionPanel
-          teacherUid={room.teacherUid}
+          roomId={room.roomId}
           roomCode={room.roomCode}
           questions={questions}
         />

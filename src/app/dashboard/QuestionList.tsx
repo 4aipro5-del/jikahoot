@@ -94,12 +94,12 @@ const CREATOR_FILTERS: { key: "all" | "student" | "teacher"; label: string }[] =
 ];
 
 export default function QuestionList({
-  teacherUid,
+  roomId,
   questions,
   onNewQuestion,
   onReceiveStudentQuestions,
 }: {
-  teacherUid: string;
+  roomId: string;
   questions: QuestionWithId[];
   onNewQuestion?: () => void;
   onReceiveStudentQuestions?: () => void;
@@ -181,12 +181,12 @@ export default function QuestionList({
     setActionError(null);
 
     try {
-      await updateQuestion(teacherUid, question.id, {
+      await updateQuestion(roomId, question.id, {
         text: trimmedText,
         choices: buildChoices(trimmedChoices),
         correctChoiceId: `c${draftCorrectIndex}`,
       });
-      await approveQuestion(teacherUid, question.id);
+      await approveQuestion(roomId, question.id);
       cancelEditing();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "문제를 수정 후 승인하지 못했습니다.");
@@ -462,7 +462,7 @@ export default function QuestionList({
                             ) : (
                               <>
                                 <button
-                                  onClick={() => approveQuestion(teacherUid, question.id)}
+                                  onClick={() => approveQuestion(roomId, question.id)}
                                   className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-black text-white transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
                                 >
                                   승인
@@ -476,7 +476,7 @@ export default function QuestionList({
                                   </button>
                                 )}
                                 <button
-                                  onClick={() => rejectQuestion(teacherUid, question.id)}
+                                  onClick={() => rejectQuestion(roomId, question.id)}
                                   className="rounded-full bg-[var(--error)] px-4 py-2 text-sm font-black text-white transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
                                 >
                                   반려
@@ -484,7 +484,7 @@ export default function QuestionList({
                               </>
                             ))}
                           <button
-                            onClick={() => deleteQuestion(teacherUid, question.id)}
+                            onClick={() => deleteQuestion(roomId, question.id)}
                             className="ml-auto rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-sm font-black text-white/60 hover:bg-white/12 hover:text-white"
                           >
                             삭제

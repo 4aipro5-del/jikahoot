@@ -71,12 +71,12 @@ const RefreshIcon = (
 );
 
 export default function StudentSubmissionPanel({
-  teacherUid,
+  roomId,
   roomCode,
   questions,
   onBack,
 }: {
-  teacherUid: string;
+  roomId: string;
   roomCode: string;
   questions: QuestionWithId[];
   // 새 창(전용 라우트)에서는 '돌아가기'가 필요 없어 생략한다. 있을 때만 버튼 노출.
@@ -103,7 +103,7 @@ export default function StudentSubmissionPanel({
     setToggling(true);
     setError(null);
     try {
-      await setSubmissionOpen(teacherUid, roomCode, next);
+      await setSubmissionOpen(roomId, roomCode, next);
     } catch {
       setError("상태를 변경하지 못했어요. 다시 시도해 주세요.");
     } finally {
