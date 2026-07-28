@@ -5,7 +5,7 @@ import { createGame } from "@/lib/firestore/games";
 import { subscribeToRoom } from "@/lib/firestore/rooms";
 import type { QuestionWithId } from "@/lib/firestore/questions";
 import { QUESTION_DURATION_SEC } from "@/lib/gameConfig";
-import type { Room } from "@/types/firestore";
+import type { RoomWithId } from "@/types/firestore";
 
 // 게임 운영 창은 고정된 window name을 써서 다시 열어도 같은 창을 재사용한다.
 const GAME_WINDOW_NAME = "jikahoot-game";
@@ -22,41 +22,47 @@ const ACCENT_PURPLE = "color-mix(in srgb, var(--primary) 55%, #ffffff)";
 // start/progress/results. The main window never renders the lobby or controls;
 // it just shows a "game in progress" placeholder and a re-open button.
 export default function GameTab({
-  teacherUid,
+  roomId,
+  ownerUid,
   questions,
 }: {
-  teacherUid: string;
+  roomId: string;
+  ownerUid: string;
   questions: QuestionWithId[];
 }) {
   const [currentGameId, setCurrentGameId] = useState<string | null | undefined>(undefined);
-  const [room, setRoom] = useState<Room | null>(null);
+  const [room, setRoom] = useState<RoomWithId | null>(null);
 
   useEffect(() => {
-    return subscribeToRoom(teacherUid, (nextRoom) => {
+    return subscribeToRoom(roomId, (nextRoom) => {
       setRoom(nextRoom);
       setCurrentGameId(nextRoom?.currentGameId ?? null);
     });
-  }, [teacherUid]);
+  }, [roomId]);
 
   if (currentGameId === undefined) {
     return null;
   }
 
   if (!currentGameId) {
-    return <StartGameScreen teacherUid={teacherUid} questions={questions} room={room} />;
+    return (
+      <StartGameScreen roomId={roomId} ownerUid={ownerUid} questions={questions} room={room} />
+    );
   }
 
   return <GameInProgressScreen gameCode={currentGameId} />;
 }
 
 function StartGameScreen({
-  teacherUid,
+  roomId,
+  ownerUid,
   questions,
   room,
 }: {
-  teacherUid: string;
+  roomId: string;
+  ownerUid: string;
   questions: QuestionWithId[];
-  room: Room | null;
+  room: RoomWithId | null;
 }) {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +84,7 @@ function StartGameScreen({
     const gameWindow = window.open("about:blank", GAME_WINDOW_NAME);
     try {
       const publicQuestions = approved.map((q) => ({ id: q.id, text: q.text, choices: q.choices }));
-      const code = await createGame(teacherUid, publicQuestions, durationSec, autoAdvance);
+      const code = await createGame(roomId, ownerUid, publicQuestions, durationSec, autoAdvance);
       if (gameWindow) gameWindow.location.href = gameWindowUrl(code);
     } catch (err) {
       gameWindow?.close();

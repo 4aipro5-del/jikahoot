@@ -1,41 +1,50 @@
 import type { Timestamp } from 'firebase/firestore'
 
-// rooms/{teacherUid}
+// rooms/{roomId}
+// A teacher may own many rooms (rooms are queried by ownerUid). The teacher's
+// profile (name/photo/email) is NOT stored here — it lives in Firebase Auth and
+// is the single source of truth. This doc only holds room-scoped data.
 export interface Room {
-  teacherUid: string
-  displayName: string
-  email: string
-  photoUrl: string | null
+  ownerUid: string
+  name: string
   roomCode: string
   createdAt: Timestamp
-  // Points at the teacher's current game session so the dashboard can resume
-  // it after a reload. Only updated at lifecycle boundaries (created/finished),
+  // Points at this room's current game session so the dashboard can resume it
+  // after a reload. Only updated at lifecycle boundaries (created/finished),
   // not on every in-game transition — live status comes from subscribing to
   // games/{currentGameId} directly, this is just "which game to subscribe to".
   currentGameId?: string | null
   currentGameStatus?: GameStatus | null
   currentGameStartedAt?: Timestamp | null
-  // Teacher-configurable settings (Settings tab). All optional — readers apply
-  // the documented default when a field is absent, so existing rooms keep
-  // working unchanged.
-  useGooglePhoto?: boolean // default true
+  // Room-configurable settings (Settings tab). All optional — readers apply the
+  // documented default when a field is absent, so existing rooms keep working.
   defaultQuestionDurationSec?: number // default 20
   autoAdvance?: boolean // default true
   // 학생 문제 제출 허용 여부. This is the ENFORCEMENT source of truth: the
-  // questionBank create rule get()s this room by its {teacherUid} path (rules
-  // can't map teacherUid -> roomCode, so the flag must be reachable here). It is
+  // questionBank create rule get()s this room by its {roomId} path. It is
   // mirrored onto roomCodes.submissionOpen for the student client to read, and
   // both are written together atomically. Absent means "open" (하위호환).
   submissionOpen?: boolean
 }
 
-// roomCodes/{code} — reverse lookup so students can resolve a room by code alone.
-// submissionOpen here is a student-READABLE mirror of Room.submissionOpen:
-// anonymous students can read roomCodes but never the private room doc, so this
-// copy lets /submit gate its UI. The rule enforcement reads Room.submissionOpen,
-// not this — this is UX only. Absent means "open".
+// A room paired with its document id (the roomId). Reads attach the doc id so
+// callers can key questionBank/games/roomCodes off the room without a second
+// field on the doc itself.
+export type RoomWithId = Room & { roomId: string }
+
+// roomCodes/{code} — reverse lookup so students can resolve a room by code
+// alone (mirrors the game-code pattern). submissionOpen here is a student-
+// READABLE mirror of Room.submissionOpen: anonymous students can read roomCodes
+// but never the private room doc, so this copy lets /submit gate its UI. The
+// rule enforcement reads Room.submissionOpen, not this — this is UX only.
+// Absent means "open".
 export interface RoomCode {
+  // owner uid — kept as `teacherUid` so the roomCodes rules stay uid-based and
+  // unchanged. Equals the room's ownerUid.
   teacherUid: string
+  // which room this code points at. Legacy docs (pre-multi-room) may lack it —
+  // readers fall back to teacherUid, which equals the roomId for primary rooms.
+  roomId?: string
   submissionOpen?: boolean
 }
 
@@ -46,7 +55,7 @@ export interface Choice {
   text: string
 }
 
-// rooms/{teacherUid}/questionBank/{questionId}
+// rooms/{roomId}/questionBank/{questionId}
 export interface Question {
   text: string
   choices: Choice[]
@@ -70,7 +79,13 @@ export type GameStatus = 'lobby' | 'active' | 'finished'
 
 // games/{gameCode}
 export interface Game {
+  // owner uid — kept as `teacherUid` because the security rules key game
+  // ownership off this field (gameOwner). Equals the room's ownerUid.
   teacherUid: string
+  // which room this game was started from (for per-room lookups/cleanup).
+  // Optional because games created before multi-room predate it — readers fall
+  // back to teacherUid, which equals the roomId for a primary room.
+  roomId?: string
   status: GameStatus
   questions: PublicQuestion[]
   currentQuestionIndex: number // -1 while in lobby

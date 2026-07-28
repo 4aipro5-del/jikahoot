@@ -3,8 +3,7 @@
 import { useState } from "react";
 import type { User } from "firebase/auth";
 import { clearGuestTeacher, linkTeacherWithGoogle } from "@/lib/firebase/auth";
-import { syncRoomProfile } from "@/lib/firestore/rooms";
-import type { Room } from "@/types/firestore";
+import type { RoomWithId } from "@/types/firestore";
 
 // Teacher-side settings are wired: display name / answer time / auto-advance /
 // Google-photo toggle all persist to the Room doc (via the handlers passed from
@@ -18,12 +17,13 @@ export default function SettingsPanel({
   onUpdateSettings,
   onUpdateDisplayName,
 }: {
-  room: Room;
+  room: RoomWithId;
   user: User;
-  onUpdateSettings: (patch: Partial<Room>) => Promise<void>;
+  onUpdateSettings: (patch: Partial<RoomWithId>) => Promise<void>;
   onUpdateDisplayName: (name: string) => Promise<void>;
 }) {
-  const [nameInput, setNameInput] = useState(room.displayName);
+  const currentName = user.displayName?.trim() ?? "";
+  const [nameInput, setNameInput] = useState(currentName);
   const [savingName, setSavingName] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [upgrading, setUpgrading] = useState(false);
@@ -32,11 +32,11 @@ export default function SettingsPanel({
   const isGuest = user.isAnonymous;
   const answerTime = room.defaultQuestionDurationSec ?? 20;
   const autoAdvance = room.autoAdvance ?? true;
-  const useGooglePhoto = room.useGooglePhoto !== false;
-  const showPhoto = useGooglePhoto && Boolean(room.photoUrl);
-  const initial = (room.displayName.trim()[0] ?? "?").toUpperCase();
+  // 프로필(사진/이름/이메일)은 Firebase Auth가 단일 출처 — room이 아니라 user에서 읽는다.
+  const showPhoto = Boolean(user.photoURL);
+  const initial = (currentName.trim()[0] ?? "?").toUpperCase();
 
-  const nameChanged = nameInput.trim() !== room.displayName && nameInput.trim().length > 0;
+  const nameChanged = nameInput.trim() !== currentName && nameInput.trim().length > 0;
 
   // 게스트(익명) → 영구 구글 계정. linkWithPopup은 uid를 유지해 방/문제/게임이
   // 그대로 승계된다. 구글 프로필을 방에 동기화하고 게스트 마커를 지운 뒤 새로고침.
@@ -45,8 +45,10 @@ export default function SettingsPanel({
     setUpgradeError(null);
     setUpgrading(true);
     try {
-      const cred = await linkTeacherWithGoogle(user);
-      await syncRoomProfile(cred.user);
+      await linkTeacherWithGoogle(user);
+      // profile now comes straight from Firebase Auth (the linked Google
+      // account), so there's nothing to sync into Firestore — just drop the
+      // guest marker and reload to reflect the upgraded account.
       clearGuestTeacher();
       window.location.reload();
     } catch (err) {
@@ -68,7 +70,7 @@ export default function SettingsPanel({
     }
   }
 
-  async function save(patch: Partial<Room>) {
+  async function save(patch: Partial<RoomWithId>) {
     setError(null);
     try {
       await onUpdateSettings(patch);
@@ -155,7 +157,7 @@ export default function SettingsPanel({
                   {showPhoto ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={room.photoUrl!}
+                      src={user.photoURL!}
                       alt=""
                       className="h-14 w-14 flex-none rounded-xl object-cover"
                     />
@@ -164,19 +166,7 @@ export default function SettingsPanel({
                       {initial}
                     </span>
                   )}
-                  <label className="flex cursor-pointer items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={useGooglePhoto}
-                      onChange={(e) => save({ useGooglePhoto: e.target.checked })}
-                      className="h-5 w-5 flex-none accent-[var(--primary)]"
-                    />
-                    <span className="text-base font-semibold text-white">Google 프로필 사진 사용</span>
-                  </label>
                 </div>
-                <p className="text-sm text-[color:var(--foreground-muted)]">
-                  체크 해제 시 기본 이미지가 사용됩니다.
-                </p>
               </div>
             )}
 
@@ -184,7 +174,7 @@ export default function SettingsPanel({
             {!isGuest && (
               <div className="flex flex-col gap-2">
                 <span className="text-base font-bold text-white/70">Google 계정</span>
-                <p className="text-base text-white/80">{room.email || "연결된 Google 계정"}</p>
+                <p className="text-base text-white/80">{user.email || "연결된 Google 계정"}</p>
                 <span className="mt-1 inline-flex w-fit items-center gap-2 rounded-xl border border-white/12 bg-white/[0.06] px-4 py-2.5 text-base font-bold text-white">
                   <GoogleMark />
                   연결된 계정

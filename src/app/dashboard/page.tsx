@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { User } from "firebase/auth";
 import {
@@ -8,13 +8,26 @@ import {
   subscribeToAuthState,
   updateTeacherDisplayName,
 } from "@/lib/firebase/auth";
-import { getRoomByTeacherUid, syncRoomProfile, updateRoomSettings } from "@/lib/firestore/rooms";
-import { subscribeToQuestionBank, type QuestionWithId } from "@/lib/firestore/questions";
-import type { Room } from "@/types/firestore";
+import {
+  createRoom,
+  deleteRoom,
+  ensurePrimaryRoom,
+  renameRoom,
+  subscribeToRooms,
+  updateRoomSettings,
+} from "@/lib/firestore/rooms";
+import {
+  getRoomQuestionStats,
+  subscribeToQuestionBank,
+  type QuestionWithId,
+  type RoomQuestionStats,
+} from "@/lib/firestore/questions";
+import type { RoomWithId } from "@/types/firestore";
 import AccountMenu from "./AccountMenu";
 import DashboardHome from "./DashboardHome";
 import Drawer from "./Drawer";
 import GameTab from "./GameTab";
+import RoomsPanel from "./RoomsPanel";
 import SettingsPanel from "./SettingsPanel";
 import QuestionForm from "./QuestionForm";
 import QuestionList from "./QuestionList";
@@ -24,34 +37,69 @@ import StageSkeleton from "@/components/StageSkeleton";
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null | undefined>(undefined);
-  const [room, setRoom] = useState<Room | null>(null);
+  const [rooms, setRooms] = useState<RoomWithId[]>([]);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [statsByRoom, setStatsByRoom] = useState<Record<string, RoomQuestionStats>>({});
+  const [showRooms, setShowRooms] = useState(false);
+  // bumped after a display-name change to re-render children that read the
+  // (mutated-in-place) Firebase Auth user.displayName; also re-runs room load
+  const [profileTick, bumpProfile] = useState(0);
   const [checkedProfile, setCheckedProfile] = useState(false);
-  const [needsDisplayName, setNeedsDisplayName] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState("");
   const [savingDisplayName, setSavingDisplayName] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [questions, setQuestions] = useState<QuestionWithId[]>([]);
   const [tab, setTab] = useState<DashboardTab>("dashboard");
   const [isNewQuestionOpen, setIsNewQuestionOpen] = useState(false);
+  const ensuredRef = useRef(false);
+
+  // the room the dashboard is currently managing (all tabs act on it)
+  const room = rooms.find((r) => r.roomId === selectedRoomId) ?? null;
+  const isGuest = Boolean(user?.isAnonymous);
+  // a signed-in teacher with no display name (fresh guest) must set one first —
+  // derived from Auth so the prompt clears the moment updateProfile lands
+  const needsDisplayName = Boolean(user && !user.displayName?.trim());
 
   function selectTab(next: DashboardTab) {
+    setShowRooms(false);
     setTab(next);
   }
 
-  // 학생 문제 받기: 전용 화면을 새 창으로 연다(고정 window name으로 재사용/포커스).
-  // 교사는 원래 문제 관리 창을 그대로 유지하고, 새 창은 학생용 QR·제출 코드·현황
-  // 표시(프로젝션) 용도로 쓴다.
+  // 학생 문제 받기: 선택된 방 기준으로 전용 화면을 새 창으로 연다.
   function openSubmissionsWindow() {
-    const submissionsWindow = window.open("/dashboard/submissions", "jikahoot-submissions");
+    if (!room) return;
+    const submissionsWindow = window.open(
+      `/dashboard/submissions?room=${room.roomId}`,
+      "jikahoot-submissions",
+    );
     submissionsWindow?.focus();
   }
 
   useEffect(() => subscribeToAuthState(setUser), []);
 
   useEffect(() => {
-    if (!room) return;
-    return subscribeToQuestionBank(room.teacherUid, setQuestions);
-  }, [room]);
+    if (!selectedRoomId) return;
+    return subscribeToQuestionBank(selectedRoomId, setQuestions);
+  }, [selectedRoomId]);
+
+  // one-shot aggregate stats per room for the room cards (refreshes when the
+  // room list changes)
+  useEffect(() => {
+    if (rooms.length === 0) return;
+    let cancelled = false;
+    Promise.all(
+      rooms.map(async (r) => [r.roomId, await getRoomQuestionStats(r.roomId)] as const),
+    )
+      .then((entries) => {
+        if (!cancelled) setStatsByRoom(Object.fromEntries(entries));
+      })
+      .catch(() => {
+        /* stats are best-effort; ignore */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [rooms]);
 
   useEffect(() => {
     if (user === null) {
@@ -60,46 +108,42 @@ export default function DashboardPage() {
     }
     if (!user) return;
 
-    const currentUser = user;
+    // no display name yet (fresh guest) → the derived `needsDisplayName` renders
+    // the name prompt; don't load rooms until it's set.
+    if (!user.displayName?.trim()) return;
 
-    let active = true;
+    const uid = user.uid;
+    ensuredRef.current = false;
+    let cancelled = false;
 
-    async function loadTeacherRoom() {
-      setError(null);
-      setCheckedProfile(false);
-      setNeedsDisplayName(false);
-      setRoom(null);
-
-      try {
-        const existingRoom = await getRoomByTeacherUid(currentUser.uid);
-        if (!active) return;
-
-        if (existingRoom?.displayName.trim()) {
-          setRoom(existingRoom);
-          return;
+    const unsub = subscribeToRooms(uid, (list) => {
+      if (cancelled) return;
+      if (list.length === 0) {
+        // no room yet (new teacher) OR a legacy room not yet migrated — ensure
+        // the primary room once; the subscription then picks it up.
+        if (!ensuredRef.current) {
+          ensuredRef.current = true;
+          ensurePrimaryRoom(uid).catch((err) =>
+            setError(err instanceof Error ? err.message : "방을 준비하지 못했습니다."),
+          );
         }
-
-        setDisplayNameInput("");
-        setNeedsDisplayName(true);
-      } catch (err) {
-        if (!active) return;
-        setError(err instanceof Error ? err.message : "방 정보를 불러오지 못했습니다.");
-      } finally {
-        if (active) setCheckedProfile(true);
+        return;
       }
-    }
-
-    void loadTeacherRoom();
+      setRooms(list);
+      setSelectedRoomId((prev) =>
+        prev && list.some((r) => r.roomId === prev) ? prev : list[0].roomId,
+      );
+      setCheckedProfile(true);
+    });
 
     return () => {
-      active = false;
+      cancelled = true;
+      unsub();
     };
-  }, [user, router]);
+  }, [user, router, profileTick]);
 
   async function handleDisplayNameSubmit(e: FormEvent) {
     e.preventDefault();
-    // guest (anonymous) teachers must be able to set their name too — the room
-    // is created off their uid just like a Google teacher's
     if (!user) return;
 
     const trimmedName = displayNameInput.trim();
@@ -113,9 +157,9 @@ export default function DashboardPage() {
 
     try {
       await updateTeacherDisplayName(user, trimmedName);
-      const nextRoom = await syncRoomProfile(user);
-      setRoom(nextRoom);
-      setNeedsDisplayName(false);
+      // name now exists → derived needsDisplayName clears and the load effect
+      // re-runs (profileTick) → rooms subscription starts
+      bumpProfile((v) => v + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "이름을 저장하지 못했습니다.");
     } finally {
@@ -123,20 +167,43 @@ export default function DashboardPage() {
     }
   }
 
-  // Settings tab writes: persist to the Room doc, then optimistically fold the
-  // change into local state so the greeting/account-menu/game defaults reflect
-  // it immediately (the room is loaded once, not subscribed).
-  async function handleUpdateSettings(patch: Partial<Room>) {
+  // Settings writes go straight to the room doc; the rooms subscription reflects
+  // the change back into `room` (no local mirror needed).
+  async function handleUpdateSettings(patch: Partial<RoomWithId>) {
     if (!room) return;
-    await updateRoomSettings(room.teacherUid, patch);
-    setRoom({ ...room, ...patch });
+    await updateRoomSettings(room.roomId, patch);
   }
 
   async function handleUpdateDisplayName(name: string) {
-    if (!user || !room) return;
+    if (!user) return;
+    // display name lives in Firebase Auth now; updateProfile mutates the current
+    // user in place, so bump a tick to re-render children that read it.
     await updateTeacherDisplayName(user, name);
-    await updateRoomSettings(room.teacherUid, { displayName: name });
-    setRoom({ ...room, displayName: name });
+    bumpProfile((v) => v + 1);
+  }
+
+  function handleSelectRoom(roomId: string) {
+    setSelectedRoomId(roomId);
+    setShowRooms(false);
+    setTab("dashboard");
+  }
+
+  async function handleCreateRoom(name: string) {
+    if (!user) return;
+    const created = await createRoom(user.uid, name);
+    setSelectedRoomId(created.roomId); // switch to the new room (list updates live)
+  }
+
+  async function handleRenameRoom(roomId: string, name: string) {
+    await renameRoom(roomId, name);
+  }
+
+  async function handleDeleteRoom(target: RoomWithId) {
+    await deleteRoom(target.roomId, target.roomCode);
+    if (selectedRoomId === target.roomId) {
+      const next = rooms.find((r) => r.roomId !== target.roomId);
+      setSelectedRoomId(next?.roomId ?? null);
+    }
   }
 
   if (user && needsDisplayName) {
@@ -218,6 +285,21 @@ export default function DashboardPage() {
 
   const pendingCount = questions.filter((q) => q.status === "pending").length;
 
+  // The one-shot aggregate stats only refetch when the room LIST changes, so
+  // they'd go stale as questions are submitted/approved/rejected/deleted. The
+  // selected room's questionBank IS live-subscribed here, so derive its card
+  // stats from that so its card always reflects the latest counts.
+  const statsForCards: Record<string, RoomQuestionStats> = selectedRoomId
+    ? {
+        ...statsByRoom,
+        [selectedRoomId]: {
+          total: questions.length,
+          pending: pendingCount,
+          rejected: questions.filter((q) => q.status === "rejected").length,
+        },
+      }
+    : statsByRoom;
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-[var(--background)] lg:flex-row">
       <Sidebar active={tab} onSelect={selectTab} pendingCount={pendingCount} />
@@ -225,39 +307,62 @@ export default function DashboardPage() {
       <main className="relative min-w-0 flex-1 px-5 pb-6 pt-14 sm:px-8 sm:pb-8 sm:pt-16 lg:px-10">
         {/* 프로필: 레이아웃을 밀지 않도록 우측 상단에 absolute로 띄운다 */}
         <div className="absolute right-5 top-6 z-20 sm:right-8 sm:top-8 lg:right-10">
-          <AccountMenu room={room} user={user} />
+          <AccountMenu user={user} />
         </div>
 
-        {tab === "dashboard" && (
-          <DashboardHome
-            room={room}
-            questions={questions}
-            onViewApprovals={() => setTab("approval")}
+        {showRooms ? (
+          <RoomsPanel
+            rooms={rooms}
+            selectedRoomId={selectedRoomId}
+            statsByRoom={statsForCards}
+            isGuest={isGuest}
+            onSelect={handleSelectRoom}
+            onCreate={handleCreateRoom}
+            onRename={handleRenameRoom}
+            onDelete={handleDeleteRoom}
           />
-        )}
+        ) : (
+          <>
+            {tab === "dashboard" && (
+              <DashboardHome
+                displayName={user.displayName?.trim() || "선생님"}
+                questions={questions}
+                rooms={rooms}
+                selectedRoomId={selectedRoomId}
+                statsByRoom={statsForCards}
+                isGuest={isGuest}
+                onSelectRoom={handleSelectRoom}
+                onManageRooms={() => setShowRooms(true)}
+                onViewApprovals={() => setTab("approval")}
+              />
+            )}
 
-        {tab === "approval" && (
-          <QuestionList
-            teacherUid={room.teacherUid}
-            questions={questions}
-            onNewQuestion={() => setIsNewQuestionOpen(true)}
-            onReceiveStudentQuestions={openSubmissionsWindow}
-          />
-        )}
+            {tab === "approval" && (
+              <QuestionList
+                roomId={room.roomId}
+                questions={questions}
+                onNewQuestion={() => setIsNewQuestionOpen(true)}
+                onReceiveStudentQuestions={openSubmissionsWindow}
+              />
+            )}
 
-        {tab === "game" && <GameTab teacherUid={room.teacherUid} questions={questions} />}
-        {tab === "settings" && (
-          <SettingsPanel
-            room={room}
-            user={user}
-            onUpdateSettings={handleUpdateSettings}
-            onUpdateDisplayName={handleUpdateDisplayName}
-          />
+            {tab === "game" && (
+              <GameTab roomId={room.roomId} ownerUid={room.ownerUid} questions={questions} />
+            )}
+            {tab === "settings" && (
+              <SettingsPanel
+                room={room}
+                user={user}
+                onUpdateSettings={handleUpdateSettings}
+                onUpdateDisplayName={handleUpdateDisplayName}
+              />
+            )}
+          </>
         )}
       </main>
 
       <Drawer open={isNewQuestionOpen} onClose={() => setIsNewQuestionOpen(false)} title="새 문제 만들기">
-        <QuestionForm teacherUid={room.teacherUid} />
+        <QuestionForm roomId={room.roomId} />
       </Drawer>
     </div>
   );

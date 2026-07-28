@@ -3,15 +3,13 @@
 import { useState } from "react";
 import type { User } from "firebase/auth";
 import { signOutUser } from "@/lib/firebase/auth";
-import type { Room } from "@/types/firestore";
 
-export default function AccountMenu({ room, user }: { room: Room; user: User }) {
+export default function AccountMenu({ user }: { user: User }) {
   const [open, setOpen] = useState(false);
   const isGuest = user.isAnonymous;
-  const initial = room.displayName.trim().slice(0, 1) || "T";
-  // 'Google 프로필 사진 사용' 설정(기본 켜짐)을 존중 — 해제 시 기본 이니셜 아바타.
-  // 설정 변경은 room 상태를 즉시 갱신하므로 재로그인 없이 바로 반영된다.
-  const showPhoto = room.useGooglePhoto !== false && Boolean(room.photoUrl);
+  const displayName = user.displayName?.trim() || "선생님";
+  const initial = displayName.slice(0, 1) || "T";
+  const showPhoto = Boolean(user.photoURL);
 
   return (
     <div className="relative">
@@ -22,13 +20,13 @@ export default function AccountMenu({ room, user }: { room: Room; user: User }) 
       >
         {showPhoto ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={room.photoUrl!} alt="" className="h-7 w-7 rounded-full object-cover" />
+          <img src={user.photoURL!} alt="" className="h-7 w-7 rounded-full object-cover" />
         ) : (
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--primary)] text-sm font-black">
             {initial}
           </span>
         )}
-        <span className="text-sm font-bold">{room.displayName} 선생님</span>
+        <span className="text-sm font-bold">{displayName} 선생님</span>
         {isGuest && (
           <span className="rounded-full bg-[var(--warning)] px-2 py-0.5 text-[0.7rem] font-black text-[#4a2c00]">
             게스트

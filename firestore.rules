@@ -7,10 +7,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isTeacher(teacherUid) {
-      return isSignedIn() && request.auth.uid == teacherUid;
-    }
-
     function game(gameCode) {
       return get(/databases/$(database)/documents/games/$(gameCode)).data;
     }
@@ -32,58 +28,89 @@ service cloud.firestore {
       return game(gameCode).get('paused', false) == true;
     }
 
-    // ---- Teacher room + persistent question bank ----
-    match /rooms/{teacherUid} {
-      allow read, create, update: if isTeacher(teacherUid);
-      allow delete: if false;
+    // The owner of a room. A teacher may own many rooms (rooms are keyed by a
+    // roomId, not by uid). Legacy/primary rooms predate ownerUid and live at
+    // rooms/{uid}, so default to the doc id — which equals the owner uid there.
+    function roomOwner(roomId) {
+      return get(/databases/$(database)/documents/rooms/$(roomId)).data.get('ownerUid', roomId);
+    }
+
+    // ---- Teacher rooms (1 teacher : N rooms) + per-room question bank ----
+    match /rooms/{roomId} {
+      // single-doc read. The primary room slot (rooms/{uid}) is allowed by doc
+      // id so a fresh teacher can read-before-create it while it doesn't exist
+      // yet (a rule touching resource.data would error on the null resource).
+      // Additional (random-id) rooms are readable only when they exist and the
+      // caller owns them.
+      allow get: if isSignedIn() && (
+        roomId == request.auth.uid
+        || (resource != null && resource.data.ownerUid == request.auth.uid)
+      );
+      // list/query: MUST use a direct field reference. The room list runs
+      // where('ownerUid','==',uid); Firestore statically checks that the query
+      // is safe against the rule, and a .get() with a default is opaque to that
+      // check (it rejects the whole query). Rooms without ownerUid simply don't
+      // match the filter, so this never leaks another teacher's rooms.
+      allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+      allow update: if isSignedIn()
+        && resource.data.get('ownerUid', roomId) == request.auth.uid
+        // ownership is immutable: block re-pointing a room at another teacher
+        // (which would inject it into their room list). The default handles the
+        // legacy backfill where ownerUid goes absent(→roomId) → roomId.
+        && request.resource.data.get('ownerUid', roomId) == resource.data.get('ownerUid', roomId);
+      allow create: if isSignedIn()
+        && request.resource.data.ownerUid == request.auth.uid;
+      // owner may delete their room (the client removes questionBank + roomCode
+      // first, then the room doc)
+      allow delete: if isSignedIn()
+        && resource.data.get('ownerUid', roomId) == request.auth.uid;
 
       // correctChoiceId lives here, so only the room owner may ever read it
       match /questionBank/{questionId} {
-        allow read: if isTeacher(teacherUid);
+        allow read: if isSignedIn() && roomOwner(roomId) == request.auth.uid;
 
         // the teacher is their own reviewer, so their own questions go straight
         // to 'approved'; anything a student submits is forced into 'pending'.
         // A student create is additionally rejected once 제출 종료 is set — the
-        // room's submissionOpen must not be false. We read it off the room (not
-        // roomCodes) because the rule only knows {teacherUid}, not the code, and
-        // get(rooms/{teacherUid}) is the only submission flag reachable by path.
-        // Absent (get default true) keeps pre-existing rooms open. The teacher's
-        // own creation is never gated by this.
+        // room's submissionOpen must not be false (get default true keeps
+        // pre-existing rooms open). The owner's own creation is never gated.
         allow create: if isSignedIn() && (
           (
-            isTeacher(teacherUid)
+            roomOwner(roomId) == request.auth.uid
             && request.resource.data.createdBy == 'teacher'
             && request.resource.data.status == 'approved'
           )
           || (
-            !isTeacher(teacherUid)
+            roomOwner(roomId) != request.auth.uid
             && request.resource.data.createdBy == 'student'
             && request.resource.data.authorUid == request.auth.uid
             && request.resource.data.status == 'pending'
-            && get(/databases/$(database)/documents/rooms/$(teacherUid)).data.get('submissionOpen', true) == true
+            && get(/databases/$(database)/documents/rooms/$(roomId)).data.get('submissionOpen', true) == true
           )
         );
 
         // approve/reject/edit is the room owner's call only
-        allow update, delete: if isTeacher(teacherUid);
+        allow update, delete: if isSignedIn() && roomOwner(roomId) == request.auth.uid;
       }
     }
 
-    // room-code -> teacherUid lookup, so students can resolve a room without
-    // ever knowing the teacher's uid (mirrors the game-code pattern below)
+    // room-code -> room lookup, so students can resolve a room without ever
+    // knowing the teacher's uid (mirrors the game-code pattern below). teacherUid
+    // is the owner (keeps these rules uid-based); roomId is which room it points
+    // at (equal to teacherUid for a primary room; legacy docs may omit it).
     match /roomCodes/{code} {
       allow read: if isSignedIn();
       allow create: if isSignedIn()
         && request.auth.uid == request.resource.data.teacherUid
-        && request.resource.data.keys().hasOnly(['teacherUid', 'submissionOpen'])
+        && request.resource.data.keys().hasOnly(['teacherUid', 'roomId', 'submissionOpen'])
         && !exists(/databases/$(database)/documents/roomCodes/$(code));
-      // the owning teacher may toggle submissionOpen (제출 종료/열기); teacherUid
-      // is immutable and no other field may be added
+      // the owning teacher may toggle submissionOpen (제출 종료/열기); no other
+      // field may change
       allow update: if isSignedIn()
         && request.auth.uid == resource.data.teacherUid
-        && request.resource.data.teacherUid == resource.data.teacherUid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submissionOpen']);
-      allow delete: if false;
+      // owner may delete the code when deleting its room
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.teacherUid;
     }
 
     // ---- Ephemeral game sessions, looked up directly by game code ----

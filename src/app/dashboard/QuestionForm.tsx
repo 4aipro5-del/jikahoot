@@ -3,7 +3,7 @@
 import QuestionEditorForm from "@/components/QuestionEditorForm";
 import { createTeacherQuestion } from "@/lib/firestore/questions";
 
-export default function QuestionForm({ teacherUid }: { teacherUid: string }) {
+export default function QuestionForm({ roomId }: { roomId: string }) {
   return (
     <QuestionEditorForm
       title="새 문제 만들기"
@@ -11,7 +11,7 @@ export default function QuestionForm({ teacherUid }: { teacherUid: string }) {
       successMessage="문제를 추가했습니다."
       className="dashboard-builder-card"
       hideTitle
-      onSubmit={(input) => createTeacherQuestion(teacherUid, input)}
+      onSubmit={(input) => createTeacherQuestion(roomId, input)}
     />
   );
 }
