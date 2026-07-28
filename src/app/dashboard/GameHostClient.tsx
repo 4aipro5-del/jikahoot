@@ -232,6 +232,11 @@ export default function GameHostClient({
   const autoAdvancedIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // 임베드(대시보드) 모드에서는 자동 진행을 하지 않는다 — 탭/방을 옮기면 이
+    // 컴포넌트가 언마운트돼 타이머가 죽기 때문. 대신 대시보드 루트에 항상 떠 있는
+    // GameAutoAdvancer가 자동 진행을 담당한다. 여기(임베드)는 수동 '다음 문제'만.
+    // 독립 라우트(/dashboard/game/[code])는 팝업처럼 상시 마운트라 자체 처리.
+    if (embedded) return;
     if (!game || game.status !== "active" || advancing) return;
     // 일시정지 중에는 자동 진행하지 않음
     if (game.paused) return;
