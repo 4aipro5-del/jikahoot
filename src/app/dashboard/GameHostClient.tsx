@@ -48,8 +48,17 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   const [ending, setEnding] = useState(false);
 
   useEffect(() => subscribeToAuthState(setUser), []);
-  useEffect(() => subscribeToGame(gameCode, setGame), [gameCode]);
-  useEffect(() => subscribeToPlayers(gameCode, setPlayers), [gameCode]);
+  // 이 컴포넌트는 게임 운영 창(팝업)에서도 렌더된다. 팝업은 Firebase 세션을
+  // 비동기로 복원하는데, 그 전에 game/players를 구독하면 미인증 상태로 읽어
+  // 스냅샷 리스너에서 permission-denied가 터진다. 그래서 user가 준비된 뒤 구독한다.
+  useEffect(() => {
+    if (!user) return;
+    return subscribeToGame(gameCode, setGame);
+  }, [gameCode, user]);
+  useEffect(() => {
+    if (!user) return;
+    return subscribeToPlayers(gameCode, setPlayers);
+  }, [gameCode, user]);
 
   useEffect(() => {
     if (user === null) router.replace("/");
