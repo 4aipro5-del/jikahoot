@@ -31,7 +31,16 @@ const CHOICE_THEMES = [
   { bg: "var(--success)", shadow: "rgba(20, 83, 45, 0.42)", shape: "■", label: "D", light: false },
 ];
 
-export default function GameHostClient({ gameCode }: { gameCode: string }) {
+export default function GameHostClient({
+  gameCode,
+  embedded = false,
+}: {
+  gameCode: string;
+  // embedded=true renders inside the dashboard Game tab (no fullscreen stage
+  // wrapper, no popup close/navigation on end — the parent GameTab detects the
+  // room's currentGameId clearing and returns to the start screen on its own).
+  embedded?: boolean;
+}) {
   const router = useRouter();
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [game, setGame] = useState<Game | null | undefined>(undefined);
@@ -176,9 +185,10 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     try {
       await finishGame(gameCode);
       await clearCurrentGame(game.roomId ?? game.teacherUid, gameCode);
-      // 팝업으로 열린 게임 창이면 정리 후 스스로 닫아 원래 창(새 게임 시작 화면)으로
-      // 돌아가게 한다. 직접 접근한 경우 opener가 없어 무시된다.
-      if (typeof window !== "undefined" && window.opener && !window.opener.closed) {
+      // 대시보드 임베드 모드에서는 여기서 아무것도 하지 않는다 — currentGameId가
+      // 해제되면 부모 GameTab이 '새 게임 시작' 화면으로 돌아간다. 팝업(독립 창)으로
+      // 열린 경우엔 정리 후 스스로 닫는다. 직접 접근한 경우 opener가 없어 무시된다.
+      if (!embedded && typeof window !== "undefined" && window.opener && !window.opener.closed) {
         window.close();
       }
     } catch (err) {
@@ -197,9 +207,12 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
     setError(null);
     try {
       await clearCurrentGame(game.roomId ?? game.teacherUid, gameCode);
-      // 팝업으로 열린 게임 창이면 닫아 원래 창(새 게임 시작)으로 돌려보내고,
-      // 직접 접근한 경우엔 대시보드로 이동한다.
-      if (typeof window !== "undefined" && window.opener && !window.opener.closed) {
+      // 임베드 모드: currentGameId 해제만으로 부모 GameTab이 '새 게임 시작'으로
+      // 돌아가므로 별도 이동/닫기를 하지 않는다. 팝업 창이면 닫고, 직접 접근한
+      // 독립 창이면 대시보드로 이동한다.
+      if (embedded) {
+        // no-op — parent re-renders once currentGameId clears
+      } else if (typeof window !== "undefined" && window.opener && !window.opener.closed) {
         window.close();
       } else {
         router.replace("/dashboard");
@@ -219,6 +232,11 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   const autoAdvancedIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // 임베드(대시보드) 모드에서는 자동 진행을 하지 않는다 — 탭/방을 옮기면 이
+    // 컴포넌트가 언마운트돼 타이머가 죽기 때문. 대신 대시보드 루트에 항상 떠 있는
+    // GameAutoAdvancer가 자동 진행을 담당한다. 여기(임베드)는 수동 '다음 문제'만.
+    // 독립 라우트(/dashboard/game/[code])는 팝업처럼 상시 마운트라 자체 처리.
+    if (embedded) return;
     if (!game || game.status !== "active" || advancing) return;
     // 일시정지 중에는 자동 진행하지 않음
     if (game.paused) return;
@@ -238,31 +256,41 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   }, [game, now, advancing]);
 
   if (!user || game === undefined) {
+    if (embedded) {
+      return (
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <span className="h-14 w-14 animate-pulse rounded-2xl bg-white/10" aria-hidden="true" />
+        </div>
+      );
+    }
     return <StageSkeleton />;
   }
 
-  if (game === null) {
-    return (
+  // 로딩 이후의 안내 상태(게임 없음 / 권한 없음)는 임베드 여부에 따라 전체화면
+  // stage 래퍼를 쓸지, 대시보드 안 카드로 보일지 결정한다.
+  const panelMessage = (message: string) =>
+    embedded ? (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="quiz-panel px-6 py-5 text-center">
+          <p className="paper-muted">{message}</p>
+        </div>
+      </div>
+    ) : (
       <div className="stage-shell">
         <div className="stage-content flex min-h-screen items-center justify-center">
           <div className="quiz-panel px-6 py-5 text-center">
-            <p className="paper-muted">게임을 찾을 수 없어요.</p>
+            <p className="paper-muted">{message}</p>
           </div>
         </div>
       </div>
     );
+
+  if (game === null) {
+    return panelMessage("게임을 찾을 수 없어요.");
   }
 
   if (game.teacherUid !== user.uid) {
-    return (
-      <div className="stage-shell">
-        <div className="stage-content flex min-h-screen items-center justify-center">
-          <div className="quiz-panel px-6 py-5 text-center">
-            <p className="paper-muted">권한이 없어요.</p>
-          </div>
-        </div>
-      </div>
-    );
+    return panelMessage("권한이 없어요.");
   }
 
   // Time-based escape hatch: once the question timer expires the host can
@@ -275,20 +303,37 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
   const effectiveNow = game.paused && game.pausedAt ? game.pausedAt.toMillis() : now;
   const activeTimeUp = activeDeadline !== null && effectiveNow >= activeDeadline;
 
-  return (
-    <div className="stage-shell">
-      <div className="stage-content dashboard-stage flex min-h-screen flex-col gap-6 py-8">
-        {game.status === "lobby" && (
-          <LobbyView
-            gameCode={gameCode}
-            players={players}
-            canStart={players.length > 0}
-            onStart={handleAdvance}
-            onKick={handleKick}
-            onEndGame={() => setShowEndGameModal(true)}
-            starting={advancing}
-          />
-        )}
+  const consoleBody = (
+    <div
+      className={
+        embedded
+          ? "dashboard-stage mx-auto flex w-full flex-col gap-6"
+          : "stage-content dashboard-stage flex min-h-screen flex-col gap-6 py-8"
+      }
+    >
+        {game.status === "lobby" &&
+          (embedded ? (
+            // 대시보드 임베드(교사 화면 ②): QR/코드/참가자 그리드는 학생 전광판
+            // 창이 담당하므로, 여기서는 대기 안내 + 참가자 수 + 시작/종료만 둔다.
+            <WaitingHostView
+              playerCount={players.length}
+              canStart={players.length > 0}
+              onStart={handleAdvance}
+              onEndGame={() => setShowEndGameModal(true)}
+              starting={advancing}
+            />
+          ) : (
+            // 독립 라우트(보조): 예전처럼 콘솔 전체(QR/코드/참가자/시작)를 렌더
+            <LobbyView
+              gameCode={gameCode}
+              players={players}
+              canStart={players.length > 0}
+              onStart={handleAdvance}
+              onKick={handleKick}
+              onEndGame={() => setShowEndGameModal(true)}
+              starting={advancing}
+            />
+          ))}
 
         {game.status === "active" && (
           <ActiveView
@@ -331,6 +376,11 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
           </p>
         )}
       </div>
+  );
+
+  return (
+    <>
+      {embedded ? consoleBody : <div className="stage-shell">{consoleBody}</div>}
 
       <EndGameConfirmModal
         open={showEndGameModal}
@@ -339,7 +389,67 @@ export default function GameHostClient({ gameCode }: { gameCode: string }) {
           if (!ending) setShowEndGameModal(false);
         }}
         onConfirm={handleConfirmEndGame}
+        embedded={embedded}
       />
+    </>
+  );
+}
+
+// 교사 화면 ②(애들 들어오는 중). 학생 전광판 창이 QR/코드/참가자 명단을 보여주므로
+// 대시보드에는 대기 안내 + 참가자 수 + 게임 시작/종료만 둔다. '학생 화면 다시 열기'는
+// 상위 GameTab이 상단에 항상 제공한다.
+function WaitingHostView({
+  playerCount,
+  canStart,
+  onStart,
+  onEndGame,
+  starting,
+}: {
+  playerCount: number;
+  canStart: boolean;
+  onStart: () => void;
+  onEndGame: () => void;
+  starting: boolean;
+}) {
+  return (
+    <div className="mx-auto flex min-h-[58vh] w-full max-w-xl flex-col items-center justify-center gap-9 py-10 text-center">
+      <div className="space-y-3">
+        <p className="hero-chip">Game</p>
+        <h1 className="display-font text-5xl leading-none text-white sm:text-6xl">게임 진행 중</h1>
+      </div>
+
+      <div>
+        <p className="text-sm font-black uppercase tracking-[0.2em] text-white/50">현재 참가자</p>
+        <p className="display-font mt-2 leading-none text-white">
+          <span className="text-6xl">{playerCount}</span>
+          <span className="ml-1.5 text-2xl">명</span>
+        </p>
+      </div>
+
+      <div className="flex w-full max-w-md flex-col gap-2.5">
+        <button
+          onClick={onStart}
+          disabled={!canStart || starting}
+          className="inline-flex min-h-[4.5rem] items-center justify-center gap-3 rounded-2xl border-2 border-white/15 bg-[var(--error)] px-6 text-3xl font-black text-white shadow-[0_8px_0_var(--error-dark)] transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-1 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <span aria-hidden="true">▶</span>
+          {starting ? "시작하는 중..." : "게임 시작하기"}
+        </button>
+        <button
+          type="button"
+          onClick={onEndGame}
+          className="inline-flex min-h-[3rem] items-center justify-center gap-2 rounded-xl px-4 text-lg font-bold text-white/55 transition-colors duration-150 hover:bg-[var(--error-soft)] hover:text-[var(--error)]"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <rect x="6" y="6" width="12" height="12" rx="2" />
+          </svg>
+          게임 종료
+        </button>
+      </div>
+
+      {!canStart && (
+        <p className="text-sm text-white/45">학생이 입장하면 게임을 시작할 수 있어요.</p>
+      )}
     </div>
   );
 }
@@ -667,11 +777,13 @@ function EndGameConfirmModal({
   busy,
   onCancel,
   onConfirm,
+  embedded = false,
 }: {
   open: boolean;
   busy: boolean;
   onCancel: () => void;
   onConfirm: () => void;
+  embedded?: boolean;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -700,7 +812,9 @@ function EndGameConfirmModal({
           게임을 종료하시겠습니까?
         </h2>
         <p className="mt-3 text-sm leading-6 text-white/60">
-          현재 게임방과 참가자 정보가 종료되고 게임 창이 닫힙니다.
+          {embedded
+            ? "현재 게임방과 참가자 정보가 종료됩니다."
+            : "현재 게임방과 참가자 정보가 종료되고 게임 창이 닫힙니다."}
         </p>
         <div className="mt-6 flex gap-3">
           <button

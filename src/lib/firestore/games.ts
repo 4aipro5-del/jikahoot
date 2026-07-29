@@ -215,14 +215,30 @@ export async function removePlayerFromGame(
   })
 }
 
-export function advanceQuestion(gameCode: string, nextIndex: number) {
-  return updateDoc(doc(db, 'games', gameCode), {
-    status: 'active',
-    currentQuestionIndex: nextIndex,
-    currentQuestionStartedAt: serverTimestamp(),
-    // 새 문제로 넘어가면 일시정지 상태는 항상 해제
-    paused: false,
-    pausedAt: null,
+export async function advanceQuestion(gameCode: string, nextIndex: number) {
+  const gameRef = doc(db, 'games', gameCode)
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(gameRef)
+    if (!snap.exists()) return
+    const game = snap.data() as Game
+
+    // 이미 종료된 게임은 다시 진행시키지 않는다 — 마감 순간 수동 '지금 종료'와
+    // 자동 진행이 경합해 finishGame 직후 advanceQuestion이 실행되면 finished 게임이
+    // active로 되살아날 수 있어서다.
+    if (game.status === 'finished') return
+    // 단조 증가: 이미 그 문제(또는 이후)로 가 있으면 무시 — stale 자동/수동 호출이
+    // 같은 문제로 다시 넘겨 타이머를 리셋하는 것을 막는다. (lobby는 index -1이라
+    // 첫 진행 nextIndex 0이 정상 통과)
+    if (game.currentQuestionIndex >= nextIndex) return
+
+    tx.update(gameRef, {
+      status: 'active',
+      currentQuestionIndex: nextIndex,
+      currentQuestionStartedAt: serverTimestamp(),
+      // 새 문제로 넘어가면 일시정지 상태는 항상 해제
+      paused: false,
+      pausedAt: null,
+    })
   })
 }
 
@@ -390,8 +406,16 @@ export async function gradeAnswer(
   rankMultiplier: number,
 ) {
   const playerRef = doc(db, 'games', gameCode, 'players', playerUid)
+  const aRef = answerRef(gameCode, playerUid, questionIndex)
 
   await runTransaction(db, async (tx) => {
+    // 트랜잭션 안에서 답안을 다시 읽어 멱등성 확보: 이미 채점된 답안이면
+    // (자동 진행과 수동 진행이 마감 순간 동시에 finalize를 부르는 경우 등) 점수를
+    // 다시 더하지 않는다. finalizeQuestion의 트랜잭션 밖 검사만으로는 동시 실행 시
+    // 이중 채점 여지가 있었다.
+    const answerSnap = await tx.get(aRef)
+    if (!answerSnap.exists() || (answerSnap.data() as Answer).isCorrect !== null) return
+
     const playerSnap = await tx.get(playerRef)
     const player = playerSnap.data() as Player
 
@@ -400,7 +424,7 @@ export async function gradeAnswer(
       ? Math.round(BASE_POINTS_PER_CORRECT_ANSWER * streakBonusMultiplier(newStreak) * rankMultiplier)
       : 0
 
-    tx.update(answerRef(gameCode, playerUid, questionIndex), {
+    tx.update(aRef, {
       isCorrect,
       pointsEarned: points,
     })

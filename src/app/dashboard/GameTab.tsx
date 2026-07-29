@@ -6,21 +6,18 @@ import { subscribeToRoom } from "@/lib/firestore/rooms";
 import type { QuestionWithId } from "@/lib/firestore/questions";
 import { QUESTION_DURATION_SEC } from "@/lib/gameConfig";
 import type { RoomWithId } from "@/types/firestore";
+import GameHostClient from "./GameHostClient";
 
-// 게임 운영 창은 고정된 window name을 써서 다시 열어도 같은 창을 재사용한다.
-const GAME_WINDOW_NAME = "jikahoot-game";
-function gameWindowUrl(code: string) {
-  return `/dashboard/game/${code}`;
+// 학생용 전광판 창은 고정된 window name을 써서 다시 열어도 같은 창을 재사용한다.
+const DISPLAY_WINDOW_NAME = "jikahoot-display";
+function displayUrl(code: string) {
+  return `/display/${code}`;
 }
 
-// 다크 배경에서 잘 보이도록 브랜드 primary를 밝게 보정한 강조 퍼플(토큰 유지).
-const ACCENT_PURPLE = "color-mix(in srgb, var(--primary) 55%, #ffffff)";
-
-// The Game tab (main window) is a thin status surface only. Starting a game
-// pops the full host console out into a dedicated window (GameHostClient at
-// /dashboard/game/[code]) where ALL operation happens — lobby/QR/code/roster/
-// start/progress/results. The main window never renders the lobby or controls;
-// it just shows a "game in progress" placeholder and a re-open button.
+// 교사는 대시보드 Game 탭 안에서 게임을 직접 운영한다 — 로비/문제/제출 현황/
+// 다음 문제/일시정지/종료 등 모든 컨트롤은 임베드된 GameHostClient에 있다.
+// 게임을 시작하면 학생용 전광판(/display/[code])이 별도 창으로 열려 교실 화면
+// 역할만 한다(QR·게임 코드·진행 상황·참가자 수·실시간 순위만 표시, 제어 없음).
 export default function GameTab({
   roomId,
   ownerUid,
@@ -78,16 +75,16 @@ function StartGameScreen({
   async function handleStart() {
     setError(null);
     setStarting(true);
-    // 팝업 차단을 피하려 클릭 제스처 안에서 운영 창을 먼저 열고, 게임 코드가
-    // 나오면 그 창을 게임 라우트로 이동시킨다. 원래 창은 room.currentGameId
-    // 구독으로 '게임 진행 중' 상태 화면으로 전환된다(로비로 전환하지 않음).
-    const gameWindow = window.open("about:blank", GAME_WINDOW_NAME);
+    // 팝업 차단을 피하려 클릭 제스처 안에서 전광판 창을 먼저 열고, 게임 코드가
+    // 나오면 그 창을 전광판(/display/[code])으로 이동시킨다. 대시보드(이 창)는
+    // room.currentGameId 구독으로 게임 운영 콘솔(GameHostClient)로 전환된다.
+    const displayWindow = window.open("about:blank", DISPLAY_WINDOW_NAME);
     try {
       const publicQuestions = approved.map((q) => ({ id: q.id, text: q.text, choices: q.choices }));
       const code = await createGame(roomId, ownerUid, publicQuestions, durationSec, autoAdvance);
-      if (gameWindow) gameWindow.location.href = gameWindowUrl(code);
+      if (displayWindow) displayWindow.location.href = displayUrl(code);
     } catch (err) {
-      gameWindow?.close();
+      displayWindow?.close();
       setError(err instanceof Error ? err.message : "게임을 시작하지 못했습니다.");
     } finally {
       setStarting(false);
@@ -143,65 +140,35 @@ function StartGameScreen({
   );
 }
 
-// 원래 창: 게임이 진행 중임을 알리고, 운영은 새 창에서 이뤄진다는 안내만 제공한다.
-// 참가자/QR/코드/게임 시작 등 제어 요소는 여기에 두지 않는다.
+// 대시보드(원래 창): 게임 운영 콘솔(GameHostClient)을 임베드해 교사가 여기서
+// 직접 진행한다. 상단에는 학생용 전광판을 (다시) 여는 버튼만 둔다.
 function GameInProgressScreen({ gameCode }: { gameCode: string }) {
-  function openGameWindow() {
-    // 고정 window name → 이미 열린 운영 창이 있으면 재사용/포커스한다.
-    const gameWindow = window.open(gameWindowUrl(gameCode), GAME_WINDOW_NAME);
-    gameWindow?.focus();
+  function openDisplayWindow() {
+    // 고정 window name → 이미 열린 전광판 창이 있으면 재사용/포커스한다.
+    const displayWindow = window.open(displayUrl(gameCode), DISPLAY_WINDOW_NAME);
+    displayWindow?.focus();
   }
 
   return (
-    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-9 py-12 text-center">
-      <div className="space-y-4">
-        <p className="hero-chip">Game Status</p>
-        <h1 className="display-font text-5xl leading-none text-white sm:text-6xl">게임 진행 중</h1>
-      </div>
-
-      <p className="max-w-md text-lg leading-8 text-[color:var(--foreground-muted)]">
-        참가자 관리와 게임 진행은
-        <br />
-        별도의 <span className="font-bold" style={{ color: ACCENT_PURPLE }}>게임 창</span>에서
-        이루어집니다.
-      </p>
-
-      <button
-        type="button"
-        onClick={openGameWindow}
-        className="inline-flex min-h-[4.75rem] w-full max-w-md items-center justify-center gap-3 rounded-2xl border border-white/12 bg-[var(--primary)] px-8 text-2xl font-black text-white shadow-[0_12px_44px_rgba(50,0,224,0.5)] transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-0.5"
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-        </svg>
-        게임 창 다시 열기
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M5 12h14M13 6l6 6-6 6" />
-        </svg>
-      </button>
-
-      {/* 구분선 + 가운데 점 */}
-      <div className="flex w-full max-w-md items-center gap-3">
-        <span className="h-px flex-1 bg-white/12" />
-        <span className="h-1 w-1 flex-none rounded-full bg-white/25" />
-        <span className="h-px flex-1 bg-white/12" />
-      </div>
-
-      {/* 하단 안내 */}
-      <div className="flex max-w-md items-start gap-3 text-left">
-        <span className="mt-0.5 flex-none text-white/40" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 11v5M12 7.5h.01" />
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={openDisplayWindow}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/12 bg-[var(--surface)] px-5 py-3 text-base font-bold text-white transition-colors duration-150 hover:bg-white/[0.06]"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <path d="M8 21h8M12 17v4" />
           </svg>
-        </span>
-        <div>
-          <p className="font-bold text-white">창을 닫았거나 차단된 경우</p>
-          <p className="mt-1 text-sm leading-6 text-white/50">
-            언제든지 다시 열어 게임을 계속 진행할 수 있어요.
-          </p>
-        </div>
+          학생 화면(전광판) 열기
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M7 17 17 7M9 7h8v8" />
+          </svg>
+        </button>
       </div>
+
+      <GameHostClient gameCode={gameCode} embedded />
     </div>
   );
 }

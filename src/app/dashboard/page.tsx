@@ -26,6 +26,7 @@ import type { RoomWithId } from "@/types/firestore";
 import AccountMenu from "./AccountMenu";
 import DashboardHome from "./DashboardHome";
 import Drawer from "./Drawer";
+import GameAutoAdvancer from "./GameAutoAdvancer";
 import GameTab from "./GameTab";
 import RoomsPanel from "./RoomsPanel";
 import SettingsPanel from "./SettingsPanel";
@@ -310,6 +311,15 @@ export default function DashboardPage() {
         <div className="mb-4 flex min-w-0 justify-end">
           <AccountMenu user={user} />
         </div>
+
+        {/* 진행 중 게임마다 자동 진행 컨트롤러를 항상 마운트한다. 탭(대시보드/문제/
+            설정)이나 선택된 방을 바꿔도 언마운트되지 않아 문제 타이머가 계속 돈다.
+            currentGameStatus가 'finished'인(종료된) 게임은 제외. */}
+        {rooms
+          .filter((r) => r.currentGameId && r.currentGameStatus !== "finished")
+          .map((r) => (
+            <GameAutoAdvancer key={r.currentGameId} gameCode={r.currentGameId as string} />
+          ))}
 
         {showRooms ? (
           <RoomsPanel
