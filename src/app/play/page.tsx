@@ -4,6 +4,8 @@ import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { joinGame } from "@/lib/firestore/games";
 import StageSkeleton from "@/components/StageSkeleton";
+import StudentJoinScreen from "@/components/StudentJoinScreen";
+import { IconGamepad } from "@/components/student-ui";
 import PlayingGame from "./PlayingGame";
 
 type Step =
@@ -84,7 +86,6 @@ function PlayPageContent() {
     return (
       <PlayingGame
         gameCode={step.gameCode}
-        nickname={step.nickname}
         authorUid={step.authorUid}
         onForcedOut={handleForcedOut}
         onLeave={handleLeave}
@@ -93,63 +94,27 @@ function PlayPageContent() {
   }
 
   return (
-    <div className="stage-shell">
-      <div className="stage-content flex min-h-screen items-center justify-center py-8">
-        <div className="flex w-full max-w-[52rem] flex-col gap-6">
-          <div className="flex flex-col gap-3">
-            <span className="hero-chip self-start">Game Entry</span>
-            <h1 className="display-font text-4xl leading-none text-white sm:text-5xl lg:text-6xl">
-              지금 바로
-              <br />
-              플레이 시작.
-            </h1>
-          </div>
-
-          <section className="paper-panel kahoot-spectrum-paper p-6 sm:p-8">
-            <div className="flex flex-col gap-5">
-              <div>
-                <p className="hero-chip hero-chip-paper">Join Game</p>
-                <h2 className="display-font mt-4 text-4xl text-[var(--panel-text)] sm:text-5xl">
-                  코드 입력
-                </h2>
-                <p className="paper-muted mt-2 text-sm leading-6 sm:text-base">
-                  선생님이 알려준 게임 코드와 이름을 입력하면 바로 무대에 입장해요.
-                </p>
-              </div>
-
-              <form onSubmit={handleJoin} className="flex flex-col gap-4">
-                <input
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="게임 코드 6자리"
-                  className="text-input code-input"
-                  maxLength={6}
-                />
-                <input
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  placeholder="이름(닉네임)"
-                  className="text-input"
-                />
-
-                {error && (
-                  <p className="status-banner" data-tone="error">
-                    {error}
-                  </p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={joining}
-                  className="primary-button primary-button-hero w-full"
-                >
-                  {joining ? "입장 중..." : "퀴즈 시작"}
-                </button>
-              </form>
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
+    <StudentJoinScreen
+      accent="play"
+      eyebrow="Play"
+      eyebrowIcon={<IconGamepad />}
+      titleTop="우리 반 퀴즈"
+      titleAccent="시작하기"
+      description="게임 코드와 이름을 입력하고 퀴즈를 시작하세요."
+      codeLabel="게임 코드"
+      codePlaceholder="선생님이 알려주신 게임 코드 6자리를 입력하세요."
+      code={code}
+      onCodeChange={setCode}
+      nickname={nickname}
+      onNicknameChange={setNickname}
+      onSubmit={handleJoin}
+      submitting={joining}
+      submitLabel="START"
+      submitTextClassName="text-4xl"
+      error={error}
+      noteIcon={<IconGamepad />}
+      noteTitle="준비되면 자동으로 시작합니다."
+      noteMuted
+    />
   );
 }

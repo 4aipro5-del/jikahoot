@@ -660,6 +660,29 @@ button:disabled {
   color: var(--warning);
 }
 
+/* lobby mascots: gentle "stomping feet" bob (staggered per character) */
+@keyframes mascot-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(-2deg);
+  }
+}
+
+.mascot-bob {
+  animation: mascot-bob 0.85s ease-in-out infinite;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot-bob {
+    animation: none;
+  }
+}
+
 .metric-card {
   border-radius: 24px;
   border: 1px solid var(--duo-border);
