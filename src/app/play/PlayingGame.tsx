@@ -10,7 +10,7 @@ import {
   type PlayerWithId,
 } from "@/lib/firestore/games";
 import type { Answer, Game, Player } from "@/types/firestore";
-import Leaderboard from "@/components/Leaderboard";
+import FinalLeaderboard from "@/components/FinalLeaderboard";
 import StageSkeleton from "@/components/StageSkeleton";
 import BrandMark from "@/components/BrandMark";
 import { IconPeople, StudentHeader, StudentMascots, StudentShapes } from "@/components/student-ui";
@@ -139,7 +139,7 @@ export default function PlayingGame({
                 마지막 문제까지 모두 끝났어요. 내 점수와 전체 순위를 확인해 보세요.
               </p>
             </div>
-            <Leaderboard players={players} highlightPlayerId={authorUid} />
+            <FinalLeaderboard players={players} highlightPlayerId={authorUid} />
 
             <button
               type="button"

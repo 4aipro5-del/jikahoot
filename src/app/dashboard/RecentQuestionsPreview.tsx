@@ -19,12 +19,12 @@ export default function RecentQuestionsPreview({
   questions: QuestionWithId[];
   onViewAll: () => void;
 }) {
-  const recent = questions.slice(0, 5);
+  const recent = questions.slice(0, 3);
 
   return (
-    <section className="flex flex-col gap-5 rounded-2xl border border-white/10 bg-[var(--surface)] p-6 sm:p-8">
+    <section className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[var(--surface)] p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="display-font text-2xl text-white">최근 제출된 문제</h2>
+        <h2 className="display-font text-xl text-white">최근 제출된 문제</h2>
         <button
           type="button"
           onClick={onViewAll}

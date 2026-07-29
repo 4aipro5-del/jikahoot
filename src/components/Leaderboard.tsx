@@ -47,7 +47,7 @@ export default function Leaderboard({
             >
               {rank}
             </span>
-            <span className="min-w-0 flex-1 truncate text-lg font-bold text-white">
+            <span className="min-w-0 flex-1 truncate text-xl font-bold text-white">
               {player.nickname}
               {isMe ? " (나)" : ""}
             </span>

@@ -11,6 +11,7 @@ import {
 } from "@/lib/firestore/games";
 import type { Game } from "@/types/firestore";
 import Leaderboard from "@/components/Leaderboard";
+import FinalLeaderboard from "@/components/FinalLeaderboard";
 import GameQRCode from "@/components/GameQRCode";
 import { IconSparkle, StudentMascot } from "@/components/student-ui";
 
@@ -88,7 +89,7 @@ export default function DisplayClient({ gameCode }: { gameCode: string }) {
           <p className="hero-chip">Final Leaderboard</p>
           <h1 className="display-font text-6xl text-white">최종 순위</h1>
           <div className="w-full max-w-4xl">
-            <Leaderboard players={players} />
+            <FinalLeaderboard players={players} />
           </div>
         </div>
       </FullscreenStage>
@@ -176,7 +177,7 @@ function LobbyDisplay({
           </div>
 
           <div className="min-w-0 lg:text-center">
-            <p className="text-sm font-bold text-white/50">게임 코드</p>
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-white/50">GAME CODE</p>
             <p className="display-font mt-1 break-all text-[clamp(3rem,7vw,6.5rem)] leading-none text-white">
               {gameCode}
             </p>
@@ -293,11 +294,8 @@ function DisplayBoard({
         {/* ── 좌측: 게임 코드 / QR / 진행 상황 / 참가자 수 ── */}
         <div className="flex flex-col gap-7">
           <div>
-            <p className="inline-flex items-center gap-2 text-lg font-black uppercase tracking-[0.18em] text-[var(--accent)]">
-              게임 코드
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
-                <path d="M18 5l2-2M20 9l3-1M19 13l2 1" />
-              </svg>
+            <p className="text-lg font-black uppercase tracking-[0.18em] text-[var(--accent)]">
+              GAME CODE
             </p>
             <p className="display-font mt-1 break-all text-[clamp(3.5rem,9vw,9rem)] font-black leading-[0.95] text-white">
               {gameCode}
