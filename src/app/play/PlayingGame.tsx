@@ -190,7 +190,7 @@ function LobbyView({
         <StudentHeader />
 
         <div className="flex flex-1 items-center justify-center">
-          <div className="grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-16">
+          <div className="grid w-full max-w-6xl items-center gap-8 lg:grid-cols-2 lg:gap-12">
             {/* left: waiting intro */}
             <div className="flex flex-col justify-center gap-5">
               <span className="inline-flex items-center gap-2 self-start text-sm font-black uppercase tracking-[0.2em] text-[var(--success)]">
@@ -210,19 +210,19 @@ function LobbyView({
             {/* right: game code + mascots + headcount */}
             <div className="w-full">
               <section className="rounded-[28px] border border-white/10 bg-[var(--surface)] p-7 text-center shadow-[var(--shadow-soft)] sm:p-9">
-                <p className="text-base font-black uppercase tracking-[0.2em] text-[var(--success)]">
+                <p className="text-lg font-black uppercase tracking-[0.2em] text-[var(--success)]">
                   방 코드
                 </p>
-                <p className="display-font mt-2 break-all text-6xl leading-none text-white sm:text-7xl">
+                <p className="display-font mt-2 break-all text-7xl leading-none text-white sm:text-8xl">
                   {gameCode}
                 </p>
 
                 <div className="my-6 border-t border-dashed border-white/12" />
 
-                <StudentMascots />
+                <StudentMascots width={72} />
 
-                <p className="mt-6 text-xl font-bold text-white">
-                  <span className="text-3xl font-black text-[var(--success)]">{players.length}</span>{" "}
+                <p className="mt-8 text-2xl font-bold text-white">
+                  <span className="text-4xl font-black text-[var(--success)]">{players.length}</span>{" "}
                   명 참여 중
                 </p>
               </section>
