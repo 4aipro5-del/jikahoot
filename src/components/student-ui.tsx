@@ -227,13 +227,14 @@ export function StudentMascot({
 
 const MASCOT_ORDER: MascotKind[] = ["circle", "triangle", "square", "diamond"];
 
-export function StudentMascots() {
+export function StudentMascots({ width }: { width?: number }) {
   return (
     <div className="flex items-end justify-center gap-3 sm:gap-5">
       {MASCOT_ORDER.map((kind, i) => (
         <StudentMascot
           key={kind}
           kind={kind}
+          width={width}
           className="mascot-bob"
           style={{ animationDelay: `${i * 140}ms` }}
         />

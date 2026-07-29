@@ -12,6 +12,7 @@ import {
 import type { Answer, Game, Player } from "@/types/firestore";
 import Leaderboard from "@/components/Leaderboard";
 import StageSkeleton from "@/components/StageSkeleton";
+import BrandMark from "@/components/BrandMark";
 import { IconPeople, StudentHeader, StudentMascots, StudentShapes } from "@/components/student-ui";
 import { useNow } from "@/lib/useNow";
 
@@ -190,7 +191,7 @@ function LobbyView({
         <StudentHeader />
 
         <div className="flex flex-1 items-center justify-center">
-          <div className="grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-16">
+          <div className="grid w-full max-w-6xl items-center gap-8 lg:grid-cols-2 lg:gap-12">
             {/* left: waiting intro */}
             <div className="flex flex-col justify-center gap-5">
               <span className="inline-flex items-center gap-2 self-start text-sm font-black uppercase tracking-[0.2em] text-[var(--success)]">
@@ -210,19 +211,19 @@ function LobbyView({
             {/* right: game code + mascots + headcount */}
             <div className="w-full">
               <section className="rounded-[28px] border border-white/10 bg-[var(--surface)] p-7 text-center shadow-[var(--shadow-soft)] sm:p-9">
-                <p className="text-base font-black uppercase tracking-[0.2em] text-[var(--success)]">
+                <p className="text-lg font-black uppercase tracking-[0.2em] text-[var(--success)]">
                   방 코드
                 </p>
-                <p className="display-font mt-2 break-all text-6xl leading-none text-white sm:text-7xl">
+                <p className="display-font mt-2 break-all text-7xl leading-none text-white sm:text-8xl">
                   {gameCode}
                 </p>
 
                 <div className="my-6 border-t border-dashed border-white/12" />
 
-                <StudentMascots />
+                <StudentMascots width={72} />
 
-                <p className="mt-6 text-xl font-bold text-white">
-                  <span className="text-3xl font-black text-[var(--success)]">{players.length}</span>{" "}
+                <p className="mt-8 text-2xl font-bold text-white">
+                  <span className="text-4xl font-black text-[var(--success)]">{players.length}</span>{" "}
                   명 참여 중
                 </p>
               </section>
@@ -273,6 +274,17 @@ function ActiveView({
   const timeUp = deadline !== null && remainingSec <= 0;
   const hasAnswered = Boolean(answer);
 
+  // 남은 시간 바: 남은 시간에 따라 파랑 → 노랑 → 빨강, 시간이 줄수록 바가 줄어든다.
+  const barColor =
+    timeUp || remainingSec <= 5
+      ? "var(--error)"
+      : remainingSec <= 10
+        ? "var(--warning)"
+        : "var(--primary)";
+  const timeRatio = deadline
+    ? Math.max(0, Math.min(1, (deadline - nowMs) / (game.questionDurationSec * 1000)))
+    : 0;
+
   async function handleChoose(choiceId: string) {
     if (hasAnswered || timeUp || submitting || paused) return;
     setSubmitting(true);
@@ -286,106 +298,131 @@ function ActiveView({
     }
   }
 
-  // 진행 바 색 = 남은 시간에 따라 기본 파랑 → 노랑 → 빨강
-  const barColor =
-    timeUp || remainingSec <= 5
-      ? "var(--error)"
-      : remainingSec <= 10
-        ? "var(--warning)"
-        : "var(--primary)";
-  // 진행 바 = 남은 시간 비율 (시간이 줄수록 바가 줄어듦)
-  const timeRatio = deadline
-    ? Math.max(0, Math.min(1, (deadline - nowMs) / (game.questionDurationSec * 1000)))
-    : 0;
+  const starIcon = (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--warning)" aria-hidden="true">
+      <path d="m12 2 2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77 5.82 21l1.18-6.86-5-4.87 7.1-1.01z" />
+    </svg>
+  );
+  const pauseIcon = (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="6" y="5" width="4" height="14" rx="1" />
+      <rect x="14" y="5" width="4" height="14" rx="1" />
+    </svg>
+  );
 
   return (
-    <div className="stage-shell">
-      <div className="stage-content flex min-h-screen flex-col justify-center gap-5 py-6">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
-          {/* 상단: 진행 바(남은 시간에 따라 색 변화), 그 아래 문제 번호 */}
-          <div className="flex flex-col gap-2">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-white/12">
-              <div
-                className="h-full rounded-full transition-[width,background-color] duration-300"
-                style={{ width: `${timeRatio * 100}%`, backgroundColor: barColor }}
-              />
-            </div>
-            <p className="text-sm font-black">
-              <span style={{ color: "var(--primary)" }}>{questionIndex + 1}</span>
-              <span className="text-white/40"> / {game.questions.length}</span>
-            </p>
+    <div className="min-h-screen bg-[var(--background)]">
+      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-5 py-6 sm:px-8">
+        {/* 상단 바: 로고 / (일시정지 상태) + 점수 */}
+        <header className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <BrandMark className="h-9 w-9 flex-none" />
+            <span className="brand-wordmark text-2xl text-white">JIHOOT</span>
           </div>
+          <div className="flex items-center gap-2.5">
+            {paused && (
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/8 px-4 py-2 text-sm font-bold text-white/80">
+                {pauseIcon}
+                일시정지
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/8 px-4 py-2 text-sm font-black text-white">
+              {starIcon}
+              {myScore}점
+            </span>
+          </div>
+        </header>
 
-          {/* 문제 카드 */}
-          <section className="rounded-2xl bg-white p-6 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:p-7">
-            <p className="paper-ghost text-xs font-black uppercase tracking-[0.18em]">Question</p>
-            <h2 className="display-font mt-2 text-2xl leading-tight text-[var(--panel-text)] sm:text-3xl">
-              {question.text}
-            </h2>
-          </section>
-
+        {/* 본문: 남은 공간 세로 중앙 정렬 */}
+        <div className="flex flex-1 flex-col justify-center gap-5">
+          {/* 일시정지 안내 배너 */}
           {paused && (
-            <p className="status-banner flex items-center justify-center gap-2" data-tone="warning">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <rect x="6" y="5" width="4" height="14" rx="1" />
-                <rect x="14" y="5" width="4" height="14" rx="1" />
-              </svg>
-              일시정지됨 · 선생님을 기다려 주세요
+            <p className="mx-auto inline-flex items-center gap-2 rounded-2xl bg-[var(--surface)] px-6 py-3.5 text-base font-bold text-[var(--warning)]">
+              {pauseIcon}
+              선생님을 기다리고 있어요.
             </p>
           )}
 
-          {/* 보기 2×2 (A/B/C/D 라벨 없음, 도형 + 텍스트) */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            {question.choices.map((choice, index) => {
-              const theme = ANSWER_THEMES[index % ANSWER_THEMES.length];
-              const isMyChoice = answer?.choiceId === choice.id;
-
-              return (
-                <button
-                  key={choice.id}
-                  onClick={() => handleChoose(choice.id)}
-                  disabled={hasAnswered || timeUp || submitting || paused}
-                  className="relative flex min-h-[5.25rem] items-center gap-4 rounded-2xl px-5 py-4 text-left transition-transform duration-150 ease-out enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed"
-                  style={{
-                    background: theme.bg,
-                    color: theme.light ? "var(--panel-text)" : "#ffffff",
-                    boxShadow: `0 5px 0 ${theme.shadow}`,
-                    // 선택 강조: 흰색 5px 테두리(안쪽) + 1.03배 확대. 다른 보기는
-                    // 색/투명도 변화 없음(흐리게 처리하지 않음).
-                    outline: isMyChoice ? "5px solid #ffffff" : "none",
-                    outlineOffset: "-5px",
-                    transform: isMyChoice ? "scale(1.03)" : undefined,
-                    zIndex: isMyChoice ? 1 : undefined,
-                  }}
-                >
-                  <span
-                    className="flex h-11 w-11 flex-none items-center justify-center rounded-full text-lg font-black"
-                    style={{ background: theme.light ? "rgba(23,21,31,0.08)" : "rgba(255,255,255,0.18)" }}
-                  >
-                    {theme.shape}
-                  </span>
-                  <span className="min-w-0 flex-1 text-base font-bold leading-snug sm:text-lg">
-                    {choice.text}
-                  </span>
-                  {isMyChoice && (
-                    <span
-                      className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.3)]"
-                      style={{
-                        background: theme.light ? "var(--panel-text)" : "#ffffff",
-                        color: theme.light ? "#ffffff" : "var(--panel-text)",
-                      }}
-                      aria-label="선택함"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M20 6 9 17l-5-5" />
-                      </svg>
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          {/* 남은 시간 바 (문제 카드 위, 다크 배경) */}
+          <div className="h-2 w-full overflow-hidden rounded-full bg-white/12">
+            <div
+              className="h-full rounded-full transition-[width,background-color] duration-300"
+              style={{ width: `${timeRatio * 100}%`, backgroundColor: barColor }}
+            />
           </div>
 
+          {/* 문제 카드 (화이트): 문제 번호 / 질문 / 보기 2×2 */}
+          <section className="rounded-[28px] border border-black/[0.06] bg-white p-6 shadow-[0_10px_30px_rgba(0,0,0,0.06)] sm:p-8">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-black/[0.06] px-4 py-2 text-sm font-black">
+              <span className="text-[var(--muted)]">문제</span>
+              <span style={{ color: "var(--primary)" }}>{questionIndex + 1}</span>
+              <span className="text-black/35">/ {game.questions.length}</span>
+            </span>
+
+            <div className="mt-6 flex min-h-[5.5rem] items-center gap-4 sm:min-h-[7rem]">
+              <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-[var(--primary)] text-xl font-black text-white">
+                Q
+              </span>
+              <h2 className="display-font text-2xl leading-tight text-[var(--panel-text)] sm:text-3xl">
+                {question.text}
+              </h2>
+            </div>
+
+            {/* 보기 2×2 — 폰에서도 2열 유지(세로로 쌓지 않아 4개가 한 화면에 들어옴).
+                좁은 화면에서 칸이 넘치지 않도록 모바일에선 크기를 컴팩트하게 낮춘다. */}
+            <div className="mt-8 grid grid-cols-2 gap-3 sm:mt-10 sm:gap-4">
+              {question.choices.map((choice, index) => {
+                const theme = ANSWER_THEMES[index % ANSWER_THEMES.length];
+                const isMyChoice = answer?.choiceId === choice.id;
+
+                return (
+                  <button
+                    key={choice.id}
+                    onClick={() => handleChoose(choice.id)}
+                    disabled={hasAnswered || timeUp || submitting || paused}
+                    className="relative flex min-h-[6.5rem] items-center gap-3 rounded-2xl px-4 py-4 text-left transition-transform duration-150 ease-out enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed sm:min-h-[10rem] sm:gap-4 sm:px-6 sm:py-5"
+                    style={{
+                      background: theme.bg,
+                      color: theme.light ? "var(--panel-text)" : "#ffffff",
+                      boxShadow: `0 5px 0 ${theme.shadow}`,
+                      // 선택 강조: 흰색 5px 테두리(안쪽) + 1.03배 확대. 다른 보기는
+                      // 색/투명도 변화 없음(흐리게 처리하지 않음).
+                      outline: isMyChoice ? "5px solid #ffffff" : "none",
+                      outlineOffset: "-5px",
+                      transform: isMyChoice ? "scale(1.03)" : undefined,
+                      zIndex: isMyChoice ? 1 : undefined,
+                    }}
+                  >
+                    <span
+                      className="flex h-11 w-11 flex-none items-center justify-center rounded-full text-lg font-black sm:h-14 sm:w-14 sm:text-2xl"
+                      style={{ background: theme.light ? "rgba(23,21,31,0.08)" : "rgba(255,255,255,0.22)" }}
+                    >
+                      {theme.shape}
+                    </span>
+                    <span className="min-w-0 flex-1 text-base font-black leading-snug sm:text-2xl">
+                      {choice.text}
+                    </span>
+                    {isMyChoice && (
+                      <span
+                        className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.3)]"
+                        style={{
+                          background: theme.light ? "var(--panel-text)" : "#ffffff",
+                          color: theme.light ? "#ffffff" : "var(--panel-text)",
+                        }}
+                        aria-label="선택함"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* 제출 상태 피드백 */}
           {submitError && (
             <p className="status-banner" data-tone="error">
               {submitError}
@@ -407,13 +444,12 @@ function ActiveView({
             </p>
           )}
 
-          {/* 하단 우측: 별 아이콘 + 점수 (이름 없음) */}
-          <div className="flex justify-end">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface)] px-4 py-2 text-sm font-black text-white">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--warning)" aria-hidden="true">
-                <path d="m12 2 2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77 5.82 21l1.18-6.86-5-4.87 7.1-1.01z" />
-              </svg>
-              {myScore} pt
+          {/* 하단: 보너스 점수 안내 */}
+          <div className="flex items-center gap-3 rounded-2xl bg-[var(--surface)] px-5 py-4 text-sm text-white/70 sm:text-base">
+            <span className="flex-none">{starIcon}</span>
+            <span>
+              정답을 빠르게, 연속으로 맞히면{" "}
+              <span className="font-bold text-[var(--warning)]">보너스 점수</span>를 얻어요!
             </span>
           </div>
         </div>

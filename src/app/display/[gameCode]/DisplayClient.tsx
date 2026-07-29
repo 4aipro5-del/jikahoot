@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
 import { signInStudentAnonymously, subscribeToAuthState } from "@/lib/firebase/auth";
-import { subscribeToGame, subscribeToPlayers, type PlayerWithId } from "@/lib/firestore/games";
+import {
+  removePlayerFromGame,
+  subscribeToGame,
+  subscribeToPlayers,
+  type PlayerWithId,
+} from "@/lib/firestore/games";
 import type { Game } from "@/types/firestore";
 import Leaderboard from "@/components/Leaderboard";
 import GameQRCode from "@/components/GameQRCode";
@@ -50,6 +55,16 @@ export default function DisplayClient({ gameCode }: { gameCode: string }) {
     return subscribeToPlayers(gameCode, setPlayers);
   }, [gameCode, user, game]);
 
+  // 방장(교사) 세션에서 전광판을 연 경우에만 강퇴가 가능하다(규칙상 소유자만 삭제).
+  // 익명으로 연 프로젝터 화면에서는 강퇴 버튼을 노출하지 않는다.
+  async function handleKick(player: PlayerWithId) {
+    try {
+      await removePlayerFromGame(gameCode, player.id, player.nickname);
+    } catch (err) {
+      console.error("참가자를 내보내지 못했습니다.", err);
+    }
+  }
+
   if (user === undefined || game === undefined) {
     return (
       <FullscreenStage>
@@ -90,14 +105,28 @@ export default function DisplayClient({ gameCode }: { gameCode: string }) {
   }
 
   // Ⓐ 시작 전·입장 중: 원래 쓰던 로비 형식(QR/안내/코드 + 참가자) 그대로,
-  // 단 제어 버튼(게임 시작하기·게임 종료)은 학생 화면이라 제거한다.
-  return <LobbyDisplay gameCode={gameCode} players={players} />;
+  // 단 제어 버튼(게임 시작하기·게임 종료)은 학생 화면이라 제거한다. 방장 세션이면
+  // 참가자 이름을 눌러 강퇴할 수 있다.
+  const isOwner = !!user && user.uid === game.teacherUid;
+  return (
+    <LobbyDisplay gameCode={gameCode} players={players} isOwner={isOwner} onKick={handleKick} />
+  );
 }
 
 // 참가자 번호 색은 핵심 4색을 순환 배정한다(연속 중복 방지).
 const LOBBY_NUMBER_COLORS = ["var(--primary)", "var(--warning)", "var(--error)", "var(--success)"];
 
-function LobbyDisplay({ gameCode, players }: { gameCode: string; players: PlayerWithId[] }) {
+function LobbyDisplay({
+  gameCode,
+  players,
+  isOwner,
+  onKick,
+}: {
+  gameCode: string;
+  players: PlayerWithId[];
+  isOwner: boolean;
+  onKick: (player: PlayerWithId) => void;
+}) {
   const joinHost = typeof window !== "undefined" ? window.location.host : "";
 
   return (
@@ -178,23 +207,60 @@ function LobbyDisplay({ gameCode, players }: { gameCode: string; players: Player
 
           {players.length > 0 && (
             <div className="grid w-full grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
-              {players.map((player, index) => (
-                <div
-                  key={player.id}
-                  className="tile-enter relative flex min-h-[104px] items-center justify-center rounded-2xl border border-white/10 bg-[var(--surface)] px-6 py-6 text-center"
-                >
+              {players.map((player, index) => {
+                const number = (
                   <span
                     className="absolute left-4 top-3 text-xl font-black tabular-nums"
                     style={{ color: LOBBY_NUMBER_COLORS[index % LOBBY_NUMBER_COLORS.length] }}
                   >
                     {index + 1}
                   </span>
-                  <span className="max-w-full truncate text-2xl font-black text-white sm:text-3xl">
-                    {player.nickname}
-                  </span>
-                </div>
-              ))}
+                );
+
+                // 방장 세션: 이름을 누르면 강퇴(갖다 대면 취소선 + X 표시).
+                if (isOwner) {
+                  return (
+                    <button
+                      key={player.id}
+                      type="button"
+                      onClick={() => onKick(player)}
+                      title={`${player.nickname} 내보내기`}
+                      aria-label={`${player.nickname} 내보내기`}
+                      className="group tile-enter relative flex min-h-[104px] items-center justify-center rounded-2xl border border-white/10 bg-[var(--surface)] px-6 py-6 text-center transition hover:border-[color:var(--error)] hover:bg-[var(--error-soft)]"
+                    >
+                      {number}
+                      <span className="max-w-full truncate text-2xl font-black text-white transition-colors group-hover:text-[var(--error)] group-hover:line-through sm:text-3xl">
+                        {player.nickname}
+                      </span>
+                      <span className="absolute right-3 top-3 text-[var(--error)] opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 6 6 18M6 6l12 12" />
+                        </svg>
+                      </span>
+                    </button>
+                  );
+                }
+
+                // 익명(프로젝터) 화면: 명단만 표시, 강퇴 불가.
+                return (
+                  <div
+                    key={player.id}
+                    className="tile-enter relative flex min-h-[104px] items-center justify-center rounded-2xl border border-white/10 bg-[var(--surface)] px-6 py-6 text-center"
+                  >
+                    {number}
+                    <span className="max-w-full truncate text-2xl font-black text-white sm:text-3xl">
+                      {player.nickname}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
+          )}
+
+          {isOwner && players.length > 0 && (
+            <p className="text-center text-sm text-white/40">
+              참가자 이름을 누르면 내보낼 수 있어요.
+            </p>
           )}
         </div>
       </section>
