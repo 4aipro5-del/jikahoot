@@ -368,8 +368,9 @@ function ActiveView({
               </h2>
             </div>
 
-            {/* 보기 2×2 (도형 + 텍스트) */}
-            <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* 보기 2×2 — 폰에서도 2열 유지(세로로 쌓지 않아 4개가 한 화면에 들어옴).
+                좁은 화면에서 칸이 넘치지 않도록 모바일에선 크기를 컴팩트하게 낮춘다. */}
+            <div className="mt-8 grid grid-cols-2 gap-3 sm:mt-10 sm:gap-4">
               {question.choices.map((choice, index) => {
                 const theme = ANSWER_THEMES[index % ANSWER_THEMES.length];
                 const isMyChoice = answer?.choiceId === choice.id;
@@ -379,7 +380,7 @@ function ActiveView({
                     key={choice.id}
                     onClick={() => handleChoose(choice.id)}
                     disabled={hasAnswered || timeUp || submitting || paused}
-                    className="relative flex min-h-[9rem] items-center gap-4 rounded-2xl px-6 py-5 text-left transition-transform duration-150 ease-out enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed sm:min-h-[10rem]"
+                    className="relative flex min-h-[6.5rem] items-center gap-3 rounded-2xl px-4 py-4 text-left transition-transform duration-150 ease-out enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed sm:min-h-[10rem] sm:gap-4 sm:px-6 sm:py-5"
                     style={{
                       background: theme.bg,
                       color: theme.light ? "var(--panel-text)" : "#ffffff",
@@ -393,12 +394,12 @@ function ActiveView({
                     }}
                   >
                     <span
-                      className="flex h-14 w-14 flex-none items-center justify-center rounded-full text-2xl font-black"
+                      className="flex h-11 w-11 flex-none items-center justify-center rounded-full text-lg font-black sm:h-14 sm:w-14 sm:text-2xl"
                       style={{ background: theme.light ? "rgba(23,21,31,0.08)" : "rgba(255,255,255,0.22)" }}
                     >
                       {theme.shape}
                     </span>
-                    <span className="min-w-0 flex-1 text-xl font-black leading-snug sm:text-2xl">
+                    <span className="min-w-0 flex-1 text-base font-black leading-snug sm:text-2xl">
                       {choice.text}
                     </span>
                     {isMyChoice && (
