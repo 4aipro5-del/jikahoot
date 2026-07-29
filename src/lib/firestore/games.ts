@@ -215,14 +215,30 @@ export async function removePlayerFromGame(
   })
 }
 
-export function advanceQuestion(gameCode: string, nextIndex: number) {
-  return updateDoc(doc(db, 'games', gameCode), {
-    status: 'active',
-    currentQuestionIndex: nextIndex,
-    currentQuestionStartedAt: serverTimestamp(),
-    // 새 문제로 넘어가면 일시정지 상태는 항상 해제
-    paused: false,
-    pausedAt: null,
+export async function advanceQuestion(gameCode: string, nextIndex: number) {
+  const gameRef = doc(db, 'games', gameCode)
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(gameRef)
+    if (!snap.exists()) return
+    const game = snap.data() as Game
+
+    // 이미 종료된 게임은 다시 진행시키지 않는다 — 마감 순간 수동 '지금 종료'와
+    // 자동 진행이 경합해 finishGame 직후 advanceQuestion이 실행되면 finished 게임이
+    // active로 되살아날 수 있어서다.
+    if (game.status === 'finished') return
+    // 단조 증가: 이미 그 문제(또는 이후)로 가 있으면 무시 — stale 자동/수동 호출이
+    // 같은 문제로 다시 넘겨 타이머를 리셋하는 것을 막는다. (lobby는 index -1이라
+    // 첫 진행 nextIndex 0이 정상 통과)
+    if (game.currentQuestionIndex >= nextIndex) return
+
+    tx.update(gameRef, {
+      status: 'active',
+      currentQuestionIndex: nextIndex,
+      currentQuestionStartedAt: serverTimestamp(),
+      // 새 문제로 넘어가면 일시정지 상태는 항상 해제
+      paused: false,
+      pausedAt: null,
+    })
   })
 }
 

@@ -214,7 +214,7 @@ function DisplayBoard({
   players: PlayerWithId[];
   isOwner: boolean;
 }) {
-  const isActive = game.status === "active";
+  // DisplayBoard는 active 상태에서만 렌더된다(lobby/finished는 별도 화면).
   const total = game.questions.length;
   const current = game.currentQuestionIndex + 1; // 1-based for display
 
@@ -248,38 +248,25 @@ function DisplayBoard({
               <span className="inline-flex items-center justify-center gap-2.5 sm:justify-start">
                 <span
                   className="h-3.5 w-3.5 rounded-full"
-                  style={{ background: isActive ? "var(--success)" : "var(--warning)" }}
+                  style={{ background: "var(--success)" }}
                   aria-hidden="true"
                 />
-                <span
-                  className="display-font text-3xl sm:text-4xl"
-                  style={{ color: isActive ? "var(--success)" : "var(--warning)" }}
-                >
-                  {isActive ? "진행 중!" : "대기 중"}
-                </span>
+                <span className="display-font text-3xl text-[var(--success)] sm:text-4xl">진행 중!</span>
               </span>
 
-              {isActive ? (
-                <>
-                  <p className="text-2xl font-black text-white sm:text-3xl">
-                    문제 {current} / {total}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {Array.from({ length: total }).map((_, i) => (
-                      <span
-                        key={i}
-                        className="h-3 w-9 rounded-full"
-                        style={{ background: i < current ? "var(--primary)" : "rgba(255,255,255,0.12)" }}
-                        aria-hidden="true"
-                      />
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <p className="max-w-xs text-lg leading-7 text-[color:var(--foreground-muted)]">
-                  휴대폰으로 QR을 스캔하거나 위 코드를 입력해 참여하세요.
-                </p>
-              )}
+              <p className="text-2xl font-black text-white sm:text-3xl">
+                문제 {current} / {total}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {Array.from({ length: total }).map((_, i) => (
+                  <span
+                    key={i}
+                    className="h-3 w-9 rounded-full"
+                    style={{ background: i < current ? "var(--primary)" : "rgba(255,255,255,0.12)" }}
+                    aria-hidden="true"
+                  />
+                ))}
+              </div>
             </div>
           </div>
 
