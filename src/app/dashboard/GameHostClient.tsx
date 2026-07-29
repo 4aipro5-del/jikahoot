@@ -625,7 +625,10 @@ function ActiveView({
   const canAdvance = allAnswered || timeUp;
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[1.7fr_1fr] lg:items-stretch">
+    // 화면(가용 영역) 가로·세로 중앙 정렬. min-h는 뷰포트 기준이라 화면 크기에
+    // 맞춰 중앙이 조정되고, 내용이 더 길면 컨테이너가 늘어나 잘리지 않는다.
+    <div className="flex min-h-[80vh] w-full items-center justify-center">
+      <section className="grid w-full gap-6 lg:grid-cols-[1.7fr_1fr] lg:items-stretch">
       {/* 현재 문제 — 가장 큰 영역: 문제번호 / 제목 / 제출 현황 / 보기 4개 */}
       <div className="paper-panel flex flex-col gap-6 p-6 sm:p-8">
         <div className="space-y-4">
@@ -767,7 +770,8 @@ function ActiveView({
           </p>
         )}
       </div>
-    </section>
+      </section>
+    </div>
   );
 }
 
