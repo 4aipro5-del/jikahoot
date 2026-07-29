@@ -18,7 +18,7 @@ import {
 import { getCorrectChoiceMap } from "@/lib/firestore/questions";
 import { clearCurrentGame } from "@/lib/firestore/rooms";
 import type { Game } from "@/types/firestore";
-import Leaderboard from "@/components/Leaderboard";
+import FinalLeaderboard from "@/components/FinalLeaderboard";
 import GameQRCode from "@/components/GameQRCode";
 import StageSkeleton from "@/components/StageSkeleton";
 import { useNow } from "@/lib/useNow";
@@ -358,7 +358,7 @@ export default function GameHostClient({
                 전체 라운드가 끝났어요. 최종 리더보드를 확인해 보세요.
               </p>
             </div>
-            <Leaderboard players={players} />
+            <FinalLeaderboard players={players} />
             <button
               type="button"
               onClick={handleResetGame}
