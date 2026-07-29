@@ -345,6 +345,7 @@ export default function DashboardPage() {
                 onSelectRoom={handleSelectRoom}
                 onManageRooms={() => setShowRooms(true)}
                 onViewApprovals={() => setTab("approval")}
+                onStartGame={() => setTab("game")}
               />
             )}
 

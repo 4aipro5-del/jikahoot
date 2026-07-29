@@ -1,7 +1,6 @@
 "use client";
 
 import type { QuestionWithId, RoomQuestionStats } from "@/lib/firestore/questions";
-import { formatRelativeTime } from "@/lib/formatRelativeTime";
 import type { RoomWithId } from "@/types/firestore";
 import RecentQuestionsPreview from "./RecentQuestionsPreview";
 
@@ -29,7 +28,7 @@ const BookIcon = (
 );
 
 const ChecklistArt = (
-  <svg width="128" height="128" viewBox="0 0 128 128" fill="none" aria-hidden="true">
+  <svg width="92" height="92" viewBox="0 0 128 128" fill="none" aria-hidden="true">
     <rect x="22" y="20" width="84" height="88" rx="18" fill="rgba(255,255,255,0.05)" />
     <rect x="38" y="40" width="11" height="11" rx="3.5" fill="rgba(255,255,255,0.16)" />
     <rect x="57" y="42" width="36" height="7" rx="3.5" fill="rgba(255,255,255,0.12)" />
@@ -43,7 +42,7 @@ const ChecklistArt = (
 );
 
 const BooksArt = (
-  <svg width="128" height="128" viewBox="0 0 128 128" fill="none" aria-hidden="true">
+  <svg width="92" height="92" viewBox="0 0 128 128" fill="none" aria-hidden="true">
     <rect x="34" y="76" width="66" height="17" rx="5" fill="var(--primary)" opacity="0.92" />
     <rect x="30" y="56" width="66" height="17" rx="5" fill="var(--primary)" opacity="0.66" transform="rotate(-4 63 64)" />
     <rect x="38" y="36" width="60" height="17" rx="5" fill="var(--primary)" opacity="0.48" transform="rotate(4 68 44)" />
@@ -67,6 +66,7 @@ export default function DashboardHome({
   onSelectRoom,
   onManageRooms,
   onViewApprovals,
+  onStartGame,
 }: {
   displayName: string;
   questions: QuestionWithId[];
@@ -77,26 +77,32 @@ export default function DashboardHome({
   onSelectRoom: (roomId: string) => void;
   onManageRooms: () => void;
   onViewApprovals: () => void;
+  onStartGame: () => void;
 }) {
   const pendingCount = questions.filter((q) => q.status === "pending").length;
   const approvedCount = questions.filter((q) => q.status === "approved").length;
 
+  const selectedRoom = rooms.find((r) => r.roomId === selectedRoomId) ?? rooms[0] ?? null;
+  const selectedTotal =
+    (selectedRoom ? statsByRoom[selectedRoom.roomId]?.total : undefined) ?? questions.length;
+  const otherRooms = rooms.filter((r) => r.roomId !== selectedRoom?.roomId);
+
   return (
-    <div className="flex flex-col gap-8">
-      <header className="flex flex-wrap items-center justify-between gap-6">
-        <div className="min-w-0 space-y-2">
+    <div className="flex flex-col gap-5">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div className="min-w-0 space-y-1">
           <p className="hero-chip">Dashboard</p>
-          <h1 className="display-font text-4xl text-white sm:text-[2.75rem]">
+          <h1 className="display-font text-3xl text-white sm:text-4xl">
             안녕하세요,
             <br className="sm:hidden" /> {displayName} 선생님 👋
           </h1>
-          <p className="text-base text-[color:var(--foreground-muted)]">
+          <p className="text-sm text-[color:var(--foreground-muted)]">
             오늘도 멋진 퀴즈를 만들어보세요.
           </p>
         </div>
       </header>
 
-      {/* 내 방 — 빠른 전환 스트립 */}
+      {/* 내 방 — 현재 방 카드 + 새 방 만들기 */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-black text-white">내 방</h2>
@@ -108,64 +114,86 @@ export default function DashboardHome({
             방 관리로 이동 <span aria-hidden="true">→</span>
           </button>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-1">
-          {rooms.map((r) => {
-            const selected = r.roomId === selectedRoomId;
-            const stats = statsByRoom[r.roomId];
-            const status = roomStatus(stats);
-            return (
-              <button
-                key={r.roomId}
-                type="button"
-                onClick={() => onSelectRoom(r.roomId)}
-                className={`flex min-w-[168px] flex-none flex-col gap-2 rounded-2xl border p-4 text-left transition-colors ${
-                  selected
-                    ? "border-[var(--primary)] bg-[color:rgba(50,0,224,0.1)]"
-                    : "border-white/10 bg-[var(--surface)] hover:border-white/25"
-                }`}
-              >
-                {selected ? (
-                  <span className="self-start rounded-full bg-[var(--primary)] px-2 py-0.5 text-[0.65rem] font-black text-white">
-                    현재 사용 중
-                  </span>
-                ) : (
-                  <span className="h-[1.15rem]" aria-hidden="true" />
-                )}
-                <p className="truncate text-sm font-black text-white">{r.name}</p>
-                <p className="text-xs text-white/50">
-                  문제 {stats?.total ?? 0}개 · {formatRelativeTime(r.createdAt)}
-                </p>
-                <p className="flex items-center gap-1.5 text-xs text-white/60">
-                  <span
-                    className="h-2 w-2 flex-none rounded-full"
-                    style={{ background: selected ? "var(--primary)" : status.color }}
-                  />
-                  {status.label}
-                </p>
-              </button>
-            );
-          })}
+
+        <div className="flex flex-wrap items-stretch gap-4">
+          {/* 현재 사용 중인 방 (내용 크기에 맞춰 w-fit, 게임패드 이미지 없음) */}
+          {selectedRoom && (
+            <div className="flex min-h-[9rem] w-full flex-col justify-center gap-3 rounded-[22px] border-2 border-[var(--primary)] bg-[color:rgba(50,0,224,0.08)] p-6 sm:w-80">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-[var(--primary)] px-3 py-1 text-[0.7rem] font-black uppercase tracking-wide text-white">
+                  현재 사용 중
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-2.5 py-1 text-xs font-bold text-white/70">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <path d="M14 2v6h6" />
+                  </svg>
+                  문제 <span className="text-white">{selectedTotal}</span>개
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <h3 className="display-font min-w-0 truncate text-2xl text-white sm:text-3xl">
+                  {selectedRoom.name}
+                </h3>
+                <button
+                  type="button"
+                  onClick={onStartGame}
+                  aria-label="게임 시작"
+                  title="게임 시작"
+                  className="ml-auto flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[var(--error)] text-white shadow-[0_4px_0_var(--error-dark)] transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-0.5"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style={{ marginLeft: "2px" }}>
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 새 방 만들기 (게스트는 방 1개 고정이라 숨김) */}
           {!isGuest && (
             <button
               type="button"
               onClick={onManageRooms}
-              className="flex min-w-[128px] flex-none flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/20 p-4 text-white/60 transition-colors hover:border-white/40 hover:text-white"
+              className="flex w-full flex-col items-center justify-center gap-2 rounded-[22px] border-2 border-dashed border-white/15 p-5 text-center transition-colors hover:border-white/30 sm:w-64"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary)] text-lg font-black text-white">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--primary)] text-xl font-black text-white">
                 +
               </span>
-              <span className="text-xs font-bold">새 방 만들기</span>
+              <span className="text-base font-black text-white">새 방 만들기</span>
+              <span className="text-xs text-white/50">새로운 퀴즈 방을 만들어보세요.</span>
             </button>
           )}
         </div>
+
+        {/* 방이 여러 개면 다른 방으로 빠르게 전환 (단일 방/게스트면 표시 안 됨) */}
+        {otherRooms.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="text-xs font-bold text-white/40">다른 방:</span>
+            {otherRooms.map((r) => {
+              const status = roomStatus(statsByRoom[r.roomId]);
+              return (
+                <button
+                  key={r.roomId}
+                  type="button"
+                  onClick={() => onSelectRoom(r.roomId)}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[var(--surface)] px-3.5 py-1.5 text-sm font-bold text-white/75 transition-colors hover:border-white/30 hover:text-white"
+                >
+                  <span className="h-2 w-2 flex-none rounded-full" style={{ background: status.color }} />
+                  {r.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </section>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         {/* 승인 대기 — 앰버 강조, 클릭 시 승인 화면으로 이동 */}
         <button
           type="button"
           onClick={onViewApprovals}
-          className="group relative flex items-center justify-between gap-4 overflow-hidden rounded-[26px] border border-white/10 bg-[var(--surface)] p-6 text-left transition-transform duration-150 hover:-translate-y-0.5 sm:p-7"
+          className="group relative flex items-center justify-between gap-4 overflow-hidden rounded-[26px] border border-white/10 bg-[var(--surface)] p-5 text-left transition-transform duration-150 hover:-translate-y-0.5"
         >
           <div className="relative z-10 flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-2.5">
@@ -179,14 +207,14 @@ export default function DashboardHome({
                 </span>
               )}
             </div>
-            <p className="display-font text-5xl text-white">{pendingCount}개</p>
+            <p className="display-font text-4xl text-white">{pendingCount}개</p>
             <p className="text-sm font-semibold text-white/55">학생이 제출한 문제</p>
           </div>
           <div className="relative z-0 hidden flex-none sm:block">{ChecklistArt}</div>
         </button>
 
         {/* 사용 가능 문제 — 브랜드 블루 */}
-        <div className="relative flex items-center justify-between gap-4 overflow-hidden rounded-[26px] border border-white/10 bg-[var(--surface)] p-6 transition-transform duration-150 hover:-translate-y-0.5 sm:p-7">
+        <div className="relative flex items-center justify-between gap-4 overflow-hidden rounded-[26px] border border-white/10 bg-[var(--surface)] p-5 transition-transform duration-150 hover:-translate-y-0.5">
           <div className="relative z-10 flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-2.5">
               <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-[var(--primary)] text-white">
@@ -194,7 +222,7 @@ export default function DashboardHome({
               </span>
               <span className="text-lg font-black text-white">사용 가능 문제</span>
             </div>
-            <p className="display-font text-5xl text-white">{approvedCount}개</p>
+            <p className="display-font text-4xl text-white">{approvedCount}개</p>
             <p className="text-sm font-semibold text-white/55">게임에 사용할 수 있는 문제</p>
           </div>
           <div className="relative z-0 hidden flex-none sm:block">{BooksArt}</div>
