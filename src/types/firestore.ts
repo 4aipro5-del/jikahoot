@@ -101,6 +101,13 @@ export interface Game {
   // 일시정지된 시간만큼 뒤로 밀어 남은 시간을 보존한다. 없으면 진행 중(하위호환).
   paused?: boolean
   pausedAt?: Timestamp | null
+  // 정답 공개 단계. 문제 마감 시 방장이 현재 문제의 정답 보기 id를 여기에 기록하면
+  // (게임 문서는 누구나 읽으므로) 학생/교사 화면이 정답 보기를 강조한다. 답안 중에는
+  // null/부재. 다음 문제로 넘어가면(advanceQuestion) 다시 null로 비운다. PublicQuestion
+  // 자체엔 정답이 없어 공개 전 사전 노출은 불가능하다.
+  revealedChoiceId?: string | null
+  // 정답 공개 시작 시각 — 공개 후 자동 진행(기본 5초) 타이밍 기준.
+  revealStartedAt?: Timestamp | null
 }
 
 // games/{gameCode}/nicknames/{nicknameSlug}

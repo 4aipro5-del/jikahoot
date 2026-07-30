@@ -11,6 +11,7 @@ import {
   pauseGame,
   removePlayerFromGame,
   resumeGame,
+  revealAnswer,
   subscribeToGame,
   subscribeToPlayers,
   type PlayerWithId,
@@ -118,6 +119,31 @@ export default function GameHostClient({
       game.currentQuestionIndex,
       correctChoiceId,
     );
+  }
+
+  // 정답 공개: 현재 문제를 채점하고 정답 보기 id를 게임 문서에 기록한다(공개 단계 진입).
+  // 전원 응답 또는 시간 종료 시 교사가 눌러 조기/즉시 공개할 수 있고, 시간이 다 되면
+  // 헤드리스 컨트롤러가 자동으로 공개한다.
+  async function handleReveal() {
+    if (!game || busyRef.current) return;
+    const question = game.questions[game.currentQuestionIndex];
+    const correctChoiceId = correctChoiceMap[question.id];
+    if (!correctChoiceId) {
+      setError("정답 정보를 불러오는 중이에요. 잠시 후 다시 시도해 주세요.");
+      return;
+    }
+    busyRef.current = true;
+    setError(null);
+    setAdvancing(true);
+    try {
+      await finalizeCurrentQuestion();
+      await revealAnswer(gameCode, game.currentQuestionIndex, correctChoiceId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "정답을 공개하지 못했습니다. 다시 시도해 주세요.");
+    } finally {
+      busyRef.current = false;
+      setAdvancing(false);
+    }
   }
 
   async function handleAdvance() {
@@ -342,6 +368,7 @@ export default function GameHostClient({
             answeredIds={new Set(Object.keys(answers))}
             timeUp={activeTimeUp}
             paused={game.paused ?? false}
+            onReveal={handleReveal}
             onAdvance={handleAdvance}
             onPauseToggle={handlePauseToggle}
             onEndNow={handleEndNow}
@@ -593,6 +620,7 @@ function ActiveView({
   answeredIds,
   timeUp,
   paused,
+  onReveal,
   onAdvance,
   onPauseToggle,
   onEndNow,
@@ -603,6 +631,7 @@ function ActiveView({
   answeredIds: Set<string>;
   timeUp: boolean;
   paused: boolean;
+  onReveal: () => void;
   onAdvance: () => void;
   onPauseToggle: () => void;
   onEndNow: () => void;
@@ -619,10 +648,12 @@ function ActiveView({
     setEndConfirm(false);
   }
   const answerRatio = players.length > 0 ? answeredCount / players.length : 0;
-  // Gate manual advance on everyone having answered; the timer is the escape
-  // hatch so a non-answering student can't stall the whole class.
+  // 정답 공개 단계 여부. 공개되면 정답 보기를 강조하고 주요 버튼이 '다음 문제'로 바뀐다.
+  const revealedChoiceId = game.revealedChoiceId ?? null;
+  const revealed = !!revealedChoiceId;
+  // 공개 전 단계: 전원 응답 또는 시간 종료 시 정답을 공개할 수 있다(타이머가 안전장치).
   const allAnswered = answeredCount >= players.length;
-  const canAdvance = allAnswered || timeUp;
+  const canReveal = allAnswered || timeUp;
 
   return (
     // 화면(가용 영역) 가로·세로 중앙 정렬. min-h는 뷰포트 기준이라 화면 크기에
@@ -654,15 +685,20 @@ function ActiveView({
         <ul className="grid gap-3 sm:grid-cols-2">
           {question.choices.map((choice, index) => {
             const theme = CHOICE_THEMES[index % CHOICE_THEMES.length];
+            const isCorrect = revealed && choice.id === revealedChoiceId;
+            const dim = revealed && !isCorrect;
             return (
               <li
                 key={choice.id}
-                className="answer-tile"
+                className="answer-tile transition-opacity"
                 style={
                   {
                     "--tile-bg": theme.bg,
                     "--tile-shadow": theme.shadow,
                     color: theme.light ? "var(--panel-text)" : "#ffffff",
+                    opacity: dim ? 0.4 : 1,
+                    outline: isCorrect ? "4px solid var(--success)" : undefined,
+                    outlineOffset: isCorrect ? "-4px" : undefined,
                   } as CSSProperties
                 }
               >
@@ -673,7 +709,16 @@ function ActiveView({
                   >
                     {theme.shape}
                   </span>
-                  <span className="answer-kicker">{theme.label}</span>
+                  {isCorrect ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--success)] px-2.5 py-1 text-xs font-black text-white">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>
+                      정답
+                    </span>
+                  ) : (
+                    <span className="answer-kicker">{theme.label}</span>
+                  )}
                 </div>
                 <span className="text-base font-black leading-6 sm:text-lg">{choice.text}</span>
               </li>
@@ -698,30 +743,51 @@ function ActiveView({
           </p>
         </div>
 
-        {/* 주요 액션: 다음 문제 */}
-        <button
-          onClick={onAdvance}
-          disabled={advancing || !canAdvance}
-          className="w-full rounded-2xl bg-[var(--primary)] px-6 py-6 shadow-[0_6px_0_var(--primary-dark)] transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <span className="flex items-center justify-center gap-3">
+        {/* 주요 액션: 공개 전 = 정답 공개(초록), 공개 후 = 다음 문제/게임 종료(파랑) */}
+        {revealed ? (
+          <button
+            onClick={onAdvance}
+            disabled={advancing}
+            className="w-full rounded-2xl bg-[var(--primary)] px-6 py-6 shadow-[0_6px_0_var(--primary-dark)] transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span className="flex items-center justify-center gap-3">
+              {!advancing && !isLastQuestion && (
+                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white/20 text-white">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M9 6l6 6-6 6" />
+                  </svg>
+                </span>
+              )}
+              <span className="text-2xl font-black text-white">
+                {advancing ? "처리 중..." : isLastQuestion ? "게임 종료" : "다음 문제"}
+              </span>
+            </span>
             {!advancing && !isLastQuestion && (
-              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white/20 text-white">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M9 6l6 6-6 6" />
-                </svg>
+              <span className="mt-1 block text-sm font-bold text-white/70">
+                {game.currentQuestionIndex + 2} / {game.questions.length}
               </span>
             )}
-            <span className="text-2xl font-black text-white">
-              {advancing ? "처리 중..." : isLastQuestion ? "게임 종료" : "다음 문제"}
+          </button>
+        ) : (
+          <button
+            onClick={onReveal}
+            disabled={advancing || !canReveal}
+            className="w-full rounded-2xl bg-[var(--success)] px-6 py-6 shadow-[0_6px_0_var(--success-dark)] transition-transform duration-150 enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span className="flex items-center justify-center gap-3">
+              {!advancing && (
+                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white/20 text-white">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                </span>
+              )}
+              <span className="text-2xl font-black text-white">
+                {advancing ? "처리 중..." : "정답 공개"}
+              </span>
             </span>
-          </span>
-          {!advancing && !isLastQuestion && (
-            <span className="mt-1 block text-sm font-bold text-white/70">
-              {game.currentQuestionIndex + 2} / {game.questions.length}
-            </span>
-          )}
-        </button>
+          </button>
+        )}
 
         {/* 보조 액션: 일시정지/재개 · 지금 종료 */}
         <div className="grid grid-cols-2 gap-3">
@@ -762,12 +828,20 @@ function ActiveView({
           </button>
         </div>
 
-        {!canAdvance && !advancing && (
+        {revealed ? (
           <p className="text-sm leading-6 text-white/45">
-            모든 학생이 제출하면 넘어갈 수 있어요.
-            <br />
-            시간이 끝나면 자동으로 넘어가요.
+            정답을 공개했어요.
+            {game.autoAdvance === false ? " ‘다음 문제’를 눌러 진행하세요." : " 잠시 후 자동으로 넘어가요."}
           </p>
+        ) : (
+          !canReveal &&
+          !advancing && (
+            <p className="text-sm leading-6 text-white/45">
+              모든 학생이 제출하면 정답을 공개할 수 있어요.
+              <br />
+              시간이 끝나면 자동으로 공개돼요.
+            </p>
+          )
         )}
       </div>
       </section>

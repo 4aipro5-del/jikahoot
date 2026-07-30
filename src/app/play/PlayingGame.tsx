@@ -273,6 +273,9 @@ function ActiveView({
   const remainingSec = deadline ? Math.max(0, Math.ceil((deadline - nowMs) / 1000)) : 0;
   const timeUp = deadline !== null && remainingSec <= 0;
   const hasAnswered = Boolean(answer);
+  // 정답 공개 단계: 방장이 정답 보기 id를 게임 문서에 기록하면 정답을 강조한다.
+  const revealedChoiceId = game.revealedChoiceId ?? null;
+  const revealed = !!revealedChoiceId;
 
   // 남은 시간 바: 남은 시간에 따라 파랑 → 노랑 → 빨강, 시간이 줄수록 바가 줄어든다.
   const barColor =
@@ -374,23 +377,31 @@ function ActiveView({
               {question.choices.map((choice, index) => {
                 const theme = ANSWER_THEMES[index % ANSWER_THEMES.length];
                 const isMyChoice = answer?.choiceId === choice.id;
+                const isCorrectChoice = revealed && choice.id === revealedChoiceId;
+                const myWrongChoice = revealed && isMyChoice && !isCorrectChoice;
+                // 공개 단계에서 정답도 내 선택도 아닌 보기는 흐리게
+                const dim = revealed && !isCorrectChoice && !isMyChoice;
 
                 return (
                   <button
                     key={choice.id}
                     onClick={() => handleChoose(choice.id)}
-                    disabled={hasAnswered || timeUp || submitting || paused}
-                    className="relative flex min-h-[6.5rem] items-center gap-3 rounded-2xl px-4 py-4 text-left transition-transform duration-150 ease-out enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed sm:min-h-[10rem] sm:gap-4 sm:px-6 sm:py-5"
+                    disabled={hasAnswered || timeUp || submitting || paused || revealed}
+                    className="relative flex min-h-[6.5rem] items-center gap-3 rounded-2xl px-4 py-4 text-left transition-[transform,opacity] duration-150 ease-out enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed sm:min-h-[10rem] sm:gap-4 sm:px-6 sm:py-5"
                     style={{
                       background: theme.bg,
                       color: theme.light ? "var(--panel-text)" : "#ffffff",
                       boxShadow: `0 5px 0 ${theme.shadow}`,
-                      // 선택 강조: 흰색 5px 테두리(안쪽) + 1.03배 확대. 다른 보기는
-                      // 색/투명도 변화 없음(흐리게 처리하지 않음).
-                      outline: isMyChoice ? "5px solid #ffffff" : "none",
+                      opacity: dim ? 0.4 : 1,
+                      // 공개 시 정답=초록 테두리, 아니면 내 선택=흰 테두리. 5px 안쪽 + 1.03배.
+                      outline: isCorrectChoice
+                        ? "5px solid var(--success)"
+                        : isMyChoice
+                          ? "5px solid #ffffff"
+                          : "none",
                       outlineOffset: "-5px",
-                      transform: isMyChoice ? "scale(1.03)" : undefined,
-                      zIndex: isMyChoice ? 1 : undefined,
+                      transform: isCorrectChoice || isMyChoice ? "scale(1.03)" : undefined,
+                      zIndex: isCorrectChoice || isMyChoice ? 1 : undefined,
                     }}
                   >
                     <span
@@ -402,7 +413,25 @@ function ActiveView({
                     <span className="min-w-0 flex-1 text-base font-black leading-snug sm:text-2xl">
                       {choice.text}
                     </span>
-                    {isMyChoice && (
+                    {isCorrectChoice ? (
+                      <span
+                        className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--success)] text-white shadow-[0_2px_6px_rgba(0,0,0,0.3)]"
+                        aria-label="정답"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                      </span>
+                    ) : myWrongChoice ? (
+                      <span
+                        className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--error)] text-white shadow-[0_2px_6px_rgba(0,0,0,0.3)]"
+                        aria-label="내가 고른 오답"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M18 6 6 18M6 6l12 12" />
+                        </svg>
+                      </span>
+                    ) : isMyChoice ? (
                       <span
                         className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.3)]"
                         style={{
@@ -415,7 +444,7 @@ function ActiveView({
                           <path d="M20 6 9 17l-5-5" />
                         </svg>
                       </span>
-                    )}
+                    ) : null}
                   </button>
                 );
               })}
@@ -438,9 +467,9 @@ function ActiveView({
               {answer.isCorrect ? `정답! +${answer.pointsEarned}점` : "아쉬워요, 이번 문제는 오답이에요."}
             </p>
           )}
-          {!answer && timeUp && (
+          {!answer && (timeUp || revealed) && (
             <p className="status-banner" data-tone="warning">
-              시간이 끝났어요. 다음 문제를 기다려 주세요.
+              {revealed ? "정답을 확인해 보세요." : "시간이 끝났어요. 다음 문제를 기다려 주세요."}
             </p>
           )}
 
