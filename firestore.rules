@@ -28,6 +28,13 @@ service cloud.firestore {
       return game(gameCode).get('paused', false) == true;
     }
 
+    // 정답 공개 단계 여부. revealedChoiceId가 설정되면(공개) 답안 제출을 막아,
+    // 공개된 정답을 뒤늦게 제출·채점해 득점하는 것을 서버에서 차단한다. 필드가 없는
+    // (구버전/공개 전) 게임은 null → 공개 아님으로 취급한다.
+    function gameRevealed(gameCode) {
+      return game(gameCode).get('revealedChoiceId', null) != null;
+    }
+
     // The owner of a room. A teacher may own many rooms (rooms are keyed by a
     // roomId, not by uid). Legacy/primary rooms predate ownerUid and live at
     // rooms/{uid}, so default to the doc id — which equals the owner uid there.
@@ -161,6 +168,7 @@ service cloud.firestore {
             && request.resource.data.pointsEarned == null
             && gameStatus(gameCode) == 'active'
             && !gamePaused(gameCode)
+            && !gameRevealed(gameCode)
             && int(questionIndex) == gameCurrentIndex(gameCode);
 
           allow read: if isSignedIn() && (

@@ -7,11 +7,13 @@ import {
   advanceQuestion,
   finalizeQuestion,
   finishGame,
+  revealAnswer,
   subscribeToGame,
   subscribeToPlayers,
   type PlayerWithId,
 } from "@/lib/firestore/games";
 import { getCorrectChoiceMap } from "@/lib/firestore/questions";
+import { REVEAL_DURATION_SEC } from "@/lib/gameConfig";
 import type { Game } from "@/types/firestore";
 import { useNow } from "@/lib/useNow";
 
@@ -28,7 +30,9 @@ export default function GameAutoAdvancer({ gameCode }: { gameCode: string }) {
   const [correctChoiceMap, setCorrectChoiceMap] = useState<Record<string, string>>({});
   // 재진입 방지: advancing 상태가 없으니 ref로 동기 잠금.
   const busyRef = useRef(false);
-  const autoAdvancedIndexRef = useRef<number | null>(null);
+  // 문제 index별로 공개/진행을 각각 한 번씩만 트리거하기 위한 잠금.
+  const revealedIndexRef = useRef<number | null>(null);
+  const advancedIndexRef = useRef<number | null>(null);
   const now = useNow(500);
 
   useEffect(() => subscribeToAuthState(setUser), []);
@@ -54,45 +58,61 @@ export default function GameAutoAdvancer({ gameCode }: { gameCode: string }) {
   useEffect(() => {
     if (!user || !game || game.teacherUid !== user.uid) return;
     if (game.status !== "active") return;
-    // 일시정지 중에는 자동 진행하지 않음
+    // 일시정지 중에는 공개/진행 모두 멈춘다
     if (game.paused) return;
-    // 교사의 자동 진행 설정 존중(undefined=on, 구버전 호환)
-    if (game.autoAdvance === false) return;
-    if (!game.currentQuestionStartedAt) return;
-
-    const deadline = game.currentQuestionStartedAt.toMillis() + game.questionDurationSec * 1000;
-    if (now < deadline) return;
-    if (autoAdvancedIndexRef.current === game.currentQuestionIndex) return;
     if (busyRef.current) return;
 
-    // 정답 맵이 아직 로딩 전이면 대기 — 지금 넘어가면 이 문제 채점이 누락된다.
-    const question = game.questions[game.currentQuestionIndex];
-    const correctChoiceId = question ? correctChoiceMap[question.id] : undefined;
-    if (!correctChoiceId) return;
+    const idx = game.currentQuestionIndex;
+    const question = game.questions[idx];
+    if (!question) return;
 
-    autoAdvancedIndexRef.current = game.currentQuestionIndex;
-    const questionIndex = game.currentQuestionIndex;
-    const isLast = questionIndex + 1 >= game.questions.length;
+    if (!game.revealedChoiceId) {
+      // ── 답안 단계: 타이머 마감 시 채점 + 정답 공개 (자동 진행 설정과 무관하게 항상) ──
+      if (!game.currentQuestionStartedAt) return;
+      const deadline = game.currentQuestionStartedAt.toMillis() + game.questionDurationSec * 1000;
+      if (now < deadline) return;
+      if (revealedIndexRef.current === idx) return;
+      // 정답 맵이 아직 로딩 전이면 대기 — 지금 공개하면 채점이 누락된다.
+      const correctChoiceId = correctChoiceMap[question.id];
+      if (!correctChoiceId) return;
 
+      revealedIndexRef.current = idx;
+      (async () => {
+        busyRef.current = true;
+        try {
+          await finalizeQuestion(gameCode, players.map((p) => p.id), idx, correctChoiceId);
+          await revealAnswer(gameCode, idx, correctChoiceId);
+        } catch (err) {
+          console.error("정답 공개 실패", err);
+          revealedIndexRef.current = null; // 다음 tick 재시도
+        } finally {
+          busyRef.current = false;
+        }
+      })();
+      return;
+    }
+
+    // ── 공개 단계: 자동 진행 ON이면 REVEAL_DURATION 뒤 다음 문제/종료 ──
+    // (자동 진행 OFF면 교사가 '다음 문제'를 눌러 진행 — 여기서는 아무것도 안 함)
+    if (game.autoAdvance === false) return;
+    if (!game.revealStartedAt) return;
+    const advanceAt = game.revealStartedAt.toMillis() + REVEAL_DURATION_SEC * 1000;
+    if (now < advanceAt) return;
+    if (advancedIndexRef.current === idx) return;
+
+    advancedIndexRef.current = idx;
+    const isLast = idx + 1 >= game.questions.length;
     (async () => {
       busyRef.current = true;
       try {
-        // 넘어가기 전에 현재 문제를 채점(점수/연속정답이 리더보드에 반영)
-        await finalizeQuestion(
-          gameCode,
-          players.map((p) => p.id),
-          questionIndex,
-          correctChoiceId,
-        );
         if (isLast) {
           await finishGame(gameCode);
         } else {
-          await advanceQuestion(gameCode, questionIndex + 1);
+          await advanceQuestion(gameCode, idx + 1);
         }
       } catch (err) {
         console.error("자동 진행 실패", err);
-        // 실패 시 다음 tick에 재시도할 수 있게 잠금을 푼다
-        autoAdvancedIndexRef.current = null;
+        advancedIndexRef.current = null; // 다음 tick 재시도
       } finally {
         busyRef.current = false;
       }

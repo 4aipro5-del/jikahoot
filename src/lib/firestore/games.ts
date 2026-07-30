@@ -235,9 +235,36 @@ export async function advanceQuestion(gameCode: string, nextIndex: number) {
       status: 'active',
       currentQuestionIndex: nextIndex,
       currentQuestionStartedAt: serverTimestamp(),
-      // 새 문제로 넘어가면 일시정지 상태는 항상 해제
+      // 새 문제로 넘어가면 일시정지·정답 공개 상태는 항상 해제
       paused: false,
       pausedAt: null,
+      revealedChoiceId: null,
+      revealStartedAt: null,
+    })
+  })
+}
+
+// 정답 공개: 문제 마감 시(타이머 종료 또는 전원 응답) 방장이 현재 문제의 정답 보기
+// id를 게임 문서에 기록한다. 이후 학생/교사 화면이 정답을 강조하고, 공개 후 자동 진행
+// (또는 교사의 다음 문제)로 넘어간다. 이미 공개됐거나 active가 아니면 무시(멱등).
+export async function revealAnswer(
+  gameCode: string,
+  questionIndex: number,
+  correctChoiceId: string,
+) {
+  const gameRef = doc(db, 'games', gameCode)
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(gameRef)
+    if (!snap.exists()) return
+    const game = snap.data() as Game
+    if (game.status !== 'active') return
+    // 다른 문제거나 이미 공개된 상태면 무시(자동/수동 경합 방지)
+    if (game.currentQuestionIndex !== questionIndex) return
+    if (game.revealedChoiceId) return
+
+    tx.update(gameRef, {
+      revealedChoiceId: correctChoiceId,
+      revealStartedAt: serverTimestamp(),
     })
   })
 }
@@ -267,12 +294,18 @@ export async function resumeGame(gameCode: string) {
       return
     }
 
-    const pausedMs = Timestamp.now().toMillis() - pausedAt.toMillis()
-    const shiftedStartedAt = Timestamp.fromMillis(startedAt.toMillis() + Math.max(0, pausedMs))
+    // 일시정지된 시간만큼 진행 중이던 시각들을 함께 뒤로 밀어 남은 시간을 보존한다:
+    // 문제 타이머(currentQuestionStartedAt)와, 공개 단계라면 정답 공개 카운트다운
+    // (revealStartedAt)까지. revealStartedAt을 안 밀면 남은 공개 시간보다 오래 정지했을 때
+    // 재개 즉시 다음 문제로 넘어가 5초 공개가 잘린다.
+    const shift = Math.max(0, Timestamp.now().toMillis() - pausedAt.toMillis())
     tx.update(gameRef, {
       paused: false,
       pausedAt: null,
-      currentQuestionStartedAt: shiftedStartedAt,
+      currentQuestionStartedAt: Timestamp.fromMillis(startedAt.toMillis() + shift),
+      ...(game.revealStartedAt
+        ? { revealStartedAt: Timestamp.fromMillis(game.revealStartedAt.toMillis() + shift) }
+        : {}),
     })
   })
 }

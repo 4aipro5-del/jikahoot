@@ -129,9 +129,12 @@ export default function PlayingGame({
 
   if (game.status === "finished") {
     return (
-      <div className="stage-shell">
+      // stage-shell(overflow:hidden) 대신 스크롤 가능한 래퍼. 참가자가 적으면
+      // justify-center로 가운데, 많아서 뷰포트보다 길어지면 위로 정렬 + 스크롤돼
+      // 제목/버튼이 잘리지 않는다.
+      <div className="min-h-screen w-full">
         <div className="stage-content flex min-h-screen flex-col justify-center gap-6 py-8">
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 text-center">
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-10 text-center">
             <div className="space-y-3">
               <p className="hero-chip self-center">Final Leaderboard</p>
               <h1 className="display-font text-5xl text-white sm:text-6xl">최종 순위</h1>
@@ -146,7 +149,7 @@ export default function PlayingGame({
               onClick={onLeave}
               className="primary-button mx-auto w-full max-w-xs"
             >
-              다른 게임 시작하기
+              START NEW GAME
             </button>
           </div>
         </div>
@@ -273,6 +276,9 @@ function ActiveView({
   const remainingSec = deadline ? Math.max(0, Math.ceil((deadline - nowMs) / 1000)) : 0;
   const timeUp = deadline !== null && remainingSec <= 0;
   const hasAnswered = Boolean(answer);
+  // 정답 공개 단계: 방장이 정답 보기 id를 게임 문서에 기록하면 정답을 강조한다.
+  const revealedChoiceId = game.revealedChoiceId ?? null;
+  const revealed = !!revealedChoiceId;
 
   // 남은 시간 바: 남은 시간에 따라 파랑 → 노랑 → 빨강, 시간이 줄수록 바가 줄어든다.
   const barColor =
@@ -286,7 +292,8 @@ function ActiveView({
     : 0;
 
   async function handleChoose(choiceId: string) {
-    if (hasAnswered || timeUp || submitting || paused) return;
+    // revealed(정답 공개) 단계에서는 제출 금지 — 서버 규칙도 거부하지만 UI에서도 막는다.
+    if (hasAnswered || timeUp || submitting || paused || revealed) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -374,23 +381,31 @@ function ActiveView({
               {question.choices.map((choice, index) => {
                 const theme = ANSWER_THEMES[index % ANSWER_THEMES.length];
                 const isMyChoice = answer?.choiceId === choice.id;
+                const isCorrectChoice = revealed && choice.id === revealedChoiceId;
+                const myWrongChoice = revealed && isMyChoice && !isCorrectChoice;
+                // 공개 단계에서 정답도 내 선택도 아닌 보기는 흐리게
+                const dim = revealed && !isCorrectChoice && !isMyChoice;
 
                 return (
                   <button
                     key={choice.id}
                     onClick={() => handleChoose(choice.id)}
-                    disabled={hasAnswered || timeUp || submitting || paused}
-                    className="relative flex min-h-[6.5rem] items-center gap-3 rounded-2xl px-4 py-4 text-left transition-transform duration-150 ease-out enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed sm:min-h-[10rem] sm:gap-4 sm:px-6 sm:py-5"
+                    disabled={hasAnswered || timeUp || submitting || paused || revealed}
+                    className="relative flex min-h-[6.5rem] items-center gap-3 rounded-2xl px-4 py-4 text-left transition-[transform,opacity] duration-150 ease-out enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 disabled:cursor-not-allowed sm:min-h-[10rem] sm:gap-4 sm:px-6 sm:py-5"
                     style={{
                       background: theme.bg,
                       color: theme.light ? "var(--panel-text)" : "#ffffff",
                       boxShadow: `0 5px 0 ${theme.shadow}`,
-                      // 선택 강조: 흰색 5px 테두리(안쪽) + 1.03배 확대. 다른 보기는
-                      // 색/투명도 변화 없음(흐리게 처리하지 않음).
-                      outline: isMyChoice ? "5px solid #ffffff" : "none",
+                      opacity: dim ? 0.4 : 1,
+                      // 공개 시 정답=초록 테두리, 아니면 내 선택=흰 테두리. 5px 안쪽 + 1.03배.
+                      outline: isCorrectChoice
+                        ? "5px solid var(--success)"
+                        : isMyChoice
+                          ? "5px solid #ffffff"
+                          : "none",
                       outlineOffset: "-5px",
-                      transform: isMyChoice ? "scale(1.03)" : undefined,
-                      zIndex: isMyChoice ? 1 : undefined,
+                      transform: isCorrectChoice || isMyChoice ? "scale(1.03)" : undefined,
+                      zIndex: isCorrectChoice || isMyChoice ? 1 : undefined,
                     }}
                   >
                     <span
@@ -402,55 +417,79 @@ function ActiveView({
                     <span className="min-w-0 flex-1 text-base font-black leading-snug sm:text-2xl">
                       {choice.text}
                     </span>
-                    {isMyChoice && (
+                    {isCorrectChoice ? (
                       <span
-                        className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.3)]"
-                        style={{
-                          background: theme.light ? "var(--panel-text)" : "#ffffff",
-                          color: theme.light ? "#ffffff" : "var(--panel-text)",
-                        }}
-                        aria-label="선택함"
+                        className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[var(--success)] text-white shadow-[0_2px_10px_rgba(0,0,0,0.25)] sm:h-12 sm:w-12"
+                        aria-label="정답"
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <path d="M20 6 9 17l-5-5" />
                         </svg>
                       </span>
-                    )}
+                    ) : myWrongChoice ? (
+                      <span
+                        className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[var(--error)] text-white shadow-[0_2px_10px_rgba(0,0,0,0.25)] sm:h-12 sm:w-12"
+                        aria-label="내가 고른 오답"
+                      >
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M18 6 6 18M6 6l12 12" />
+                        </svg>
+                      </span>
+                    ) : isMyChoice ? (
+                      <span
+                        className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[#1a1626] text-white shadow-[0_2px_10px_rgba(0,0,0,0.25)] sm:h-12 sm:w-12"
+                        aria-label="선택함"
+                      >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}
             </div>
           </section>
 
-          {/* 제출 상태 피드백 */}
+          {/* 제출 오류만 배너로 (채점 결과는 하단 바 우측에 표시) */}
           {submitError && (
             <p className="status-banner" data-tone="error">
               {submitError}
             </p>
           )}
-          {answer && answer.isCorrect === null && (
-            <p className="status-banner" data-tone="warning">
-              제출 완료! 채점을 기다리는 중이에요.
-            </p>
-          )}
-          {answer && answer.isCorrect !== null && (
-            <p className="status-banner" data-tone={answer.isCorrect ? "success" : "error"}>
-              {answer.isCorrect ? `정답! +${answer.pointsEarned}점` : "아쉬워요, 이번 문제는 오답이에요."}
-            </p>
-          )}
-          {!answer && timeUp && (
-            <p className="status-banner" data-tone="warning">
-              시간이 끝났어요. 다음 문제를 기다려 주세요.
-            </p>
-          )}
 
-          {/* 하단: 보너스 점수 안내 */}
-          <div className="flex items-center gap-3 rounded-2xl bg-[var(--surface)] px-5 py-4 text-sm text-white/70 sm:text-base">
+          {/* 하단: 보너스 안내(좌) + 채점 결과(우) */}
+          <div className="flex items-center gap-4 rounded-2xl bg-[var(--surface)] px-5 py-4 text-sm text-white/70 sm:text-base">
             <span className="flex-none">{starIcon}</span>
-            <span>
+            <span className="min-w-0 flex-1">
               정답을 빠르게, 연속으로 맞히면{" "}
               <span className="font-bold text-[var(--warning)]">보너스 점수</span>를 얻어요!
             </span>
+
+            {answer && answer.isCorrect !== null ? (
+              <>
+                <span className="h-9 w-px flex-none bg-white/12" />
+                <span className="flex flex-none items-baseline gap-2 whitespace-nowrap">
+                  {answer.isCorrect ? (
+                    <>
+                      <span className="display-font text-lg text-white sm:text-2xl">정답!</span>
+                      <span className="display-font text-lg text-[var(--success)] sm:text-2xl">
+                        +{answer.pointsEarned}점
+                      </span>
+                    </>
+                  ) : (
+                    <span className="display-font text-lg text-white/70 sm:text-2xl">오답</span>
+                  )}
+                </span>
+              </>
+            ) : answer ? (
+              <>
+                <span className="h-9 w-px flex-none bg-white/12" />
+                <span className="flex-none whitespace-nowrap text-lg font-black text-white">
+                  제출 완료
+                </span>
+              </>
+            ) : null}
           </div>
         </div>
       </div>
