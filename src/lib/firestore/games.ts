@@ -294,12 +294,18 @@ export async function resumeGame(gameCode: string) {
       return
     }
 
-    const pausedMs = Timestamp.now().toMillis() - pausedAt.toMillis()
-    const shiftedStartedAt = Timestamp.fromMillis(startedAt.toMillis() + Math.max(0, pausedMs))
+    // 일시정지된 시간만큼 진행 중이던 시각들을 함께 뒤로 밀어 남은 시간을 보존한다:
+    // 문제 타이머(currentQuestionStartedAt)와, 공개 단계라면 정답 공개 카운트다운
+    // (revealStartedAt)까지. revealStartedAt을 안 밀면 남은 공개 시간보다 오래 정지했을 때
+    // 재개 즉시 다음 문제로 넘어가 5초 공개가 잘린다.
+    const shift = Math.max(0, Timestamp.now().toMillis() - pausedAt.toMillis())
     tx.update(gameRef, {
       paused: false,
       pausedAt: null,
-      currentQuestionStartedAt: shiftedStartedAt,
+      currentQuestionStartedAt: Timestamp.fromMillis(startedAt.toMillis() + shift),
+      ...(game.revealStartedAt
+        ? { revealStartedAt: Timestamp.fromMillis(game.revealStartedAt.toMillis() + shift) }
+        : {}),
     })
   })
 }
