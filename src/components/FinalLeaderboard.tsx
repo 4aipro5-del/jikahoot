@@ -24,10 +24,10 @@ export default function FinalLeaderboard({
   const rest = ranked.slice(3);
 
   return (
-    <div className="flex w-full flex-col gap-5">
+    <div className="flex w-full flex-col gap-6">
       {/* 포디엄: sm 미만은 세로 스택(1·2·3), sm 이상은 3열 포디엄(2·1·3, CSS order).
           좁은 폰 폭에서 3열을 유지하면 넘쳐서 stage-shell의 overflow:hidden에 잘린다. */}
-      <div className="flex flex-col gap-2.5 sm:grid sm:grid-cols-3 sm:items-end sm:gap-4">
+      <div className="flex flex-col gap-3.5 sm:grid sm:grid-cols-3 sm:items-end sm:gap-5">
         <PodiumCard rank={1} player={champion} highlight={champion?.id === highlightPlayerId} />
         <PodiumCard rank={2} player={second} highlight={second?.id === highlightPlayerId} />
         <PodiumCard rank={3} player={third} highlight={third?.id === highlightPlayerId} />
@@ -42,21 +42,21 @@ export default function FinalLeaderboard({
             return (
               <li
                 key={player.id}
-                className={`flex items-center gap-4 border-b border-white/[0.06] px-4 py-3.5 last:border-0 ${
+                className={`flex items-center gap-4 border-b border-white/[0.06] px-4 py-6 last:border-0 ${
                   isMe ? "rounded-2xl bg-[var(--primary-soft)]" : ""
                 }`}
               >
-                <span className="w-6 flex-none text-center text-lg font-black text-white/45 tabular-nums">
+                <span className="w-8 flex-none text-center text-2xl font-black text-white/45 tabular-nums">
                   {rank}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-lg font-bold text-white">
+                <span className="min-w-0 flex-1 truncate text-2xl font-bold text-white">
                   {player.nickname}
                   {isMe ? " (나)" : ""}
                 </span>
-                <span className="display-font text-xl leading-none text-white tabular-nums">
+                <span className="display-font text-3xl leading-none text-white tabular-nums">
                   {player.totalScore.toLocaleString()}
                 </span>
-                <span className="text-sm font-bold text-white/40">점</span>
+                <span className="text-lg font-bold text-white/40">점</span>
               </li>
             );
           })}
@@ -97,7 +97,7 @@ function PodiumCard({
 
   return (
     <div
-      className={`flex flex-col items-center gap-2.5 rounded-[22px] border p-4 text-center transition-transform sm:p-5 ${orderClass} ${
+      className={`flex flex-col items-center gap-3.5 rounded-[22px] border px-5 py-7 text-center transition-transform sm:px-6 sm:py-9 ${orderClass} ${
         isChampion
           ? "border-[#ffc93c] bg-[color:rgba(255,201,60,0.07)] shadow-[0_0_40px_rgba(255,201,60,0.16)] sm:-translate-y-2"
           : "border-white/10 bg-[var(--surface)]"
@@ -105,7 +105,7 @@ function PodiumCard({
     >
       <span
         className={`flex flex-none items-center justify-center rounded-full font-black tabular-nums ${
-          isChampion ? "h-12 w-12 text-xl" : "h-9 w-9 text-base sm:h-10 sm:w-10 sm:text-lg"
+          isChampion ? "h-14 w-14 text-3xl" : "h-11 w-11 text-lg sm:h-12 sm:w-12 sm:text-2xl"
         }`}
         style={{ background: theme.badge, color: theme.badgeText }}
       >
@@ -114,7 +114,7 @@ function PodiumCard({
 
       <p
         className={`display-font min-w-0 max-w-full truncate text-white ${
-          isChampion ? "text-xl sm:text-2xl" : "text-base sm:text-xl"
+          isChampion ? "text-3xl sm:text-4xl" : "text-lg sm:text-3xl"
         }`}
       >
         {player.nickname}
@@ -124,12 +124,12 @@ function PodiumCard({
 
       <p className="flex items-baseline gap-1">
         <span
-          className={`display-font tabular-nums ${isChampion ? "text-3xl sm:text-4xl" : "text-2xl sm:text-3xl"}`}
+          className={`display-font tabular-nums ${isChampion ? "text-5xl sm:text-6xl" : "text-4xl sm:text-5xl"}`}
           style={{ color: theme.score }}
         >
           {player.totalScore.toLocaleString()}
         </span>
-        <span className="text-sm font-bold text-white/45">점</span>
+        <span className="text-lg font-bold text-white/45">점</span>
       </p>
 
       {isChampion && (
