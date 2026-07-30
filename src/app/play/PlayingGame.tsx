@@ -292,7 +292,8 @@ function ActiveView({
     : 0;
 
   async function handleChoose(choiceId: string) {
-    if (hasAnswered || timeUp || submitting || paused) return;
+    // revealed(정답 공개) 단계에서는 제출 금지 — 서버 규칙도 거부하지만 UI에서도 막는다.
+    if (hasAnswered || timeUp || submitting || paused || revealed) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
