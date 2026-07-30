@@ -23,6 +23,7 @@ import FinalLeaderboard from "@/components/FinalLeaderboard";
 import GameQRCode from "@/components/GameQRCode";
 import StageSkeleton from "@/components/StageSkeleton";
 import { useNow } from "@/lib/useNow";
+import { REVEAL_DURATION_SEC } from "@/lib/gameConfig";
 import { useGrading } from "./useGrading";
 
 const CHOICE_THEMES = [
@@ -255,29 +256,46 @@ export default function GameHostClient({
   // autoAdvancedIndexRef so it only fires once per question even though the
   // clock effect below re-checks on every tick.
   const now = useNow(500);
+  const revealedIndexRef = useRef<number | null>(null);
   const autoAdvancedIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // 임베드(대시보드) 모드에서는 자동 진행을 하지 않는다 — 탭/방을 옮기면 이
-    // 컴포넌트가 언마운트돼 타이머가 죽기 때문. 대신 대시보드 루트에 항상 떠 있는
-    // GameAutoAdvancer가 자동 진행을 담당한다. 여기(임베드)는 수동 '다음 문제'만.
-    // 독립 라우트(/dashboard/game/[code])는 팝업처럼 상시 마운트라 자체 처리.
+    // 임베드(대시보드) 모드에서는 자동 공개/진행을 하지 않는다 — 대시보드 루트에 항상
+    // 떠 있는 GameAutoAdvancer가 담당(탭/방 이동에도 살아있음). 여기(임베드)는 수동
+    // '정답 공개'/'다음 문제'만. 독립 라우트(/dashboard/game/[code])는 상시 마운트라
+    // 여기서 마감→정답 공개→(자동 진행 ON이면 5초 뒤)진행을 자체 처리한다. 공개 단계를
+    // 건너뛰고 바로 진행하면 revealAnswer가 index 가드에 걸려 공개가 통째로 누락된다.
     if (embedded) return;
     if (!game || game.status !== "active" || advancing) return;
-    // 일시정지 중에는 자동 진행하지 않음
     if (game.paused) return;
-    // respect the teacher's 자동 진행 setting (snapshotted onto the game at
-    // creation); undefined on older games means "on", preserving prior behavior
+
+    const idx = game.currentQuestionIndex;
+    const question = game.questions[idx];
+    if (!question) return;
+
+    if (!game.revealedChoiceId) {
+      // 마감 시 정답 공개 (자동 진행 설정과 무관하게 항상)
+      if (!game.currentQuestionStartedAt) return;
+      const deadline = game.currentQuestionStartedAt.toMillis() + game.questionDurationSec * 1000;
+      if (now < deadline) return;
+      if (revealedIndexRef.current === idx) return;
+      // 정답 맵 로딩 전이면 대기(공개/채점 누락 방지) — handleReveal이 실제 공개 수행
+      if (!correctChoiceMap[question.id]) return;
+      revealedIndexRef.current = idx;
+      // 이펙트 본문에서 동기 setState를 피하려 마이크로태스크로 지연 호출
+      queueMicrotask(() => handleReveal());
+      return;
+    }
+
+    // 공개 후: 자동 진행 ON이면 REVEAL_DURATION 뒤 다음 문제/종료 (OFF면 교사가 클릭)
     if (game.autoAdvance === false) return;
-    if (!game.currentQuestionStartedAt) return;
-    const deadline = game.currentQuestionStartedAt.toMillis() + game.questionDurationSec * 1000;
-    if (now < deadline) return;
-    if (autoAdvancedIndexRef.current === game.currentQuestionIndex) return;
-    autoAdvancedIndexRef.current = game.currentQuestionIndex;
-    handleAdvance();
-    // handleAdvance is defined above and only depends on state already
-    // covered by this effect's own deps + component state, not worth
-    // memoizing separately for this dev-tool-only lint concern
+    if (!game.revealStartedAt) return;
+    const advanceAt = game.revealStartedAt.toMillis() + REVEAL_DURATION_SEC * 1000;
+    if (now < advanceAt) return;
+    if (autoAdvancedIndexRef.current === idx) return;
+    autoAdvancedIndexRef.current = idx;
+    queueMicrotask(() => handleAdvance());
+    // handleReveal/handleAdvance depend only on state already covered here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game, now, advancing]);
 
