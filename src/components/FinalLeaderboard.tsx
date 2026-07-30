@@ -66,13 +66,14 @@ export default function FinalLeaderboard({
   );
 }
 
-// 랭크별 색: 1위 gold(경고색), 2위 은색(중립), 3위 coral(오류색) — 핵심 4색 안에서.
+// 금·은·동 메달 색(브랜드 4색과 무관). 배지 원 = 금속색, 점수 글씨는 어두운 배경에서
+// 읽히도록 살짝 밝은 톤으로.
 function podiumTheme(rank: number) {
   if (rank === 1)
-    return { badge: "var(--warning)", badgeText: "#3a2a00", score: "var(--warning)" };
+    return { badge: "#ffc93c", badgeText: "#3a2a00", score: "#ffc93c" }; // gold
   if (rank === 2)
-    return { badge: "rgba(255,255,255,0.82)", badgeText: "#1a1626", score: "rgba(255,255,255,0.9)" };
-  return { badge: "var(--error)", badgeText: "#ffffff", score: "var(--error)" };
+    return { badge: "#c9d1dc", badgeText: "#1a1626", score: "#dde3ea" }; // silver
+  return { badge: "#cd7f32", badgeText: "#ffffff", score: "#e19a5b" }; // bronze
 }
 
 function PodiumCard({
@@ -98,7 +99,7 @@ function PodiumCard({
     <div
       className={`flex flex-col items-center gap-2.5 rounded-[22px] border p-4 text-center transition-transform sm:p-5 ${orderClass} ${
         isChampion
-          ? "border-[var(--warning)] bg-[color:rgba(255,183,30,0.06)] shadow-[0_0_40px_rgba(255,183,30,0.14)] sm:-translate-y-2"
+          ? "border-[#ffc93c] bg-[color:rgba(255,201,60,0.07)] shadow-[0_0_40px_rgba(255,201,60,0.16)] sm:-translate-y-2"
           : "border-white/10 bg-[var(--surface)]"
       } ${highlight ? "ring-2 ring-[var(--primary)]" : ""}`}
     >
@@ -132,7 +133,7 @@ function PodiumCard({
       </p>
 
       {isChampion && (
-        <span className="rounded-full bg-[var(--warning-soft)] px-3 py-1 text-xs font-black text-[var(--warning)]">
+        <span className="rounded-full bg-[color:rgba(255,201,60,0.16)] px-3 py-1 text-xs font-black text-[#ffc93c]">
           최고 점수!
         </span>
       )}

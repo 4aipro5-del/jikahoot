@@ -129,9 +129,12 @@ export default function PlayingGame({
 
   if (game.status === "finished") {
     return (
-      <div className="stage-shell">
+      // stage-shell(overflow:hidden) 대신 스크롤 가능한 래퍼. 참가자가 적으면
+      // justify-center로 가운데, 많아서 뷰포트보다 길어지면 위로 정렬 + 스크롤돼
+      // 제목/버튼이 잘리지 않는다.
+      <div className="min-h-screen w-full">
         <div className="stage-content flex min-h-screen flex-col justify-center gap-6 py-8">
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 text-center">
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-10 text-center">
             <div className="space-y-3">
               <p className="hero-chip self-center">Final Leaderboard</p>
               <h1 className="display-font text-5xl text-white sm:text-6xl">최종 순위</h1>
@@ -146,7 +149,7 @@ export default function PlayingGame({
               onClick={onLeave}
               className="primary-button mx-auto w-full max-w-xs"
             >
-              다른 게임 시작하기
+              START NEW GAME
             </button>
           </div>
         </div>
@@ -415,32 +418,28 @@ function ActiveView({
                     </span>
                     {isCorrectChoice ? (
                       <span
-                        className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--success)] text-white shadow-[0_2px_6px_rgba(0,0,0,0.3)]"
+                        className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[var(--success)] text-white shadow-[0_2px_10px_rgba(0,0,0,0.25)] sm:h-12 sm:w-12"
                         aria-label="정답"
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <path d="M20 6 9 17l-5-5" />
                         </svg>
                       </span>
                     ) : myWrongChoice ? (
                       <span
-                        className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--error)] text-white shadow-[0_2px_6px_rgba(0,0,0,0.3)]"
+                        className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[var(--error)] text-white shadow-[0_2px_10px_rgba(0,0,0,0.25)] sm:h-12 sm:w-12"
                         aria-label="내가 고른 오답"
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <path d="M18 6 6 18M6 6l12 12" />
                         </svg>
                       </span>
                     ) : isMyChoice ? (
                       <span
-                        className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.3)]"
-                        style={{
-                          background: theme.light ? "var(--panel-text)" : "#ffffff",
-                          color: theme.light ? "#ffffff" : "var(--panel-text)",
-                        }}
+                        className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[#1a1626] text-white shadow-[0_2px_10px_rgba(0,0,0,0.25)] sm:h-12 sm:w-12"
                         aria-label="선택함"
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <path d="M20 6 9 17l-5-5" />
                         </svg>
                       </span>
@@ -451,35 +450,45 @@ function ActiveView({
             </div>
           </section>
 
-          {/* 제출 상태 피드백 */}
+          {/* 제출 오류만 배너로 (채점 결과는 하단 바 우측에 표시) */}
           {submitError && (
             <p className="status-banner" data-tone="error">
               {submitError}
             </p>
           )}
-          {answer && answer.isCorrect === null && (
-            <p className="status-banner" data-tone="warning">
-              제출 완료! 채점을 기다리는 중이에요.
-            </p>
-          )}
-          {answer && answer.isCorrect !== null && (
-            <p className="status-banner" data-tone={answer.isCorrect ? "success" : "error"}>
-              {answer.isCorrect ? `정답! +${answer.pointsEarned}점` : "아쉬워요, 이번 문제는 오답이에요."}
-            </p>
-          )}
-          {!answer && (timeUp || revealed) && (
-            <p className="status-banner" data-tone="warning">
-              {revealed ? "정답을 확인해 보세요." : "시간이 끝났어요. 다음 문제를 기다려 주세요."}
-            </p>
-          )}
 
-          {/* 하단: 보너스 점수 안내 */}
-          <div className="flex items-center gap-3 rounded-2xl bg-[var(--surface)] px-5 py-4 text-sm text-white/70 sm:text-base">
+          {/* 하단: 보너스 안내(좌) + 채점 결과(우) */}
+          <div className="flex items-center gap-4 rounded-2xl bg-[var(--surface)] px-5 py-4 text-sm text-white/70 sm:text-base">
             <span className="flex-none">{starIcon}</span>
-            <span>
+            <span className="min-w-0 flex-1">
               정답을 빠르게, 연속으로 맞히면{" "}
               <span className="font-bold text-[var(--warning)]">보너스 점수</span>를 얻어요!
             </span>
+
+            {answer && answer.isCorrect !== null ? (
+              <>
+                <span className="h-9 w-px flex-none bg-white/12" />
+                <span className="flex flex-none items-baseline gap-2 whitespace-nowrap">
+                  {answer.isCorrect ? (
+                    <>
+                      <span className="display-font text-lg text-white sm:text-2xl">정답!</span>
+                      <span className="display-font text-lg text-[var(--success)] sm:text-2xl">
+                        +{answer.pointsEarned}점
+                      </span>
+                    </>
+                  ) : (
+                    <span className="display-font text-lg text-white/70 sm:text-2xl">오답</span>
+                  )}
+                </span>
+              </>
+            ) : answer ? (
+              <>
+                <span className="h-9 w-px flex-none bg-white/12" />
+                <span className="flex-none whitespace-nowrap text-lg font-black text-white">
+                  제출 완료
+                </span>
+              </>
+            ) : null}
           </div>
         </div>
       </div>

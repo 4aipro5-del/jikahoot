@@ -85,7 +85,7 @@ export default function DisplayClient({ gameCode }: { gameCode: string }) {
   if (game.status === "finished") {
     return (
       <FullscreenStage wide>
-        <div className="flex w-full flex-col items-center gap-8 text-center">
+        <div className="flex w-full flex-col items-center gap-10 text-center">
           <p className="hero-chip">Final Leaderboard</p>
           <h1 className="display-font text-6xl text-white">최종 순위</h1>
           <div className="w-full max-w-4xl">

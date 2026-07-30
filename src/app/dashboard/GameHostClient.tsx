@@ -377,7 +377,7 @@ export default function GameHostClient({
         )}
 
         {game.status === "finished" && (
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 text-center">
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-10 text-center">
             <div className="space-y-3">
               <p className="hero-chip self-center">Game Finished</p>
               <h1 className="display-font text-5xl text-white sm:text-6xl">최종 순위</h1>
@@ -390,9 +390,9 @@ export default function GameHostClient({
               type="button"
               onClick={handleResetGame}
               disabled={ending}
-              className="primary-button primary-button-stage mx-auto w-full max-w-md disabled:cursor-not-allowed disabled:opacity-60"
+              className="primary-button mx-auto w-full max-w-xs disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {ending ? "정리 중..." : "새 게임 준비하기"}
+              {ending ? "정리 중..." : "START NEW GAME"}
             </button>
           </div>
         )}
