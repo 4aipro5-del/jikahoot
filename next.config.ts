@@ -11,12 +11,13 @@ const nextConfig: NextConfig = {
 };
 
 // Sentry wraps the config to upload source maps at build time — without them a
-// stack trace only points at minified bundle output. `org`, `project` and
-// `authToken` are injected by the Sentry Vercel integration; when they are
-// absent (local builds) the upload is skipped and the build still succeeds.
+// stack trace only points at minified bundle output. The env vars are injected
+// by the Sentry Vercel integration and take precedence; the literals keep local
+// production builds working too. `authToken` is the one real secret here, and
+// its absence only skips the upload — the build still succeeds.
 export default withSentryConfig(nextConfig, {
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
+  org: process.env.SENTRY_ORG ?? "indi-ud",
+  project: process.env.SENTRY_PROJECT ?? "jihoot",
   authToken: process.env.SENTRY_AUTH_TOKEN,
 
   // Only chatter in CI logs, stay quiet during local builds.
