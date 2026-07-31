@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 // Next.js configuration for the JIHOOT app.
 
@@ -9,4 +10,22 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Sentry wraps the config to upload source maps at build time — without them a
+// stack trace only points at minified bundle output. `org`, `project` and
+// `authToken` are injected by the Sentry Vercel integration; when they are
+// absent (local builds) the upload is skipped and the build still succeeds.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Only chatter in CI logs, stay quiet during local builds.
+  silent: !process.env.CI,
+
+  // Broadens source map upload so stack traces resolve inside shared chunks too.
+  widenClientFileUpload: true,
+
+  // Routes Sentry requests through our own domain. School networks commonly run
+  // ad blockers and content filters that would otherwise drop them.
+  tunnelRoute: "/sentry-tunnel",
+});
